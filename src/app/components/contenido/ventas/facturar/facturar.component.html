@@ -1,0 +1,114 @@
+<app-navegacion></app-navegacion>
+
+<div class="contenido">
+    <div class="acordeon">
+        <p-accordion [value]="['0','1','2','3']" [multiple]="true">
+            <p-accordion-panel value="0">
+                <p-accordion-header>Datos Generales</p-accordion-header>
+                <p-accordion-content>
+                    
+                    <form [formGroup]="formGenerales">
+                        <div class="enLinea">
+                            <!-- Proceso -->
+                            <p-floatlabel variant="in">
+                                <p-select [options]="procesos" optionLabel="descripcion" />
+                                <label>Proceso</label>
+                            </p-floatlabel>
+
+                            <!-- Nota Empaque -->
+                            <p-floatlabel variant="in">
+                                <input pInputText formControlName="nroNota"  type="text"/>
+                                <label>N° Nota Empaque</label>
+                            </p-floatlabel>
+
+                            <!-- Fecha -->
+                            <p-floatlabel variant="in">
+                                <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+                                <label>Fecha</label>
+                            </p-floatlabel>
+                        </div>
+                        <div class="enLinea">
+                            <div class="izq">
+
+                            </div>
+                            @if(clienteSeleccionado){
+                                <div class="cliente-card">
+                                    <div class="cliente-header">
+                                        <div class="icon">
+                                            <i class="pi pi-user"></i>
+                                        </div>
+                                        <div class="info">
+                                        <h4>{{ clienteSeleccionado.nombre }}</h4>
+                                        <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="datos-section">
+                                        <!-- Contacto -->
+                                        <div class="subcard">
+                                            <h5><i class="pi pi-user"></i> Datos de contacto</h5>
+                                            <p><strong>Teléfono:</strong> {{ clienteSeleccionado.telefono }}</p>
+                                            <p><strong>Celular:</strong> {{ clienteSeleccionado.celular }}</p>
+                                            <p><strong>Email:</strong> {{ clienteSeleccionado.email }}</p>
+                                            <p><strong>Contacto:</strong> {{ clienteSeleccionado.contacto }}</p>
+                                        </div>
+
+                                        <!-- Fiscales -->
+                                        <div class="subcard">
+                                            <h5><i class="pi pi-user"></i> Datos fiscales</h5>
+                                            <p><strong>Razón Social:</strong> {{ clienteSeleccionado.razonSocial }}</p>
+                                            <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
+                                            <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            }@else {
+                                <div class="noSeleccionado">
+                                    <div class="icon">
+                                        <i class="pi pi-user"></i>
+                                    </div>
+                                    <p>Selecciona un cliente para ver sus datos</p>
+                                </div>
+                            }
+                        </div>
+                    </form>
+
+                </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="1">
+                <p-accordion-header>Productos</p-accordion-header>
+                <p-accordion-content>
+                    <p class="m-0">
+                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem
+                        aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo
+                        enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos
+                        qui ratione voluptatem sequi nesciunt. Consectetur, adipisci velit, sed quia non numquam eius modi.
+                    </p>
+                </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="2">
+                <p-accordion-header>Servicios</p-accordion-header>
+                <p-accordion-content>
+                    <p class="m-0">
+                        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque
+                        corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in
+                        culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et
+                        expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.
+                    </p>
+                </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="3">
+                <p-accordion-header>Datos Facturación</p-accordion-header>
+                <p-accordion-content>
+                    <p class="m-0">
+                        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque
+                        corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in
+                        culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et
+                        expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.
+                    </p>
+                </p-accordion-content>
+            </p-accordion-panel>
+        </p-accordion>
+    </div>
+</div>

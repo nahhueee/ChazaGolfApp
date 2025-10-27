@@ -1,0 +1,72 @@
+@use 'theme.scss';
+@import "primeicons/primeicons.css";
+
+//#region FONTS
+@font-face {
+  font-family: "Poppins";
+  src: url('../public/fonts/Poppins.ttf') format("truetype");
+}
+@font-face {
+  font-family: "Roboto";
+  src: url('../public/fonts/Roboto.ttf') format("truetype");
+}
+//#endregion
+
+
+body {
+  transition: all 0.3s ease;
+  font-family: 'Roboto', sans-serif;
+  color: var(--text-color) !important;
+  background-color: var(--surface-ground) !important;
+  margin: 0%;
+  padding: 0%;
+}
+
+/* Transiciones suaves */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+p-floatlabel{
+  width: 100% !important;
+  margin-bottom: 10px;
+}
+p-select{
+  width: 100% !important;
+}
+p-datepicker{
+  width: 100% !important;
+}
+input{
+  width: 100% !important;
+}
+.error{
+  margin-left: 13px;
+  color: var(--error-text);
+}
+p{
+  margin: 0%;
+}
+h1{
+  margin: 0%;
+}
+h2{
+  margin: 0%;
+}
+h3{
+  margin: 0%;
+}
+h4{
+  margin: 0%;
+}
+h5{
+  margin: 0%;
+}
+h6{
+  margin: 0%;
+}
+
+.contenido{
+  margin: 20px 5%;
+  border-radius: 10px;
+}

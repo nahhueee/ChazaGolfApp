@@ -1,0 +1,62 @@
+:root {
+  --zinc-50: #fafafa;
+  --zinc-80: #f7f7f7;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+  --zinc-950: #09090b;
+
+  --error-text: #ef4444;
+
+  /* App / body */
+  --surface-ground: var(--zinc-100); /* Fondo general de la app */
+  
+  /* Card / Panel / Fieldset / Toolbar / Steps */
+  --surface-card: var(--zinc-50); /* Fondo principal de contenedores */
+  
+  /* PanelGroup / Submenus / MenuBar / Menu */
+  --surface-section: var(--zinc-50); /* Secciones internas dentro de cards o menús */
+  
+  /* Menus, OverlayPanel, Dialog, Tooltip */
+  --surface-overlay: var(--zinc-200); /* Fondos de elementos flotantes, overlays, dropdowns */
+  
+  /* Bordes (general) */
+  --surface-border: var(--zinc-300); /* Bordes de cards, paneles, inputs, menús */
+  
+  /* Hover (general) */
+  --surface-hover: var(--zinc-200); /* Hover de botones, items de menú, cards */
+  
+  /* Texto */
+  --text-color: var(--zinc-900); /* Color de texto estándar */
+  --text-color-secondary: var(--zinc-700); /* Para descripciones o hints */
+}
+
+html.dark-mode {
+  /* App / body */
+  --surface-ground: var(--zinc-900); /* Fondo general de la app */
+  
+  /* Card / Panel / Fieldset / Toolbar / Steps */
+  --surface-card: var(--zinc-800); /* Fondo principal de contenedores */
+  
+  /* PanelGroup / Submenus / MenuBar / Menu */
+  --surface-section: var(--zinc-800); /* Secciones internas dentro de cards o menús */
+  
+  /* Menus, OverlayPanel, Dialog, Tooltip */
+  --surface-overlay: var(--zinc-700); /* Fondos de elementos flotantes, overlays, dropdowns */
+  
+  /* Bordes (general) */
+  --surface-border: var(--zinc-600); /* Bordes de cards, paneles, inputs, menús */
+  
+  /* Hover (general) */
+  --surface-hover: var(--zinc-700); /* Hover de botones, items de menú, cards */
+  
+  /* Texto */
+  --text-color: var(--zinc-50); /* Color de texto estándar */
+  --text-color-secondary: var(--zinc-300); /* Para descripciones o hints */
+}

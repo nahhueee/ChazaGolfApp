@@ -1,0 +1,150 @@
+@use "sass:math";
+
+.contenido{
+  height: calc(100vh - 90px); //La altura de la pantalla menos el alto del herramientas bar
+  background: linear-gradient(var(--surface-ground), var(--surface-card));
+}
+
+.inicio{
+  font-size: 15px;
+  margin-top: 15px;
+}
+
+/*#region Logo*/
+.logo-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.logo {
+  width: 230px;
+    height: 230px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+    transform: translatey(0px);
+    animation: float 6s ease-in-out infinite;
+  z-index: 999;
+  background: linear-gradient(var(--surface-card), var(--surface-ground));
+    img { width: 100%; height: auto; }
+}
+
+  /*#region Animacion Float Logo*/
+  @keyframes float {
+    0% {
+      box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+      transform: translatey(0px);
+    }
+    50% {
+      box-shadow: 0 25px 15px 0px rgba(0,0,0,0.2);
+      transform: translatey(-20px);
+    }
+    100% {
+      box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+      transform: translatey(0px);
+    }
+  }
+  /*#endregion */
+/*#endregion */
+
+/*#region Particles Fondo*/
+.animation-fondo {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/*#region Particle Animation*/
+  $color-particle: #fff;
+  $spacing: 2560px;
+  $time-1: 60s;
+  $time-2: 120s;
+  $time-3: 180s;
+  $time-4: 600s;
+
+  /* Pauls awesome mixin */
+  @function particles($max) {
+    $val: 0px 0px $color-particle;
+    @for $i from 1 through $max {
+      $x: math.random(math.div($spacing, 1px)) * 1px;
+      $y: math.random(math.div($spacing, 1px)) * 1px;
+      $val: #{$val}, #{$x} #{$y} $color-particle;
+    }
+    @return $val;
+  }
+  @mixin particles($max) {
+      box-shadow: particles($max);
+  }
+
+  .particle,
+  .particle:after {
+    background: transparent;
+  }
+
+  .particle:after {
+    position: absolute;
+    content: "";
+    top: $spacing;
+  }
+
+  .particle-1 {
+    animation: animParticle $time-1 linear infinite;
+    @include particles(600);
+    height: 1px;
+    width: 1px;
+  }
+
+  .particle-1:after {
+    @include particles(600);
+    height: 1px;
+    width: 1px;
+  }
+
+  .particle-2 {
+    animation: animParticle $time-2 linear infinite;
+    @include particles(200);
+    height: 2px;
+    width: 2px;
+  }
+
+  .particle-2:after {
+    @include particles(200);
+    height: 2px;
+    width: 2px;
+  }
+
+  .particle-3 {
+    animation: animParticle $time-3 linear infinite;
+    @include particles(100);
+    height: 3px;
+    width: 3px;
+  }
+
+  .particle-3:after {
+    @include particles(100);
+    height: 3px;
+    width: 3px;
+  }
+
+  .particle-4 {
+    animation: animParticle $time-4 linear infinite;
+    @include particles(400);
+    height: 1px;
+    width: 1px;
+  }
+
+  .particle-4:after {
+    @include particles(400);
+    height: 1px;
+    width: 1px;
+  }
+
+  @keyframes animParticle {
+    from { transform: translateY(0px); }
+    to   { transform: translateY($spacing * -1); }
+  }
+ /*#endregion */
+/*#endregion */

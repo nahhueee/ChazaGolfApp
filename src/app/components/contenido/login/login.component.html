@@ -1,0 +1,54 @@
+<div *ngIf="esDark; else noDark">
+  <ngx-spinner name="welcomeSpinner" bdColor = "#212121" size = "large" color = "#fff" type = "fire" [fullScreen] = "true">
+    <p class="inicio" style="color: #fff" >
+      Bienvenido {{nombre}}, comencemos a trabajar...  
+    </p>
+  </ngx-spinner>
+</div>
+<ng-template #noDark >
+  <ngx-spinner name="welcomeSpinner" bdColor = "#e6e6e6" size = "large" color = "#353535" type = "fire" [fullScreen] = "true">
+      <p class="inicio" style="color: #353535" > 
+        Bienvenido {{nombre}}, comencemos a trabajar...  
+      </p>
+  </ngx-spinner>
+</ng-template>
+
+<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="fire" [fullScreen] = "true"><p style="color: white" > Cargando... </p></ngx-spinner>
+
+<div class="fondo" style="background-image: url({{background}})">
+
+  <div class="contenedor">
+    <div class="logo-container">
+      <div class="logo"><img class="icon" src="{{pathIcon}}" alt="Logo"></div>
+    </div>
+
+    <!-- Login Form -->
+    <form class="form" [formGroup]="formulario" method="POST" (submit)="Ingresar()" autocomplete="off">
+
+      <div class="encabezado">
+        <p>Iniciar Sesión</p>
+      </div>
+
+      <!-- Usuario -->
+      <p-floatlabel variant="in">
+          <input pInputText formControlName="usuario"  type="text"/>
+          <label>Usuario</label>
+          @if(campoInvalido('usuario')){
+              <small class="error">El campo es requerido.</small>
+          }
+      </p-floatlabel>
+      
+      <!-- Contraseña -->
+      <p-floatlabel variant="in">
+          <input pInputText formControlName="pass" type="password"/>
+          <label>Contraseña</label>
+          @if(campoInvalido('pass')){
+              <small class="error">El campo es requerido.</small>
+          }
+      </p-floatlabel>
+
+      <!-- Botón Ingresar -->
+      <button pButton type="submit" label="Ingresar" [disabled]="formulario.invalid"></button>
+    </form>
+  </div>
+</div>
