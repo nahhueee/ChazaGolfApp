@@ -10,6 +10,9 @@ import { ToggleButtonModule } from 'primeng/togglebutton';
 import { ButtonModule } from 'primeng/button';
 import { FloatLabel } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 
 //Otros
 import { IMaskModule } from 'angular-imask';
@@ -32,4 +35,7 @@ export const FORMS_IMPORTS = [
     RadioButtonModule,
     ToggleButtonModule,
     ButtonModule,
+    AutoCompleteModule,
+    InputGroupModule,
+    InputGroupAddonModule
 ]

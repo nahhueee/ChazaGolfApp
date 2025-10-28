@@ -29,7 +29,7 @@ body {
 
 p-floatlabel{
   width: 100% !important;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 p-select{
   width: 100% !important;
@@ -37,8 +37,18 @@ p-select{
 p-datepicker{
   width: 100% !important;
 }
+p-autocomplete{
+  width: 100% !important;
+}
 input{
   width: 100% !important;
+}
+
+.p-accordionheader{
+  background-color: var(--surface-card) !important;
+}
+.p-accordioncontent-content{
+  background-color: var(--surface-card) !important;
 }
 .error{
   margin-left: 13px;

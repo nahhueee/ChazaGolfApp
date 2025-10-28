@@ -7,30 +7,59 @@
                 <p-accordion-header>Datos Generales</p-accordion-header>
                 <p-accordion-content>
                     
-                    <form [formGroup]="formGenerales">
-                        <div class="enLinea">
-                            <!-- Proceso -->
-                            <p-floatlabel variant="in">
-                                <p-select [options]="procesos" optionLabel="descripcion" />
-                                <label>Proceso</label>
-                            </p-floatlabel>
-
-                            <!-- Nota Empaque -->
-                            <p-floatlabel variant="in">
-                                <input pInputText formControlName="nroNota"  type="text"/>
-                                <label>N° Nota Empaque</label>
-                            </p-floatlabel>
-
-                            <!-- Fecha -->
-                            <p-floatlabel variant="in">
-                                <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
-                                <label>Fecha</label>
-                            </p-floatlabel>
-                        </div>
+                    <form [formGroup]="formGenerales" autocomplete="off">
                         <div class="enLinea">
                             <div class="izq">
-
+                                <div class="enLinea">
+                                    <!-- Proceso -->
+                                    <p-floatlabel variant="in">
+                                        <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion" />
+                                        <label>Proceso</label>
+                                    </p-floatlabel>
+                                    <!-- Fecha -->
+                                    <p-floatlabel variant="in">
+                                        <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+                                        <label>Fecha</label>
+                                    </p-floatlabel>
+                                </div>
+                               
+                                <!-- Nota Empaque -->
+                                <p-floatlabel variant="in">
+                                    <input pInputText formControlName="nroNota"  type="text"/>
+                                    <label>N° Nota Empaque</label>
+                                </p-floatlabel>
                             </div>
+                            <div class="centro">
+                                <p-inputgroup>
+                                    <!-- Cliente -->
+                                    <p-floatlabel variant="in">
+                                        <p-autocomplete
+                                            formControlName="cliente"
+                                            [suggestions]="clientesFiltrados"
+                                            placeholder="Buscar por nombre o DNI"
+                                            emptyMessage="No se encontraron resultados"
+                                            (completeMethod)="FiltrarClientes($event)"
+                                            (onSelect)="SeleccionarCliente();"
+                                            optionLabel="nombre"
+                                        >
+                                            <!-- Template para las sugerencias -->
+                                            <ng-template let-cliente pTemplate="item">
+                                                {{ cliente.nombre }} - {{ cliente.documento }}
+                                            </ng-template>
+
+                                        </p-autocomplete>
+                                        <label>Cliente</label>
+                                    </p-floatlabel>
+                                    <p-button class="btnAdd" icon="pi pi-plus" (onClick)="NuevoCliente()" severity="success" />
+                                </p-inputgroup>
+
+                                <!-- Listas Precio -->
+                                <p-floatlabel variant="in">
+                                    <p-select [options]="listaPrecios" optionLabel="descripcion" />
+                                    <label>Lista De Precio</label>
+                                </p-floatlabel>
+                            </div>
+
                             @if(clienteSeleccionado){
                                 <div class="cliente-card">
                                     <div class="cliente-header">
@@ -42,25 +71,12 @@
                                         <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
                                         </div>
                                     </div>
-
-                                    <div class="datos-section">
-                                        <!-- Contacto -->
-                                        <div class="subcard">
-                                            <h5><i class="pi pi-user"></i> Datos de contacto</h5>
-                                            <p><strong>Teléfono:</strong> {{ clienteSeleccionado.telefono }}</p>
-                                            <p><strong>Celular:</strong> {{ clienteSeleccionado.celular }}</p>
-                                            <p><strong>Email:</strong> {{ clienteSeleccionado.email }}</p>
-                                            <p><strong>Contacto:</strong> {{ clienteSeleccionado.contacto }}</p>
-                                        </div>
-
-                                        <!-- Fiscales -->
-                                        <div class="subcard">
-                                            <h5><i class="pi pi-user"></i> Datos fiscales</h5>
-                                            <p><strong>Razón Social:</strong> {{ clienteSeleccionado.razonSocial }}</p>
-                                            <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
-                                            <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p>
-                                        </div>
+                                    <div class="datos-seccion">
+                                        <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
+                                        <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p>
                                     </div>
+
+                                    <p class="link">Ver Más</p>
                                 </div>
 
                             }@else {
@@ -79,12 +95,97 @@
             <p-accordion-panel value="1">
                 <p-accordion-header>Productos</p-accordion-header>
                 <p-accordion-content>
-                    <p class="m-0">
-                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem
-                        aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo
-                        enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos
-                        qui ratione voluptatem sequi nesciunt. Consectetur, adipisci velit, sed quia non numquam eius modi.
-                    </p>
+
+                    <form [formGroup]="formProductos" class="formProducto" autocomplete="off">
+                        <div class="enLinea">
+                            <!-- Codigo - Nombre -->
+                            <p-floatlabel variant="in" class="completeProductos">
+                                <p-autocomplete
+                                    formControlName="producto"
+                                    [suggestions]="productosFiltrados"
+                                    placeholder="Buscar por código o nombre"
+                                    emptyMessage="No se encontraron resultados"
+                                    (completeMethod)="FiltrarProductos($event)"
+                                    (onSelect)="SeleccionarProducto();"
+                                    optionLabel="nombre"
+                                >
+                                    <!-- Template para las sugerencias -->
+                                    <ng-template let-producto pTemplate="item">
+                                        {{ producto.codigo }} - {{ producto.nombre }}
+                                    </ng-template>
+
+                                </p-autocomplete>
+                                <label>Cliente</label>
+                            </p-floatlabel>  
+                            
+                            <div class="talles">
+                                @if(productoSeleccionado && productoSeleccionado.id != 0){
+                                    @for (talle of tallesProducto; track talle) {
+                                        <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
+                                            @if(ObtenerCantidad(talle, 'agregar') != 0){
+                                                <p-badge [value]="ObtenerCantidad(talle, 'agregar')" badgeSize="small" severity="success" class="badge-flotante"/>
+                                            }
+                                            <p>{{ talle }}</p>
+                                            <span>Stock: {{ ObtenerCantidad(talle, 'stock') }}</span>
+                                        </div>
+                                    }
+                                }@else{
+                                    @for (opcion of tallesBase; track opcion) {
+                                        <div class="NoTalle">
+                                            <p>{{opcion}}</p>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        
+                        <div class="acciones">
+                            <p-button label="Busqueda Avanzada" variant="outlined" severity="secondary" icon="pi pi-search"/>
+                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="GenerarProductoFactura()"/>
+                        </div>
+                    </form>
+
+                    <p-table [value]="productosFactura">
+                        <ng-template #header>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Cant.</th>
+                                <th>XS</th>
+                                <th>S</th>
+                                <th>M</th>
+                                <th>L</th>
+                                <th>XL</th>
+                                <th>XXL</th>
+                                <th>3XL</th>
+                                <th>4XL</th>
+                                <th>5XL</th>
+                                <th>6XL</th>
+                                <th>Precio</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template #body let-producto>
+                            <tr>
+                                <td>{{ producto.codigo }}</td>
+                                <td>{{ producto.nombre }}</td>
+                                <td>{{ producto.cantidad }}</td>
+                                <td>{{ producto.t1 }}</td>
+                                <td>{{ producto.t2 }}</td>
+                                <td>{{ producto.t3 }}</td>
+                                <td>{{ producto.t4 }}</td>
+                                <td>{{ producto.t5 }}</td>
+                                <td>{{ producto.t6 }}</td>
+                                <td>{{ producto.t7 }}</td>
+                                <td>{{ producto.t8 }}</td>
+                                <td>{{ producto.t9 }}</td>
+                                <td>{{ producto.t10 }}</td>
+                                <td>{{ producto.precio }}</td>
+                                <td>{{ producto.total }}</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
                 </p-accordion-content>
             </p-accordion-panel>
             <p-accordion-panel value="2">
