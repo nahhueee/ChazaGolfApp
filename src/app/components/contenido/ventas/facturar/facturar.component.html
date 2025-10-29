@@ -1,4 +1,5 @@
 <app-navegacion></app-navegacion>
+<p-confirmpopup />
 
 <div class="contenido">
     <div class="acordeon">
@@ -130,7 +131,7 @@
                                         </div>
                                     }
                                 }@else{
-                                    @for (opcion of tallesBase; track opcion) {
+                                    @for (opcion of tallesBase; track $index) {
                                         <div class="NoTalle">
                                             <p>{{opcion}}</p>
                                         </div>
@@ -140,8 +141,8 @@
                         </div>
                         
                         <div class="acciones">
+                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
                             <p-button label="Busqueda Avanzada" variant="outlined" severity="secondary" icon="pi pi-search"/>
-                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="GenerarProductoFactura()"/>
                         </div>
                     </form>
 
@@ -150,7 +151,6 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre</th>
-                                <th>Cant.</th>
                                 <th>XS</th>
                                 <th>S</th>
                                 <th>M</th>
@@ -161,6 +161,7 @@
                                 <th>4XL</th>
                                 <th>5XL</th>
                                 <th>6XL</th>
+                                <th>Cant.</th>
                                 <th>Precio</th>
                                 <th>Total</th>
                                 <th>Acciones</th>
@@ -168,9 +169,8 @@
                         </ng-template>
                         <ng-template #body let-producto>
                             <tr>
-                                <td>{{ producto.codigo }}</td>
-                                <td>{{ producto.nombre }}</td>
-                                <td>{{ producto.cantidad }}</td>
+                                <td>{{ producto.codProducto }}</td>
+                                <td>{{ producto.nomProducto }}</td>
                                 <td>{{ producto.t1 }}</td>
                                 <td>{{ producto.t2 }}</td>
                                 <td>{{ producto.t3 }}</td>
@@ -181,8 +181,12 @@
                                 <td>{{ producto.t8 }}</td>
                                 <td>{{ producto.t9 }}</td>
                                 <td>{{ producto.t10 }}</td>
-                                <td>{{ producto.precio }}</td>
+                                <td>{{ producto.cantidad }}</td>
+                                <td>{{ producto.unitario }}</td>
                                 <td>{{ producto.total }}</td>
+                                <td class="acciones-tabla">
+                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
+                                </td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -191,23 +195,103 @@
             <p-accordion-panel value="2">
                 <p-accordion-header>Servicios</p-accordion-header>
                 <p-accordion-content>
-                    <p class="m-0">
-                        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque
-                        corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in
-                        culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et
-                        expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.
-                    </p>
+                    <form [formGroup]="formServicios" class="formServicio" autocomplete="off">
+                        <div class="enLinea">
+                            <!-- Codigo - Nombre -->
+                            <p-floatlabel variant="in">
+                                <p-autocomplete
+                                    formControlName="servicio"
+                                    [suggestions]="serviciosFiltrado"
+                                    placeholder="Buscar por código o nombre"
+                                    emptyMessage="No se encontraron resultados"
+                                    (completeMethod)="FiltrarServicios($event)"
+                                    optionLabel="descripcion"
+                                >
+                                    <!-- Template para las sugerencias -->
+                                    <ng-template let-servicio pTemplate="item">
+                                        {{ servicio.codigo }} - {{ servicio.descripcion }}
+                                    </ng-template>
+
+                                </p-autocomplete>
+                                <label>Servicio</label>
+                            </p-floatlabel>  
+
+                            <!-- Cantidad -->
+                            <p-floatlabel variant="in">
+                                <input pInputText formControlName="cantidad"  type="number"/>
+                                <label>Cantidad</label>
+                            </p-floatlabel>
+
+                            <p-floatlabel variant="in">
+                                <input pInputText formControlName="precio" type="text" [imask]="decimal_mask"/>
+                                <label>Precio</label>
+                            </p-floatlabel>
+                        </div>
+                    </form>
+                    <div class="acciones">
+                        <p-button label="Confirmar Servicio" [raised]="true" icon="pi pi-check" (onClick)="AgregarServicio()"/>
+                    </div>
+
+                    <p-table [value]="serviciosFactura">
+                        <ng-template #header>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Cant.</th>
+                                <th>Precio</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template #body let-servicio>
+                            <tr>
+                                <td>{{ servicio.codServicio }}</td>
+                                <td>{{ servicio.nomServicio }}</td>
+                                <td>{{ servicio.cantidad }}</td>
+                                <td>{{ servicio.unitario }}</td>
+                                <td>{{ servicio.total }}</td>
+                                <td class="acciones-tabla">
+                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.idServicio)" />
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
                 </p-accordion-content>
             </p-accordion-panel>
             <p-accordion-panel value="3">
                 <p-accordion-header>Datos Facturación</p-accordion-header>
                 <p-accordion-content>
-                    <p class="m-0">
-                        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque
-                        corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in
-                        culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et
-                        expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.
-                    </p>
+                    
+                    <div class="resumen">
+                        <div class="fila">
+                            <span>Total Productos:</span>
+                            <!-- <span class="monto">${{totalItems | decimalFormat}}</span> -->
+                            <span class="monto">$5000</span>
+                        </div>
+
+                        <div class="fila">
+                            <span>Descuento:</span>
+                            <span class="monto">$3500</span>
+                        </div>
+
+                        <br>
+
+                        <div class="fila">
+                            <span>Total General:</span>
+                            <span class="monto">$30000</span>
+                        </div>
+
+                        <div class="fila">
+                            <span>Redondeo:</span>
+                            <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo"/>
+                        </div>
+
+                        <div class="fila total-final">
+                            <span>Total A Pagar:</span>
+                            <span class="monto">$30000</span>
+                        </div>
+                    </div>
+
                 </p-accordion-content>
             </p-accordion-panel>
         </p-accordion>

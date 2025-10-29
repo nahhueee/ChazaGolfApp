@@ -1,9 +1,9 @@
 
 
-export class ProductosFactura{
+  export class ProductosFactura{
     idProducto? : number;
     codProducto?: string;
-    producto?: string;
+    nomProducto?: string;
     cantidad?: number;
     t1?: number;
     t2?: number;
@@ -18,7 +18,7 @@ export class ProductosFactura{
     costo?: number;
     unitario?: number;
     total?: number;
-    obs:string = "";
+    tallesSeleccionados:string = "";
   
     constructor(data?: any) {
       if (data) {
@@ -37,9 +37,29 @@ export class ProductosFactura{
         this.t10 = data.t10;
         this.costo = data.costo;
         this.unitario = data.unitario;
-        this.producto = data.producto;
+        this.nomProducto = data.nomProducto;
         this.total = data.total;
-        this.obs = data.obs;
+        this.tallesSeleccionados = data.tallesSeleccionados;
+      }
+    }
+  }
+
+  export class ServiciosFactura{
+    idServicio? : number;
+    codServicio?: string;
+    nomServicio?: string;
+    cantidad?: number;
+    unitario?: number;
+    total?: number;
+  
+    constructor(data?: any) {
+      if (data) {
+        this.idServicio = data.idServicio;
+        this.codServicio = data.codServicio;
+        this.cantidad = data.cantidad;
+        this.unitario = data.unitario;
+        this.nomServicio = data.nomServicio;
+        this.total = data.total;
       }
     }
   }

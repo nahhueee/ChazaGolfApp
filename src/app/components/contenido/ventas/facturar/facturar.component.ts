@@ -7,12 +7,17 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { FormControl, FormGroup } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
-import { Producto, TalleSeleccionable } from '../../../../models/Producto';
+import { LineasTalle, Producto } from '../../../../models/Producto';
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { ProductosFactura } from '../../../../models/Factura';
+import { ProductosFactura, ServiciosFactura } from '../../../../models/Factura';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { ConfirmationService } from 'primeng/api';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { Servicio } from '../../../../models/Servicio';
+import { GlobalesService } from '../../../../services/globales.service';
 
 @Component({
   selector: 'app-facturar',
@@ -24,8 +29,10 @@ import { ProductosFactura } from '../../../../models/Factura';
     DatePickerModule,
     TableModule,
     BadgeModule,
-    OverlayBadgeModule
+    OverlayBadgeModule,
+    ConfirmPopupModule
   ],
+  providers: [ConfirmationService],
   templateUrl: './facturar.component.html',
   styleUrl: './facturar.component.scss',
 })
@@ -61,11 +68,25 @@ export class FacturarComponent {
   tallesProducto:string[] = [];
 
   productosFactura:ProductosFactura[]=[];
+  lineasTalles: LineasTalle[] = [];
+
+  //PANTALLA 3
+  formServicios:FormGroup;
+  servicios:Servicio[]=[];
+  serviciosFiltrado:Servicio[]=[];
+
+  serviciosFactura:ServiciosFactura[]=[];
+
+  //PANTALLA 4
+  redondeo:FormControl = new FormControl('');
 
   constructor(
     private clientesService:ClientesService,
     private productosService:ProductosService,
-    private miscService:MiscService
+    private miscService:MiscService,
+    private confirmationService: ConfirmationService,
+    private Notificaciones: NotificacionesService,
+    private globalesService:GlobalesService
   ){
     this.formGenerales = new FormGroup({
       proceso: new FormControl(''),
@@ -79,10 +100,18 @@ export class FacturarComponent {
       producto: new FormControl([null]),
       descuento: new FormControl(''),
     });
+
+    this.formServicios = new FormGroup({
+      servicio: new FormControl([null]),
+      cantidad: new FormControl(''),
+      precio: new FormControl(''),
+    });
   }
 
   ngOnInit(): void {
     this.ObtenerClientes();
+    this.ObtenerLineasTalle();
+    this.ObtenerServicios();
   }
 
   ngAfterViewInit(){
@@ -116,6 +145,20 @@ export class FacturarComponent {
     this.clientesService.SelectorClientes()
       .subscribe(response => {
         this.clientes = response;
+      });
+  }
+
+  ObtenerLineasTalle(){
+    this.miscService.ObtenerLineasTalle()
+      .subscribe(response => {
+        this.lineasTalles = response;
+      });
+  }
+
+  ObtenerServicios(){
+    this.miscService.ObtenerServicios()
+      .subscribe(response => {
+        this.servicios = response;
       });
   }
   
@@ -170,13 +213,10 @@ export class FacturarComponent {
     const seleccionado = this.formProductos.get('producto')?.value;
     this.productoSeleccionado = seleccionado;
 
-    if(this.productoSeleccionado.talles?.length){
-      this.miscService.ObtenerLineaDeTalle(this.productoSeleccionado.talles![0].idLineaTalle!)
-      .subscribe(response => {
-        this.tallesProducto = response.talles;
-        console.log(response)
-      });
-    }
+    let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
+    if(!linea) return;
+
+    this.tallesProducto = linea.talles!;
   }
 
   ObtenerCantidad(talle: string, proceso:string) {
@@ -203,75 +243,136 @@ export class FacturarComponent {
   //#endregion
 
   //#region PRODUCTOS VENTA
-  
-  GenerarProductoFactura() {
-    const productosFactura: ProductosFactura[] = [];
+  AgregarProducto() {
+    if (!this.productoSeleccionado || !this.productoSeleccionado.talles) return;
 
-    // Agrupar talles por precio unitario
-    const gruposPorPrecio = new Map<number, any[]>();
+    // Tomar solo los talles que el usuario seleccionó
+    const tallesSeleccionados = this.productoSeleccionado.talles.filter((t: any) => t.cantAgregar > 0);
 
-    for (const t of this.productoSeleccionado.talles!) {
-      if (!gruposPorPrecio.has(t.precio!)) {
-        gruposPorPrecio.set(t.precio!, []);
+    tallesSeleccionados.forEach((talleSel: any) => {
+      const cantidad = talleSel.cantAgregar;
+      const precio = talleSel.precio;
+
+      // Ver si ya existe ese producto con ese precio en el detalle
+      let existente = this.productosFactura.find(
+        (p: ProductosFactura) =>
+          p.idProducto === this.productoSeleccionado.id && p.unitario === precio
+      );
+
+      if (existente) {
+        // Sumar cantidad y total
+        existente.cantidad = (existente.cantidad ?? 0) + cantidad;
+        existente.total = (existente.unitario ?? 0) * (existente.cantidad ?? 0);
+
+        // Asignar cantidad a tX
+        this.AsignarTalle(existente, talleSel.talle, cantidad, talleSel.idLineaTalle);
+
+        // Agregar el talle si no estaba ya en tallesSeleccionados
+        const tallesExistentes = existente.tallesSeleccionados ? existente.tallesSeleccionados.split(",").map(t => t.trim()) : [];
+        if (!tallesExistentes.includes(talleSel.talle)) {
+          tallesExistentes.push(talleSel.talle);
+          existente.tallesSeleccionados = tallesExistentes.join(", ");
+        }
+      } else {
+        // Crear nueva línea de producto
+        const nuevo = new ProductosFactura({
+          idProducto: this.productoSeleccionado.id,
+          codProducto: this.productoSeleccionado.codigo,
+          nomProducto: this.productoSeleccionado.nombre,
+          cantidad: cantidad,
+          unitario: precio,
+          total: precio * cantidad,
+          tallesSeleccionados: talleSel.talle
+        });
+
+        // Asignar cantidad a tX
+        this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
+
+        this.productosFactura.push(nuevo);
       }
-      gruposPorPrecio.get(t.precio!)!.push(t);
-    }
-
-    // Crear un ProductoFactura por cada grupo de precio
-    gruposPorPrecio.forEach((talles, precio) => {
-      const nuevo = new ProductosFactura({
-        idProducto: this.productoSeleccionado.id,
-        codProducto: this.productoSeleccionado.codigo,
-        producto: this.productoSeleccionado.nombre,
-        cantidad: talles.reduce((sum, t) => sum + t.cantAgregar, 0),
-        unitario: precio,
-        total: precio * talles.reduce((sum, t) => sum + t.cantAgregar, 0),
-      });
-
-      // Asignar talles dinámicamente
-      talles.forEach((t, index) => {
-        const prop = `t${index + 1}` as keyof ProductosFactura;
-        (nuevo as any)[prop] = t.cantAgregar;
-      });
-
-      this.productosFactura.push(nuevo);
     });
 
-    //return productosFactura;
+    this.productoSeleccionado = new Producto();
+    this.formProductos.reset();
   }
 
-  // AgregarProductoAlCarrito() {
-  //   // Generamos los ProductosFactura según los talles seleccionados
-  //   const nuevos = this.GenerarProductoFactura();
+  AsignarTalle(productoFactura: ProductosFactura, talle: string, cantidad: number, idLineaTalle: number) {
+    const linea = this.lineasTalles.find(l => l.id === idLineaTalle);
+    if (!linea) return;
 
-  //   nuevos.forEach(nuevo => {
-  //     // Buscar si ya existe ese producto con el mismo precio
-  //     const existente = this.carrito.find(p =>
-  //       p.idProducto === nuevo.idProducto && p.unitario === nuevo.unitario
-  //     );
+    const index = linea.talles!.indexOf(talle);
+    if (index === -1) return;
 
-  //     if (existente) {
-  //       // Sumar cantidad y total
-  //       existente.cantidad = (existente.cantidad ?? 0) + (nuevo.cantidad ?? 0);
-  //       existente.total = (existente.unitario ?? 0) * (existente.cantidad ?? 0);
+    const campo = `t${index + 1}` as keyof ProductosFactura;
+    (productoFactura as any)[campo] = ((productoFactura as any)[campo] ?? 0) + cantidad;
+  }
 
-  //       // Unir talles (evitando duplicados)
-  //       const tallesExistentes = existente.obs ? existente.obs.split(',').map(t => t.trim()) : [];
-  //       const tallesNuevos = nuevo.obs ? nuevo.obs.split(',').map(t => t.trim()) : [];
-  //       const tallesFusionados = Array.from(new Set([...tallesExistentes, ...tallesNuevos]));
-  //       existente.obs = tallesFusionados.join(', ');
-
-  //       // Opcional: sumar cantidades por talle (si usás t1, t2, etc.)
-  //       for (let i = 1; i <= 10; i++) {
-  //         const prop = `t${i}` as keyof ProductosFactura;
-  //         existente[prop] = ((existente[prop] ?? 0) as number) + ((nuevo[prop] ?? 0) as number);
-  //       }
-  //     } else {
-  //       // Si no existe, agregar nuevo producto
-  //       this.carrito.push(nuevo);
-  //     }
-  //   });
-  // }
-
+  EliminarProducto(event: Event, idProducto:number){
+    this.confirmationService.confirm({
+      target: event.target as EventTarget, 
+      message: '¿Borrar el registro?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectButtonProps: {
+          severity: 'secondary',
+          outlined: true
+      },
+      accept: () => {
+        //Quitamos del array
+        const indice = this.productosFactura.findIndex(p => p.idProducto == idProducto);
+        if(indice != -1) this.productosFactura.splice(indice, 1);
+        this.Notificaciones.Success("Producto quitado correctamente");
+      }
+    });
+  }
   //#endregion
+
+  //#region SERVICIOS VENTA
+  FiltrarServicios(event: any) {
+    const query = event.query.toLowerCase();
+    this.serviciosFiltrado = this.servicios.filter(c => {
+      const nombre = c.descripcion!.toLowerCase();
+      const codigo = c.codigo!.toLowerCase();
+      return nombre.includes(query) || codigo.includes(query);
+    });
+  }
+
+  AgregarServicio() {
+    const nuevoServicio:ServiciosFactura = new ServiciosFactura();
+    const seleccionado = this.formServicios.get('servicio')?.value;
+
+    nuevoServicio.idServicio = seleccionado.id;
+    nuevoServicio.codServicio = seleccionado.codigo;
+    nuevoServicio.nomServicio = seleccionado.descripcion;
+    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value;
+    nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value);
+    nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
+
+    this.serviciosFactura.push(nuevoServicio);
+    this.formServicios.reset();
+  }
+
+  EliminarServicio(event: Event, idServicio:number){
+    this.confirmationService.confirm({
+      target: event.target as EventTarget, 
+      message: '¿Borrar el registro?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectButtonProps: {
+          severity: 'secondary',
+          outlined: true
+      },
+      accept: () => {
+        //Quitamos del array
+        const indice = this.serviciosFactura.findIndex(p => p.idServicio == idServicio);
+        if(indice != -1) this.serviciosFactura.splice(indice, 1);
+        this.Notificaciones.Success("Servicio quitado correctamente");
+      }
+    });
+  }
+  //#endregion
+
+
 }

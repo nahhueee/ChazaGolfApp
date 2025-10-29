@@ -191,3 +191,52 @@
   margin-bottom: 25px;
 }
 /*#endregion */
+
+/*#region DATOS FACTURACION*/
+.resumen{
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 16px;
+  width: 100%;
+}
+.fila {
+  display: flex;
+  justify-content: space-between;
+  width: 260px; /* mismo ancho para todos los totales */
+  margin-bottom: 5px;
+}
+
+.fila input {
+  width: 100px;
+  text-align: right;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--color-font) !important;
+  padding: 2px 5px;
+}
+.fila input:focus {
+  outline: none; 
+}
+
+.fila input::placeholder {
+  font-size: 16px;
+  font-family: 'Roboto', sans-serif;
+  color: var(--placeholders);
+  font-weight: 400;
+}
+
+.monto {
+  font-weight: 600;
+  text-align: right;
+  min-width: 100px;
+}
+
+.total-final {
+  border-top: 2px solid #ccc;
+  padding-top: 6px;
+  font-size: 16px;
+  font-weight: bold;
+}
+/*#endregion */

@@ -12,9 +12,9 @@ export class MiscService {
   ObtenerLineasTalle(): Observable<any> {
     return this.apiService.get('misc/lineas-talle')
   }
-  ObtenerLineaDeTalle(idLinea:number): Observable<any> {
-    return this.apiService.get(`misc/linea-talle/${idLinea}`)
-  }
+  // ObtenerLineaDeTalle(idLinea:number): Observable<any> {
+  //   return this.apiService.get(`misc/linea-talle/${idLinea}`)
+  // }
   ObtenerProcesos(): Observable<any> {
     return this.apiService.get('misc/procesos')
   }
@@ -36,8 +36,11 @@ export class MiscService {
   ObtenerTemporadas(): Observable<any> {
     return this.apiService.get('misc/temporadas')
   }
- ObtenerCondicionesIva(): Observable<any> {
+  ObtenerCondicionesIva(): Observable<any> {
     return this.apiService.get('misc/condiciones-iva')
+  }
+  ObtenerServicios(): Observable<any> {
+    return this.apiService.get('misc/servicios')
   }
   //#endregion
 }
