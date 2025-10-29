@@ -19,6 +19,7 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { Servicio } from '../../../../models/Servicio';
 import { GlobalesService } from '../../../../services/globales.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { Dialog } from 'primeng/dialog';
 
 @Component({
   selector: 'app-facturar',
@@ -32,7 +33,8 @@ import { SplitButtonModule } from 'primeng/splitbutton';
     BadgeModule,
     OverlayBadgeModule,
     ConfirmPopupModule,
-    SplitButtonModule
+    SplitButtonModule,
+    Dialog
   ],
   providers: [ConfirmationService],
   templateUrl: './facturar.component.html',
@@ -46,6 +48,7 @@ export class FacturarComponent {
   totalAPagar:number = 0;
 
   itemsMenu: MenuItem[];
+  vistaPreviaVisible:boolean = false;
 
   //PANTALLA 1
   formGenerales:FormGroup;

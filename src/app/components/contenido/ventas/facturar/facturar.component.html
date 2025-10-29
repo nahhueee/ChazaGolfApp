@@ -379,6 +379,23 @@
 </div>
 
 <div class="botones">
-    <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" />
+    <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true" />
     <p-splitbutton label="Guardar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-save"/>
 </div>
+
+<p-dialog header="Header" [modal]="true" [(visible)]="vistaPreviaVisible" [style]="{ width: '90vw' }" [maximizable]="true">
+   <div>
+        <div class="data-cliente">
+
+        </div>
+        <div class="data-productos">
+
+        </div>
+        <div class="data-servicios">
+
+        </div>
+        <div class="data-facturacion">
+
+        </div>
+   </div>
+</p-dialog>
