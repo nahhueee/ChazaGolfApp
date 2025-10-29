@@ -63,5 +63,20 @@
       }
     }
   }
+
+  export class PagosFactura{
+    idMetodo? : number;
+    metodo?: string;
+    monto?: number;
+  
+    constructor(data?: any) {
+      if (data) {
+        this.idMetodo = data.idMetodo;
+        this.metodo = data.metodo;
+        this.monto = data
+      }
+    }
+  }
+  
   
   

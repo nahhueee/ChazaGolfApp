@@ -4,7 +4,7 @@ import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.
 import { AccordionModule } from 'primeng/accordion';
 import { TableModule } from 'primeng/table';
 import { DatePickerModule } from 'primeng/datepicker';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
 import { LineasTalle, Producto } from '../../../../models/Producto';
@@ -12,12 +12,13 @@ import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { ProductosFactura, ServiciosFactura } from '../../../../models/Factura';
+import { PagosFactura, ProductosFactura, ServiciosFactura } from '../../../../models/Factura';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Servicio } from '../../../../models/Servicio';
 import { GlobalesService } from '../../../../services/globales.service';
+import { SplitButtonModule } from 'primeng/splitbutton';
 
 @Component({
   selector: 'app-facturar',
@@ -30,7 +31,8 @@ import { GlobalesService } from '../../../../services/globales.service';
     TableModule,
     BadgeModule,
     OverlayBadgeModule,
-    ConfirmPopupModule
+    ConfirmPopupModule,
+    SplitButtonModule
   ],
   providers: [ConfirmationService],
   templateUrl: './facturar.component.html',
@@ -38,6 +40,12 @@ import { GlobalesService } from '../../../../services/globales.service';
 })
 export class FacturarComponent {
   decimal_mask: any;
+  totalItems:number = 0;
+  totalDescuento:number = 0;
+  totalGeneral:number = 0;
+  totalAPagar:number = 0;
+
+  itemsMenu: MenuItem[];
 
   //PANTALLA 1
   formGenerales:FormGroup;
@@ -78,7 +86,27 @@ export class FacturarComponent {
   serviciosFactura:ServiciosFactura[]=[];
 
   //PANTALLA 4
+  formFacturacion:FormGroup;
+  formPagos:FormGroup;
   redondeo:FormControl = new FormControl('');
+  pagosFactura:PagosFactura[]=[];
+  empresas=[
+    {id: 1, descripcion: 'SUCEDE SRL'},
+    {id: 2, descripcion: 'GABEL MARIELA'},
+    {id: 3, descripcion: 'OMAR CHAZA'},
+  ];
+  tiposDescuento=[
+    {id: 1, descripcion: 'PORCENTAJE'},
+    {id: 2, descripcion: 'VOUCHER'},
+    {id: 3, descripcion: 'PROMOCION'},
+  ];
+  comprobantes=[];
+  metodosPago=[
+    {id: 1, descripcion: 'CONTADO'},
+    {id: 2, descripcion: 'TARJETA CREDITO'},
+    {id: 3, descripcion: 'TARJETA DEBITO'},
+    {id: 4, descripcion: 'MERCADO PAGO'},
+  ];
 
   constructor(
     private clientesService:ClientesService,
@@ -88,10 +116,25 @@ export class FacturarComponent {
     private Notificaciones: NotificacionesService,
     private globalesService:GlobalesService
   ){
+    this.itemsMenu = [
+        {
+            label: 'Guardar',
+            command: () => {
+                this.Guardar();
+            }
+        },
+        {
+            label: 'Guardar y facturar',
+            command: () => {
+                this.GuardarFacturar();
+            }
+        }
+    ];
+
     this.formGenerales = new FormGroup({
       proceso: new FormControl(''),
       nroNota: new FormControl({ value: '', disabled: true }),
-      fecha: new FormControl(),
+      fecha: new FormControl(new Date()),
       cliente: new FormControl([null]),
       lista: new FormControl(''),
     });
@@ -106,7 +149,23 @@ export class FacturarComponent {
       cantidad: new FormControl(''),
       precio: new FormControl(''),
     });
+
+    this.formFacturacion = new FormGroup({
+      empresa: new FormControl(''),
+      tComprobante: new FormControl(''),
+      tDescuento: new FormControl(1),
+      descuento: new FormControl('', [Validators.min(0), Validators.max(100)]),
+      codPromo: new FormControl(''),
+    });
+
+    this.formPagos = new FormGroup({
+      metodo: new FormControl('', [Validators.required]),
+      monto: new FormControl('', [Validators.min(0)])
+    });
   }
+
+  get TipoDescuentoControl(){return this.formFacturacion.get('tDescuento')?.value;}
+  get DescuentoControl(){return this.formFacturacion.get('descuento')?.value;}
 
   ngOnInit(): void {
     this.ObtenerClientes();
@@ -138,16 +197,39 @@ export class FacturarComponent {
         nroNotaControl?.enable({ emitEvent: false });
       }
     });
+
+    //Calcula el total general cuando se aplica un descuento
+    this.formFacturacion.get('descuento')?.valueChanges.subscribe((value) => {
+      this.CalcularTotalGeneral();
+    });
+
+    //Calcula el total general cuando se aplica un redondeo
+    this.redondeo.valueChanges.subscribe((value) => {
+      this.CalcularTotalGeneral();
+    });
   }
 
-  //#region CLIENTES
-  ObtenerClientes(){
-    this.clientesService.SelectorClientes()
-      .subscribe(response => {
-        this.clientes = response;
-      });
-  }
+  CalcularTotalGeneral() {
+    const totalProductos = this.productosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
+    const totalServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
 
+    this.totalItems = totalProductos + totalServicios;
+
+    const descuento = parseFloat(this.DescuentoControl) || 0;
+
+    if (descuento > 0) {
+      this.totalDescuento = (this.totalItems * descuento) / 100;
+    } else {
+      this.totalDescuento = 0;
+    }
+
+    // Total final luego de aplicar el descuento
+    this.totalGeneral = this.totalItems - this.totalDescuento
+
+    //Total a pagar calculado con redondeo
+    this.totalAPagar = this.totalGeneral - this.globalesService.EstandarizarDecimal(this.redondeo.value);
+  }
+  
   ObtenerLineasTalle(){
     this.miscService.ObtenerLineasTalle()
       .subscribe(response => {
@@ -159,6 +241,22 @@ export class FacturarComponent {
     this.miscService.ObtenerServicios()
       .subscribe(response => {
         this.servicios = response;
+      });
+  }
+
+  ObtenerComprobantes(condicionIva:number){
+    this.miscService.ObtenerComprobantes(condicionIva)
+      .subscribe(response => {
+        this.comprobantes = response;
+      });
+  }
+  
+
+  //#region CLIENTES
+  ObtenerClientes(){
+    this.clientesService.SelectorClientes()
+      .subscribe(response => {
+        this.clientes = response;
       });
   }
   
@@ -176,6 +274,12 @@ export class FacturarComponent {
     this.clientesService.ObtenerCliente(seleccionado.id)
         .subscribe(response => {
           this.clienteSeleccionado = response;
+          
+          //Obtnemos los comprobantes disponibles para el cliente
+          this.miscService.ObtenerComprobantes(this.clienteSeleccionado.idCondicionIva!)
+          .subscribe(response => {
+            this.comprobantes = response;
+          });
         });
   }
 
@@ -292,6 +396,7 @@ export class FacturarComponent {
       }
     });
 
+    this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
   }
@@ -322,6 +427,7 @@ export class FacturarComponent {
         //Quitamos del array
         const indice = this.productosFactura.findIndex(p => p.idProducto == idProducto);
         if(indice != -1) this.productosFactura.splice(indice, 1);
+        this.CalcularTotalGeneral();
         this.Notificaciones.Success("Producto quitado correctamente");
       }
     });
@@ -350,6 +456,7 @@ export class FacturarComponent {
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
 
     this.serviciosFactura.push(nuevoServicio);
+    this.CalcularTotalGeneral();
     this.formServicios.reset();
   }
 
@@ -368,11 +475,60 @@ export class FacturarComponent {
         //Quitamos del array
         const indice = this.serviciosFactura.findIndex(p => p.idServicio == idServicio);
         if(indice != -1) this.serviciosFactura.splice(indice, 1);
+        this.CalcularTotalGeneral();
         this.Notificaciones.Success("Servicio quitado correctamente");
       }
     });
   }
   //#endregion
 
+  //#region PAGOS VENTA
+  AgregarPago(){
+    if(this.formPagos.invalid) return;
 
+    const entregaAnterior = this.pagosFactura?.reduce((acc, item) => acc + (item.monto || 0), 0) || 0;
+    const totalEntregado = entregaAnterior + this.globalesService.EstandarizarDecimal(this.formPagos.get('monto')?.value);
+
+    if(totalEntregado > this.totalAPagar){
+      this.Notificaciones.Warn("La entrega por pago no puede superar el total a pagar.")
+      return;
+    }
+
+    const nuevoPago = new PagosFactura();
+    const seleccionado = this.formPagos.get('metodo')?.value;
+    nuevoPago.idMetodo = seleccionado.id;
+    nuevoPago.metodo = seleccionado.descripcion;
+    nuevoPago.monto = this.globalesService.EstandarizarDecimal(this.formPagos.get('monto')?.value);
+
+    this.pagosFactura.push(nuevoPago);
+    this.formPagos.reset();
+  }
+  EliminarPago(event: Event, idMetodo:number){
+    this.confirmationService.confirm({
+      target: event.target as EventTarget, 
+      message: '¿Borrar el registro?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectButtonProps: {
+          severity: 'secondary',
+          outlined: true
+      },
+      accept: () => {
+        //Quitamos del array
+        const indice = this.pagosFactura.findIndex(p => p.idMetodo == idMetodo);
+        if(indice != -1) this.pagosFactura.splice(indice, 1);
+        this.Notificaciones.Success("Metodo de pago quitado correctamente");
+      }
+    });
+  }
+  //#endregion
+
+  Guardar(){
+
+  }
+
+  GuardarFacturar(){
+
+  }
 }

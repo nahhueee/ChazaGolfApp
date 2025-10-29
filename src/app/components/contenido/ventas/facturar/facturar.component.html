@@ -164,7 +164,7 @@
                                 <th>Cant.</th>
                                 <th>Precio</th>
                                 <th>Total</th>
-                                <th>Acciones</th>
+                                <th>Quitar</th>
                             </tr>
                         </ng-template>
                         <ng-template #body let-producto>
@@ -182,8 +182,8 @@
                                 <td>{{ producto.t9 }}</td>
                                 <td>{{ producto.t10 }}</td>
                                 <td>{{ producto.cantidad }}</td>
-                                <td>{{ producto.unitario }}</td>
-                                <td>{{ producto.total }}</td>
+                                <td>{{ producto.unitario | decimalFormat}}</td>
+                                <td>{{ producto.total | decimalFormat }}</td>
                                 <td class="acciones-tabla">
                                     <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
                                 </td>
@@ -240,7 +240,7 @@
                                 <th>Cant.</th>
                                 <th>Precio</th>
                                 <th>Total</th>
-                                <th>Acciones</th>
+                                <th>Quitar</th>
                             </tr>
                         </ng-template>
                         <ng-template #body let-servicio>
@@ -248,8 +248,8 @@
                                 <td>{{ servicio.codServicio }}</td>
                                 <td>{{ servicio.nomServicio }}</td>
                                 <td>{{ servicio.cantidad }}</td>
-                                <td>{{ servicio.unitario }}</td>
-                                <td>{{ servicio.total }}</td>
+                                <td>{{ servicio.unitario | decimalFormat}}</td>
+                                <td>{{ servicio.total | decimalFormat }}</td>
                                 <td class="acciones-tabla">
                                     <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.idServicio)" />
                                 </td>
@@ -261,39 +261,124 @@
             <p-accordion-panel value="3">
                 <p-accordion-header>Datos Facturación</p-accordion-header>
                 <p-accordion-content>
-                    
-                    <div class="resumen">
-                        <div class="fila">
-                            <span>Total Productos:</span>
-                            <!-- <span class="monto">${{totalItems | decimalFormat}}</span> -->
-                            <span class="monto">$5000</span>
-                        </div>
 
-                        <div class="fila">
-                            <span>Descuento:</span>
-                            <span class="monto">$3500</span>
-                        </div>
+                    <div class="enLinea">
+                        <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion">
+                            <div class="enLinea">
+                                <!-- Empresa -->
+                                <p-floatlabel variant="in">
+                                    <p-select [options]="empresas" formControlName="empresa" optionLabel="descripcion" />
+                                    <label>Empresa</label>
+                                </p-floatlabel>
 
-                        <br>
+                                <!-- Tipo Comprobante -->
+                                <p-floatlabel variant="in">
+                                    <p-select [options]="comprobantes" formControlName="tComprobante" optionLabel="descripcion" />
+                                    <label>Tipo Comprobante</label>
+                                </p-floatlabel>
+                            </div>
+                            <div class="enLinea">
+                                <!-- Tipo Descuento -->
+                                <p-floatlabel variant="in">
+                                    <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" />
+                                    <label>Tipo Descuento</label>
+                                </p-floatlabel>
 
-                        <div class="fila">
-                            <span>Total General:</span>
-                            <span class="monto">$30000</span>
-                        </div>
+                                @if(TipoDescuentoControl != "3"){
+                                   <!-- Descuento -->
+                                    <p-inputgroup>
+                                        <p-floatlabel variant="in">
+                                            <input pInputText formControlName="descuento" type="number"/>
+                                            <label>Descuento</label>
+                                        </p-floatlabel>
+                                        <p-inputgroup-addon>%</p-inputgroup-addon>
+                                    </p-inputgroup>
+                                }@else {
+                                    <!-- Cod Promocion -->
+                                    <p-floatlabel variant="in">
+                                        <input pInputText formControlName="codPromo" type="text"/>
+                                        <label>Cod. Promocional</label>
+                                    </p-floatlabel>
+                                }
+                            </div>
+                        </form>
 
-                        <div class="fila">
-                            <span>Redondeo:</span>
-                            <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo"/>
-                        </div>
+                        <form class="metodo-pago" [formGroup]="formPagos">
+                            <div class="enLinea">
+                                <!-- Metodo pago -->
+                                <p-floatlabel variant="in">
+                                    <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
+                                    <label>Metodo Pago</label>
+                                </p-floatlabel>  
 
-                        <div class="fila total-final">
-                            <span>Total A Pagar:</span>
-                            <span class="monto">$30000</span>
+                                <!-- Monto -->
+                                <p-floatlabel variant="in">
+                                    <input pInputText formControlName="monto" type="text" [imask]="decimal_mask"/>
+                                    <label>Precio</label>
+                                </p-floatlabel>
+
+                                <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
+
+                            </div>
+                            <p-table [value]="pagosFactura">
+                                <ng-template #header>
+                                    <tr>
+                                        <th>Metodo</th>
+                                        <th>Monto</th>
+                                        <th>Quitar</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template #body let-pago>
+                                    <tr>
+                                        <td>{{ pago.metodo }}</td>
+                                        <td>{{ pago.monto | decimalFormat}}</td>
+                                        <td class="acciones-tabla">
+                                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago($event, pago.idMetodo)" />
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table>
+                        </form>
+
+                        <div class="resumen">
+                            <div class="fila">
+                                <span>Total Items:</span>
+                                <span class="monto">${{totalItems | decimalFormat}}</span>
+                            </div>
+
+                            <div class="fila">
+                                <span>Descuento:</span>
+                                <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                            </div>
+
+                            <br>
+
+                            <div class="fila">
+                                <span>Total General:</span>
+                                <span class="monto">${{totalGeneral | decimalFormat}}</span>
+                            </div>
+
+                            <div class="fila">
+                                <span>Redondeo:</span>
+                                <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo"/>
+                            </div>
+
+                            <div class="fila total-final">
+                                <span>Total A Pagar:</span>
+                                <span class="monto">${{totalAPagar | decimalFormat}}</span>
+                            </div>
                         </div>
                     </div>
+                    
+                    
 
                 </p-accordion-content>
             </p-accordion-panel>
         </p-accordion>
     </div>
+</div>
+
+<div class="botones">
+    <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" />
+    <p-splitbutton label="Guardar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-save"/>
 </div>
