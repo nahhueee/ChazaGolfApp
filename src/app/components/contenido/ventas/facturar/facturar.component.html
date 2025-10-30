@@ -11,7 +11,7 @@
                     <form [formGroup]="formGenerales" autocomplete="off">
                         <div class="enLinea">
                             <div class="izq">
-                                <div class="enLinea">
+                                <div class="horizontal">
                                     <!-- Proceso -->
                                     <p-floatlabel variant="in">
                                         <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion" />
@@ -146,7 +146,7 @@
                         </div>
                     </form>
 
-                    <p-table [value]="productosFactura">
+                    <p-table [value]="productosFactura" editable="true" dataKey="codProducto">
                         <ng-template #header>
                             <tr>
                                 <th>Código</th>
@@ -167,22 +167,30 @@
                                 <th>Quitar</th>
                             </tr>
                         </ng-template>
-                        <ng-template #body let-producto>
+                        <ng-template #body let-producto let-editing="editing">
                             <tr>
                                 <td>{{ producto.codProducto }}</td>
                                 <td>{{ producto.nomProducto }}</td>
-                                <td>{{ producto.t1 }}</td>
-                                <td>{{ producto.t2 }}</td>
-                                <td>{{ producto.t3 }}</td>
-                                <td>{{ producto.t4 }}</td>
-                                <td>{{ producto.t5 }}</td>
-                                <td>{{ producto.t6 }}</td>
-                                <td>{{ producto.t7 }}</td>
-                                <td>{{ producto.t8 }}</td>
-                                <td>{{ producto.t9 }}</td>
-                                <td>{{ producto.t10 }}</td>
+                                <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
+                                    [pEditableColumn]="producto[t]" 
+                                    [pEditableColumnField]="t">
+                                    <p-cellEditor>
+                                    <ng-template pTemplate="input">
+                                        <input 
+                                        pInputText 
+                                        type="number" 
+                                        [value]="producto[t]"
+                                        [disabled]="producto[t] === undefined" 
+                                        (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                        style="max-width: 70px;" />
+                                    </ng-template>
+                                    <ng-template pTemplate="output">
+                                        {{ producto[t] }}
+                                    </ng-template>
+                                    </p-cellEditor>
+                                </td>
                                 <td>{{ producto.cantidad }}</td>
-                                <td>{{ producto.unitario | decimalFormat}}</td>
+                                <td>{{ producto.unitario | decimalFormat }}</td>
                                 <td>{{ producto.total | decimalFormat }}</td>
                                 <td class="acciones-tabla">
                                     <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
@@ -196,7 +204,7 @@
                 <p-accordion-header>Servicios</p-accordion-header>
                 <p-accordion-content>
                     <form [formGroup]="formServicios" class="formServicio" autocomplete="off">
-                        <div class="enLinea">
+                        <div class="horizontal">
                             <!-- Codigo - Nombre -->
                             <p-floatlabel variant="in">
                                 <p-autocomplete
@@ -264,7 +272,7 @@
 
                     <div class="enLinea">
                         <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion">
-                            <div class="enLinea">
+                            <div class="horizontal">
                                 <!-- Empresa -->
                                 <p-floatlabel variant="in">
                                     <p-select [options]="empresas" formControlName="empresa" optionLabel="descripcion" />
@@ -277,7 +285,7 @@
                                     <label>Tipo Comprobante</label>
                                 </p-floatlabel>
                             </div>
-                            <div class="enLinea">
+                            <div class="horizontal">
                                 <!-- Tipo Descuento -->
                                 <p-floatlabel variant="in">
                                     <p-select [options]="tiposDescuento" formControlName="tDescuento" optionLabel="descripcion" />
@@ -304,7 +312,7 @@
                         </form>
 
                         <form class="metodo-pago" [formGroup]="formPagos">
-                            <div class="enLinea">
+                            <div class="horizontal">
                                 <!-- Metodo pago -->
                                 <p-floatlabel variant="in">
                                     <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />

@@ -1,5 +1,5 @@
 export class Cliente {
-    id?:number;
+    id:number = 0;
     nombre?:string;
     razonSocial?:string;
     telefono?:string;

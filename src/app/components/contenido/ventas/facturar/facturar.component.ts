@@ -353,7 +353,6 @@ export class FacturarComponent {
     
     let encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
     if (encontrado) {
-      console.log(encontrado.cantAgregar, encontrado.cantidad)
       if(encontrado && encontrado.cantAgregar! >= encontrado.cantidad!) return; //Si la cantidad a agregar es mayor o igual a lo disponible no agregamos
 
       encontrado.cantAgregar = (encontrado.cantAgregar || 0) + 1;
@@ -429,6 +428,29 @@ export class FacturarComponent {
     (productoFactura as any)[campo] = ((productoFactura as any)[campo] ?? 0) + cantidad;
   }
 
+  ActualizarCantidad(producto: any, field: string, event: any) {
+    if(producto[field] === undefined) return;
+
+    const input = event.target as HTMLInputElement;
+    const value = Number(input.value) || 0;
+    producto[field] = value;
+   
+    producto.cantidad =
+      (producto.t1 || 0) +
+      (producto.t2 || 0) +
+      (producto.t3 || 0) +
+      (producto.t4 || 0) +
+      (producto.t5 || 0) +
+      (producto.t6 || 0) +
+      (producto.t7 || 0) +
+      (producto.t8 || 0) +
+      (producto.t9 || 0) +
+      (producto.t10 || 0);
+
+    producto.total = producto.cantidad * producto.unitario;
+    this.CalcularTotalGeneral();
+  }
+  
   EliminarProducto(event: Event, idProducto:number){
     this.confirmationService.confirm({
       target: event.target as EventTarget, 
