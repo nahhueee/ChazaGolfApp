@@ -212,6 +212,7 @@ p-accordion-header{
   border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 15px;
+  background-color: var(--surface-card);
 }
 .fila {
   display: flex;
@@ -288,4 +289,146 @@ p-inputgroup-addon{
 }
 ::ng-deep .botones .p-splitbutton-button{
   width: 158px;
+}
+
+/*#region VISTA PREVIA*/
+.vista-previa{
+  padding: 20px 30px;
+}
+.recuadro {
+  flex: 1 1 180px;
+  width: 180px; 
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border: 1px solid var(--surface-border);
+  margin-bottom: 20px;
+  background-color: var(--surface-card);
+}
+
+.recuadro p {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.recuadro span {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Poppins';
+}
+
+p-divider {
+  margin:4px 0px;
+}
+
+.data-productos, .data-servicios{
+  margin-bottom: 20px;
+
+  p{
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Poppins';
+    margin-bottom: 8px;
+  }
+}
+
+.facturacion,.pagos-tabla{
+  width: 100%;
+}
+
+.contadores{
+  width: 100%;
+  display: flex;
+  justify-content: right;
+  margin-bottom: 20px;
+
+  .item{
+    padding-left: 8px;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    height: 30px;
+    width: 150px;
+    border: 1px solid var(--surface-border);
+  }
+}
+/*#endregion */
+
+/*#region CLIENTE MODAL*/
+.cliente-modal {
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+
+  .cliente-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--surface-border);
+    padding-bottom: 0.8rem;
+    width: 100%;
+
+    .icon {
+      background: var(--surface-ground);
+      border-radius: 80%;
+      padding: 5px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .info {
+      display: flex;
+      flex-direction: column;
+
+      h4 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.2rem;
+      }
+
+      span {
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .datos-section {
+    display: flex;
+    gap: 20px;
+    flex-direction: column;
+    width: 100%;
+
+    .subcard {
+      background: var(--surface-card);
+      border-radius: 12px;
+      padding: 1rem;
+      
+      h5 {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 600;
+        color: var(--p-primary-color);
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 0.2rem 0;
+        font-size: 17px;
+      }
+    }
+  }
 }

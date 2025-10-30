@@ -12,7 +12,7 @@ import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { PagosFactura, ProductosFactura, ServiciosFactura } from '../../../../models/Factura';
+import { PagosFactura, ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
@@ -20,6 +20,7 @@ import { Servicio } from '../../../../models/Servicio';
 import { GlobalesService } from '../../../../services/globales.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Dialog } from 'primeng/dialog';
+import { DividerModule } from 'primeng/divider';
 
 @Component({
   selector: 'app-facturar',
@@ -34,7 +35,8 @@ import { Dialog } from 'primeng/dialog';
     OverlayBadgeModule,
     ConfirmPopupModule,
     SplitButtonModule,
-    Dialog
+    Dialog,
+    DividerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './facturar.component.html',
@@ -42,13 +44,16 @@ import { Dialog } from 'primeng/dialog';
 })
 export class FacturarComponent {
   decimal_mask: any;
+  venta:Venta = new Venta();
   totalItems:number = 0;
   totalDescuento:number = 0;
   totalGeneral:number = 0;
   totalAPagar:number = 0;
+  cantItems:number = 0;
 
   itemsMenu: MenuItem[];
   vistaPreviaVisible:boolean = false;
+  modalClienteVisible:boolean = false;
 
   //PANTALLA 1
   formGenerales:FormGroup;
@@ -156,7 +161,7 @@ export class FacturarComponent {
     this.formFacturacion = new FormGroup({
       empresa: new FormControl(''),
       tComprobante: new FormControl(''),
-      tDescuento: new FormControl(1),
+      tDescuento: new FormControl([null]),
       descuento: new FormControl('', [Validators.min(0), Validators.max(100)]),
       codPromo: new FormControl(''),
     });
@@ -174,6 +179,7 @@ export class FacturarComponent {
     this.ObtenerClientes();
     this.ObtenerLineasTalle();
     this.ObtenerServicios();
+    this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
   }
 
   ngAfterViewInit(){
@@ -231,6 +237,11 @@ export class FacturarComponent {
 
     //Total a pagar calculado con redondeo
     this.totalAPagar = this.totalGeneral - this.globalesService.EstandarizarDecimal(this.redondeo.value);
+
+    //sumamos las cantidades
+    const cantProductos = this.productosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
+    const cantServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
+    this.cantItems = cantProductos + cantServicios;  
   }
   
   ObtenerLineasTalle(){
@@ -342,6 +353,9 @@ export class FacturarComponent {
     
     let encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
     if (encontrado) {
+      console.log(encontrado.cantAgregar, encontrado.cantidad)
+      if(encontrado && encontrado.cantAgregar! >= encontrado.cantidad!) return; //Si la cantidad a agregar es mayor o igual a lo disponible no agregamos
+
       encontrado.cantAgregar = (encontrado.cantAgregar || 0) + 1;
     }
 
@@ -533,5 +547,30 @@ export class FacturarComponent {
 
   GuardarFacturar(){
 
+  }
+
+  ArmarObjetoVenta(){
+    this.venta.id = 0;
+    this.venta.idProceso = this.formGenerales.get('proceso')?.value.id;
+    this.venta.proceso = this.formGenerales.get('proceso')?.value.descripcion;
+    this.venta.nroNota = this.formGenerales.get('nroNota')?.value;
+    this.venta.fecha = this.formGenerales.get('fecha')?.value;
+    this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
+    this.venta.cliente = this.formGenerales.get('cliente')?.value.descripcion;
+    this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
+    this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
+    this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
+    this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
+    this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value.id;
+    this.venta.tipoComprobante = this.formFacturacion.get('tComprobante')?.value.descripcion;
+    this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
+    this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
+    this.venta.descuento = this.formFacturacion.get('descuento')?.value;
+    this.venta.codPromocion = this.formFacturacion.get('codPromo')?.value;
+    this.venta.redondeo = this.redondeo.value;
+    this.venta.total = this.totalAPagar;
+    this.venta.productos = this.productosFactura;
+    this.venta.servicios = this.serviciosFactura;
+    this.venta.pagos = this.pagosFactura;
   }
 }

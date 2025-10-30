@@ -1,4 +1,28 @@
-
+  
+  export class Venta{
+    id?:number;
+    idProceso?:number;
+    proceso?:string;
+    nroNota?:string;
+    fecha?:Date;
+    idCliente?:number;
+    cliente?:string;
+    idListaPrecio?:number;
+    listaPrecio?:string;
+    idEmpresa?:number;
+    empresa?:string;
+    idTipoComprobante?:number;
+    tipoComprobante?:string;
+    idTipoDescuento?:number;
+    tipoDescuento?:string;
+    descuento?:number;
+    codPromocion?:string;
+    redondeo?:number;
+    total?:number;
+    productos?:ProductosFactura[];
+    servicios?:ServiciosFactura[];
+    pagos?:PagosFactura[];
+  }
 
   export class ProductosFactura{
     idProducto? : number;
