@@ -1,0 +1,57 @@
+<app-navegacion></app-navegacion>
+
+<div class="contenido">
+    <div class="tabla">
+        <p-table 
+        [value]="clientes"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Editar</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Telefono</th>
+                    <th>Celular</th>
+                    <th>Condición</th>
+                    <th>Documento</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-cliente>
+                <tr>
+                    <td>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(cliente.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                    </td>
+                    <td>{{ cliente.id }}</td>
+                    <td>{{ cliente.nombre }}</td>
+                    <td>{{ cliente.email }}</td>
+                    <td>{{ cliente.telefono }}</td>
+                    <td>{{ cliente.celular }}</td>
+                    <td>{{ cliente.condicionIva }}</td>
+                    <td>{{ cliente.documento }}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<p-dialog [modal]="true" [(visible)]="mostrarmodalAddMod" [style]="{ width: '90vw' }">
+   <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-user"></i>
+            <span>
+                {{ clienteSeleccionado ? 'Editar Cliente' : 'Agregar Cliente' }}
+            </span>
+        </div>
+    </ng-template>
+    <app-addmod-clientes [clienteEditar]="clienteSeleccionado" (cerrar)="Actualizar($event)"/>
+</p-dialog>

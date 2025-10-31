@@ -21,6 +21,7 @@ import { GlobalesService } from '../../../../services/globales.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
+import { AddModClientesComponent } from '../../clientes/add-mod-clientes/add-mod-clientes.component';
 
 @Component({
   selector: 'app-facturar',
@@ -36,7 +37,8 @@ import { DividerModule } from 'primeng/divider';
     ConfirmPopupModule,
     SplitButtonModule,
     Dialog,
-    DividerModule
+    DividerModule,
+    AddModClientesComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './facturar.component.html',
@@ -54,6 +56,7 @@ export class FacturarComponent {
   itemsMenu: MenuItem[];
   vistaPreviaVisible:boolean = false;
   modalClienteVisible:boolean = false;
+  modalAddClienteVisible:boolean = false;
 
   //PANTALLA 1
   formGenerales:FormGroup;
@@ -297,19 +300,13 @@ export class FacturarComponent {
         });
   }
 
-   NuevoCliente() { 
-    // this.dialogConfig.width = "100wv";
-    // let cliente = new Cliente();
-    // cliente.id = 0;
-    // this.dialogConfig.data = {cliente};
-    // this.dialog.open(AddmodClientesComponent, this.dialogConfig)
-    //         .afterClosed()
-    //         .subscribe((actualizar:boolean) => {
-    //           if (actualizar){
-    //             this.ObtenerClientes();
-    //           }
-    //         });
+  Actualizar(valor:boolean){
+    if(valor)
+      this.ObtenerClientes();
+
+    this.modalAddClienteVisible = false;
   }
+
   //#endregion
 
   //#region PRODUCTOS, FILTROS Y AGREGAR

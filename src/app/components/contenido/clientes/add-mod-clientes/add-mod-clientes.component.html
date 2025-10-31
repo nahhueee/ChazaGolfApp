@@ -1,1 +1,177 @@
-<p>add-mod-clientes.component works!</p>
+@if(desdeRouting){
+   <app-navegacion></app-navegacion> 
+}
+
+<div class="contenido">
+    <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
+
+        <div class="izq">
+            <p class="subtitulo"><i class="pi pi-address-book"></i>Básicos</p>
+
+            <!-- Nombre -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="nombre" />
+                <label>Nombre</label>
+                @if(campoInvalido('nombre')){
+                    <small class="error">El nombre es requerido.</small>
+                }
+            </p-floatlabel>
+
+            <div class="horizontal">
+                <!-- Telefono -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="telefono" type="number" />
+                    <label>Telefono</label>
+                </p-floatlabel>
+
+                <!-- Celular -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="celular" type="number" />
+                    <label>Celular</label>
+                </p-floatlabel>
+            </div>
+        
+            <!-- Contacto -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="contacto" type="text" />
+                <label>Contacto</label>
+            </p-floatlabel>
+           
+            <!-- Email -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="email" type="text" />
+                <label>Email</label>
+                @if(campoInvalido('email')){
+                    <small class="error">El email no tiene un formato correcto.</small>
+                }
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p class="subtitulo"><i class="pi pi-file"></i>Facturación</p>
+
+            <!-- Razon -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="razonSocial" type="text" />
+                <label>Razón Social</label>
+            </p-floatlabel>
+
+            <!-- Condicion IVA Receptor -->
+            <p-floatlabel variant="in">
+                <p-select [options]="condicionesIVAReceptor" formControlName="condIva" optionLabel="descripcion" />
+                <label>Cond. Iva</label>
+                <ng-template let-condicion pTemplate="item">
+                    {{ condicion.id }} - {{ condicion.descripcion }}
+                </ng-template>
+            </p-floatlabel>
+
+            <div class="horizontal">
+                <!-- Tipo Documento -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="tiposDocumento" formControlName="tDocumento" optionLabel="descripcion" />
+                    <label>Tipo Documento</label>
+                    @if(campoInvalido('tDocumento')){
+                        <small class="error">El campo es requerido.</small>
+                    }
+                </p-floatlabel>
+
+                <!-- Documento -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="documento" type="number" />
+                    <label>Documento</label>
+
+                    @if(documento?.hasError('required') && documento?.touched){
+                        <small class="error">Completa con un documento.</small>
+                    }
+                    @if(documento?.hasError('pattern') && formulario.get('tDocumento')?.value.id === 96){
+                        <small class="error">El DNI debe tener entre 7 y 8 dígitos numéricos.</small>
+                    }
+                    @if(documento?.hasError('pattern') && (formulario.get('tDocumento')?.value.id === 80 || formulario.get('tDocumento')?.value.id === 86)){
+                        <small class="error">El CUIT/CUIL debe ser válido (11 dígitos sin guiones, comenzando con 20, 23, 24, 27, 30, 33 o 34).</small>
+                    }
+                </p-floatlabel>
+            </div>
+
+            <div class="horizontal">
+                <!-- Cond. Pago -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="condicionesPago" formControlName="condPago" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <label>Condición Pago</label>
+                </p-floatlabel>
+
+                <!-- Categoria -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="categorias" formControlName="categoria" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <label>Categoria</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <div class="center">
+            <p class="subtitulo"><i class="pi pi-map-marker"></i>Dirección</p>
+
+            <!-- Provincia -->
+            <p-floatlabel variant="in">
+                <p-autocomplete
+                    formControlName="provincia"
+                    [suggestions]="provinciasFiltrado"
+                    placeholder="Buscar por nombre"
+                    emptyMessage="No se encontraron resultados"
+                    (completeMethod)="FiltrarProvincias($event)"
+                    optionLabel="nombre"
+                ></p-autocomplete>
+                <label>Provincia</label>
+            </p-floatlabel>
+            
+            <!-- Ciudad -->
+            <p-floatlabel variant="in">
+                <p-autocomplete
+                    formControlName="ciudad"
+                    [suggestions]="ciudades"
+                    placeholder="Buscar por nombre"
+                    emptyMessage="No se encontraron resultados"
+                    (completeMethod)="FiltrarCiudades($event)"
+                    optionLabel="nombre"
+                ></p-autocomplete>
+                <label>Ciudad</label>
+            </p-floatlabel>
+
+            <!-- Calle -->
+            <p-floatlabel variant="in">
+                <p-autocomplete
+                    formControlName="calle"
+                    [suggestions]="calles"
+                    placeholder="Buscar por nombre"
+                    emptyMessage="No se encontraron resultados"
+                    (completeMethod)="FiltrarCalles($event)"
+                    optionLabel="nombre"
+                ></p-autocomplete>
+                <label>Calle</label>
+            </p-floatlabel>
+            
+            <div class="horizontal">
+                <!-- Nro Calle -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="numero" type="number" />
+                    <label>Nro Calle</label>
+                </p-floatlabel>
+
+                 <!-- Codigo Postal -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="codPostal" type="number" />
+                    <label>Código Postal</label>
+                    @if(campoInvalido('codPostal')){
+                        <small class="error">El campo es obligatorio.</small>
+                    }
+                </p-floatlabel>
+            </div>
+        </div>
+        
+    </form>
+</div>
+
+<div class="botones">
+    @if(!desdeRouting){
+        <p-button label="Cancelar" severity="secondary" (click)="CerrarModal(false)" />
+    }
+    <p-button label="Guardar" (onClick)="Guardar()" />
+</div>

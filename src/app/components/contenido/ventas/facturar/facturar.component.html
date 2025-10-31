@@ -51,7 +51,7 @@
                                         </p-autocomplete>
                                         <label>Cliente</label>
                                     </p-floatlabel>
-                                    <p-button class="btnAdd" icon="pi pi-plus" (onClick)="NuevoCliente()" severity="success" />
+                                    <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
                                 </p-inputgroup>
 
                                 <!-- Listas Precio -->
@@ -112,6 +112,7 @@
                                 >
                                     <!-- Template para las sugerencias -->
                                     <ng-template let-producto pTemplate="item">
+                                        <div class="box-color" [ngStyle]="{'background': producto.color?.hexa}"></div>
                                         {{ producto.codigo }} - {{ producto.nombre }}
                                     </ng-template>
 
@@ -609,4 +610,15 @@
             </div>
         </div>
     }
+</p-dialog>
+
+
+<p-dialog [modal]="true" [(visible)]="modalAddClienteVisible" [style]="{ width: '90vw' }">
+    <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-user"></i>
+            <span> Agregar Cliente</span>
+        </div>
+    </ng-template>
+    <app-addmod-clientes (cerrar)="Actualizar($event)"/>
 </p-dialog>

@@ -31,7 +31,7 @@ p-floatlabel{
   width: 100% !important;
   margin-bottom: 15px;
 }
-p-select{
+p-select:not(p-table p-select) {
   width: 100% !important;
 }
 p-datepicker{

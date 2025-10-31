@@ -32,8 +32,8 @@ export class NavegacionComponent {
     ];
 
     this.itemsCliente = [
-        { label: 'Nuevo', icon: 'pi pi-plus' },
-        { label: 'Listado', icon: 'pi pi-list' }
+        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/clientes/add' },
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/clientes' }
     ];
 
     this.esDark = localStorage.getItem('theme') === 'dark';

@@ -2,7 +2,8 @@
 
 .contenido{
   height: calc(100vh - 90px); //La altura de la pantalla menos el alto del herramientas bar
-  background: linear-gradient(var(--surface-ground), var(--surface-card));
+  background: linear-gradient(var(--p-primary-color), var(--surface-card));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .inicio{
@@ -27,8 +28,8 @@
     box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
     transform: translatey(0px);
     animation: float 6s ease-in-out infinite;
-  z-index: 999;
-  background: linear-gradient(var(--surface-card), var(--surface-ground));
+    z-index: 999;
+    background: linear-gradient(var(--surface-card), var(--surface-ground));
     img { width: 100%; height: auto; }
 }
 
@@ -58,7 +59,7 @@
 }
 
 /*#region Particle Animation*/
-  $color-particle: #fff;
+  $color-particle: var(--text-color);
   $spacing: 2560px;
   $time-1: 60s;
   $time-2: 120s;
