@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { NavegacionComponent } from '../../compartidos/navegacion/navegacion.component';
+import { Subscription } from 'rxjs';
+import { TemaService } from '../../../services/tema.service';
 
 @Component({
   selector: 'app-inicio',
@@ -15,23 +17,27 @@ export class InicioComponent {
   private titlepage:Title;
   esDark:boolean = false;
   pathIcon:string;
+  sub!: Subscription;
 
-  constructor(){
+  constructor(
+    private temaService: TemaService
+  ){
     //this.titlepage.setTitle('INICIO');
     this.esDark = localStorage.getItem('theme') === 'dark';
-     if(this.esDark){
-      this.pathIcon = "IconoWhite.png"
-    }else{
-      this.pathIcon = "IconoBlack.png"
-    }
   }
 
-  ngOnInit(){
-    window.addEventListener('storage', (event) => {
-      console.log(event)
-      if (event.key === 'theme') {
-        this.esDark = event.newValue === 'dark';
+  ngOnInit(): void {
+    this.sub = this.temaService.theme$.subscribe(theme => {
+      this.esDark = theme === 'dark';
+      if(this.esDark){
+        this.pathIcon = "IconoWhite.png"
+      }else{
+        this.pathIcon = "IconoBlack.png"
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
   }
 }

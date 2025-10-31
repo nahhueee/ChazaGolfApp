@@ -369,7 +369,7 @@
 
                             <div class="fila">
                                 <span>Redondeo:</span>
-                                <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo"/>
+                                <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>
                             </div>
 
                             <div class="fila total-final">

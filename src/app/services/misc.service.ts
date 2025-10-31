@@ -45,5 +45,11 @@ export class MiscService {
   ObtenerServicios(): Observable<any> {
     return this.apiService.get('misc/servicios')
   }
+  ObtenerMetodosPago(): Observable<any> {
+    return this.apiService.get('misc/metodos-pago')
+  }
+  ObtenerProcesosVenta(): Observable<any> {
+    return this.apiService.get('misc/procesos-venta')
+  }
   //#endregion
 }

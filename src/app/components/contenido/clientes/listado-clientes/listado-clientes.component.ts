@@ -8,7 +8,6 @@ import { Cliente } from '../../../../models/Cliente';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ClientesService } from '../../../../services/clientes.service';
 import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
-import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-listado-clientes',

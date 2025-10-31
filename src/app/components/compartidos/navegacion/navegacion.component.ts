@@ -4,6 +4,7 @@ import { NgxSpinnerModule } from 'ngx-spinner';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
+import { TemaService } from '../../../services/tema.service';
 
 @Component({
   selector: 'app-navegacion',
@@ -23,12 +24,13 @@ export class NavegacionComponent {
 
   constructor(
     private router:Router,
+    private temaService:TemaService
   ){}
 
   ngOnInit() {
     this.itemsVenta = [
-        { label: 'Facturar', icon: 'pi pi-plus', routerLink: '/ventas/facturar' },
-        { label: 'Listado', icon: 'pi pi-list' }
+        { label: 'Facturar', icon: 'pi pi-plus', routerLink: '/ventas/administrar/0' },
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/ventas'}
     ];
 
     this.itemsCliente = [
@@ -46,7 +48,7 @@ export class NavegacionComponent {
   //#region PERSONALIZACIÓN TEMA
   CambiarModo() {
     this.AplicarTema();
-    localStorage.setItem('theme', this.esDark ? 'light' : 'dark');  
+    this.temaService.SetTema(this.esDark ? 'light' : 'dark');
     this.esDark = !this.esDark;
   }
 

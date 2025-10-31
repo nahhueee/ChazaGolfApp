@@ -22,6 +22,11 @@ import { SplitButtonModule } from 'primeng/splitbutton';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { AddModClientesComponent } from '../../clientes/add-mod-clientes/add-mod-clientes.component';
+import { VentasService } from '../../../../services/ventas.service';
+import { ActivatedRoute } from '@angular/router';
+import { TipoComprobante } from '../../../../models/TipoComprobante';
+import { MetodoPago } from '../../../../models/MetodoPago';
+import { ProcesoVenta } from '../../../../models/ProcesoVenta';
 
 @Component({
   selector: 'app-facturar',
@@ -46,6 +51,8 @@ import { AddModClientesComponent } from '../../clientes/add-mod-clientes/add-mod
 })
 export class FacturarComponent {
   decimal_mask: any;
+  modificando:boolean;
+
   venta:Venta = new Venta();
   totalItems:number = 0;
   totalDescuento:number = 0;
@@ -60,14 +67,7 @@ export class FacturarComponent {
 
   //PANTALLA 1
   formGenerales:FormGroup;
-  procesos = [
-    {id: 1, descripcion: 'FACTURA'},
-    {id: 2, descripcion: 'COTIZACION'},
-    {id: 3, descripcion: 'SHOWROOM'},
-    {id: 4, descripcion: 'DIFUSION'},
-    {id: 5, descripcion: 'CON NOTA EMPAQUE'},
-  ];
-
+  procesos:ProcesoVenta[] = [];
   listaPrecios = [
     {id: 1, descripcion: 'CONSUMIDOR FINAL'},
     {id: 2, descripcion: 'LISTA 3'},
@@ -111,13 +111,8 @@ export class FacturarComponent {
     {id: 2, descripcion: 'VOUCHER'},
     {id: 3, descripcion: 'PROMOCION'},
   ];
-  comprobantes=[];
-  metodosPago=[
-    {id: 1, descripcion: 'CONTADO'},
-    {id: 2, descripcion: 'TARJETA CREDITO'},
-    {id: 3, descripcion: 'TARJETA DEBITO'},
-    {id: 4, descripcion: 'MERCADO PAGO'},
-  ];
+  comprobantes:TipoComprobante[]=[];
+  metodosPago:MetodoPago[]=[];
 
   constructor(
     private clientesService:ClientesService,
@@ -125,7 +120,9 @@ export class FacturarComponent {
     private miscService:MiscService,
     private confirmationService: ConfirmationService,
     private Notificaciones: NotificacionesService,
-    private globalesService:GlobalesService
+    private globalesService:GlobalesService,
+    private ventasService:VentasService,
+    private rutaActiva:ActivatedRoute
   ){
     this.itemsMenu = [
         {
@@ -179,9 +176,11 @@ export class FacturarComponent {
   get DescuentoControl(){return this.formFacturacion.get('descuento')?.value;}
 
   ngOnInit(): void {
+    this.ObtenerProcesosVenta();
     this.ObtenerClientes();
     this.ObtenerLineasTalle();
     this.ObtenerServicios();
+    this.ObtenerMetodosPago();
     this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
   }
 
@@ -198,7 +197,15 @@ export class FacturarComponent {
         lazy: false,
         signed: true
       }
-    },0);
+
+      if (this.rutaActiva.snapshot.params['id'] != 0) {
+        this.modificando = true;
+        this.ObtenerVenta(this.rutaActiva.snapshot.params['id']);
+      }else{
+        this.modificando = false;
+        this.venta.id = 0;
+      }
+    },10);
 
     //DEPENDIENDO EL PROCESO HABILITAMOS NOTA DE EMPAQUE
     this.formGenerales.get('proceso')?.valueChanges.subscribe((valor) => {
@@ -221,10 +228,33 @@ export class FacturarComponent {
     });
   }
 
+  ObtenerVenta(idVenta){
+    this.ventasService.ObtenerVenta(idVenta)
+      .subscribe(response => {
+        this.venta = response;
+        this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
+        this.formGenerales.get('nroNota')?.setValue(this.venta.nroNota);
+        this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
+        this.formGenerales.get('lista')?.setValue(this.listaPrecios.find(l => l.id == this.venta.idListaPrecio));
+        this.formFacturacion.get('empresa')?.setValue(this.empresas.find(e => e.id == this.venta.idEmpresa));
+        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == this.venta.idTipoDescuento));
+        this.formFacturacion.get('descuento')?.setValue(this.venta.descuento);
+        this.formFacturacion.get('codPromo')?.setValue(this.venta.codPromocion);
+        this.redondeo.setValue(this.venta.redondeo?.toLocaleString('es-AR'));
+
+        this.formGenerales.get('cliente')?.setValue(this.clientes.find(c => c.id == this.venta.idCliente));
+        this.SeleccionarCliente();
+
+        if(this.venta.productos) this.productosFactura = this.venta.productos;
+        if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
+        if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
+
+        this.CalcularTotalGeneral();
+      });
+  }
   CalcularTotalGeneral() {
     const totalProductos = this.productosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
     const totalServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
-
     this.totalItems = totalProductos + totalServicios;
 
     const descuento = parseFloat(this.DescuentoControl) || 0;
@@ -247,6 +277,14 @@ export class FacturarComponent {
     this.cantItems = cantProductos + cantServicios;  
   }
   
+  ObtenerProcesosVenta(){
+    this.miscService.ObtenerProcesosVenta()
+      .subscribe(response => {
+        this.procesos = response;
+      });
+  }
+
+
   ObtenerLineasTalle(){
     this.miscService.ObtenerLineasTalle()
       .subscribe(response => {
@@ -261,14 +299,25 @@ export class FacturarComponent {
       });
   }
 
+  ObtenerMetodosPago(){
+    this.miscService.ObtenerMetodosPago()
+      .subscribe(response => {
+        this.metodosPago = response;
+      });
+  }
+
   ObtenerComprobantes(condicionIva:number){
     this.miscService.ObtenerComprobantes(condicionIva)
       .subscribe(response => {
         this.comprobantes = response;
       });
   }
-  
 
+  SelectContent(event: FocusEvent) {
+    const input = event.target as HTMLInputElement;
+    input.select();
+  }
+  
   //#region CLIENTES
   ObtenerClientes(){
     this.clientesService.SelectorClientes()
@@ -296,6 +345,8 @@ export class FacturarComponent {
           this.miscService.ObtenerComprobantes(this.clienteSeleccionado.idCondicionIva!)
           .subscribe(response => {
             this.comprobantes = response;
+            if(this.venta.idTipoComprobante)
+              this.formFacturacion.get('tComprobante')?.setValue(this.comprobantes.find(c => c.id == this.venta.idTipoComprobante));
           });
         });
   }
@@ -561,7 +612,27 @@ export class FacturarComponent {
   //#endregion
 
   Guardar(){
+    if(this.formFacturacion.invalid) return;
+    if(this.formGenerales.invalid) return;
+    this.ArmarObjetoVenta();
 
+    if(!this.modificando){
+      this.ventasService.Agregar(this.venta)
+      .subscribe(response => {
+        if(response){
+          this.Notificaciones.Success("Venta guardada correctamente");
+          this.venta.id = response.id;
+        }
+      });
+    }else{
+      this.ventasService.Modificar(this.venta)
+      .subscribe(response => {
+        if(response){
+          this.Notificaciones.Success("Venta actualizada correctamente");
+        }
+      });
+    }
+    
   }
 
   GuardarFacturar(){
@@ -569,7 +640,6 @@ export class FacturarComponent {
   }
 
   ArmarObjetoVenta(){
-    this.venta.id = 0;
     this.venta.idProceso = this.formGenerales.get('proceso')?.value.id;
     this.venta.proceso = this.formGenerales.get('proceso')?.value.descripcion;
     this.venta.nroNota = this.formGenerales.get('nroNota')?.value;

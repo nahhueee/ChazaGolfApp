@@ -5,6 +5,7 @@
     proceso?:string;
     nroNota?:string;
     fecha?:Date;
+    hora?:string;
     idCliente?:number;
     cliente?:string;
     idListaPrecio?:number;
@@ -39,7 +40,6 @@
     t8?: number;
     t9?: number;
     t10?: number;
-    costo?: number;
     unitario?: number;
     total?: number;
     tallesSeleccionados:string = "";
@@ -59,7 +59,6 @@
         this.t8 = data.t8;
         this.t9 = data.t9;
         this.t10 = data.t10;
-        this.costo = data.costo;
         this.unitario = data.unitario;
         this.nomProducto = data.nomProducto;
         this.total = data.total;
@@ -101,6 +100,7 @@
       }
     }
   }
+
   
   
   
