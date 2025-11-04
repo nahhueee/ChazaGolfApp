@@ -19,6 +19,7 @@ import { TemaService } from '../../../services/tema.service';
 })
 export class NavegacionComponent {
   itemsVenta: MenuItem[] | undefined;
+  itemsProducto: MenuItem[] | undefined;
   itemsCliente: MenuItem[] | undefined;
   esDark: boolean = false;
 
@@ -31,6 +32,11 @@ export class NavegacionComponent {
     this.itemsVenta = [
         { label: 'Facturar', icon: 'pi pi-plus', routerLink: '/ventas/administrar/0' },
         { label: 'Listado', icon: 'pi pi-list', routerLink: '/ventas'}
+    ];
+
+    this.itemsProducto = [
+        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/productos/add' },
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' }
     ];
 
     this.itemsCliente = [

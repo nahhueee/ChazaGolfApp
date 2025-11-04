@@ -21,7 +21,7 @@ import { GlobalesService } from '../../../../services/globales.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
-import { AddModClientesComponent } from '../../clientes/add-mod-clientes/add-mod-clientes.component';
+import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-clientes.component';
 import { VentasService } from '../../../../services/ventas.service';
 import { ActivatedRoute } from '@angular/router';
 import { TipoComprobante } from '../../../../models/TipoComprobante';
@@ -642,7 +642,7 @@ export class FacturarComponent {
   ArmarObjetoVenta(){
     this.venta.idProceso = this.formGenerales.get('proceso')?.value.id;
     this.venta.proceso = this.formGenerales.get('proceso')?.value.descripcion;
-    this.venta.nroNota = this.formGenerales.get('nroNota')?.value;
+    this.venta.nroNota = 0;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
     this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
     this.venta.cliente = this.formGenerales.get('cliente')?.value.descripcion;
@@ -655,8 +655,8 @@ export class FacturarComponent {
     this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
     this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
     this.venta.descuento = this.formFacturacion.get('descuento')?.value;
-    this.venta.codPromocion = this.formFacturacion.get('codPromo')?.value;
-    this.venta.redondeo = this.redondeo.value;
+    this.venta.codPromocion = 0;
+    this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
     this.venta.total = this.totalAPagar;
     this.venta.productos = this.productosFactura;
     this.venta.servicios = this.serviciosFactura;

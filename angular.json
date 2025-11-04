@@ -35,20 +35,23 @@
             ]
           },
           "configurations": {
-            "production": {
-              "budgets": [
+            "prod": {
+              "fileReplacements": [
                 {
-                  "type": "initial",
-                  "maximumWarning": "3MB",
-                  "maximumError": "5MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "2MB"
+                  "replace": "src/app/environments/environment.ts",
+                  "with": "src/app/environments/environment.web.ts"
                 }
               ],
-              "outputHashing": "all"
+              "outputPath": {
+                "base": "build/web/"
+              },
+              "baseHref": "/",                 
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "aot": true,
+              "extractLicenses": true
             },
             "development": {
               "optimization": false,

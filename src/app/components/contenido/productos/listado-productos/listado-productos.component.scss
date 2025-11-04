@@ -1,0 +1,108 @@
+
+.contenido{
+    background-color: var(--p-datatable-header-cell-background);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+//Filtros
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); 
+  grid-template-rows: repeat(2, auto);  
+  column-gap: 10px; 
+  align-items: start;
+  flex: 2;
+}
+.filtroTalles{
+    display: flex;
+    gap: 20px;
+}
+
+//Linea de Talles
+.talles{
+    display: flex;
+    flex-direction: column;
+    align-items: end;
+}
+.linea{
+    display: flex;
+    width: 500px;
+    margin-right: 50px;
+
+    .item{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 50px;
+        height: 35px;
+        font-size: 15px;
+        font-weight: bold;
+    }
+}
+
+.talle-dark1{
+    background-color: #006674;
+}
+.talle-dark2{
+    background-color: #8e0000;
+}
+.talle-dark3{
+    background-color: #006d36;
+}
+.talle-light1{
+    background-color: #d5fbd7;
+}
+.talle-light2{
+    background-color: #fed4d4;
+}
+.talle-light3{
+    background-color: #ffe4c4;
+}
+
+//Tabla
+.cuadrado{
+    height: 20px;
+    width: 35px;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+}
+
+//Estilo de la columna total
+::ng-deep .col-total {
+  background-color: #faffb4; 
+  text-align: center !important;          
+  padding: 6px 8px !important;  
+  width: 50px !important;
+}
+::ng-deep thead .col-total {
+    background-color: #faffb4 !important;
+    font-size: 15px;
+}
+::ng-deep .col-total.dark-mode {
+  background-color: #bb5d10 !important; 
+}
+
+
+//Estilo de las columnas de talles
+::ng-deep .col-talle {
+  text-align: center !important;          
+  padding: 6px 8px !important;
+  width: 50px !important;
+}
+//Estilo de los encabezados de las columnas talles
+::ng-deep thead .col-talle {
+    font-size: 15px;
+    background-color: #c7e9ff !important;
+}
+::ng-deep thead .col-talle.dark-mode {
+  background-color: #046adf !important;
+}
+
+
+//Estilo de los footers
+::ng-deep .footer{
+    height: 63px !important;
+}

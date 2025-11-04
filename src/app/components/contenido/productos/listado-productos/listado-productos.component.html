@@ -1,0 +1,167 @@
+<app-navegacion></app-navegacion>
+
+<div class="contenido">
+    <div class="filtroTalles">
+      <div class="filtros">
+        @for(key of filtroKeys; track $index){
+          @if(key !== 'codigo'){
+           <p-floatlabel variant="on">
+                <p-select
+                    [formControl]="filtros[key].control"
+                    [options]="filtros[key].filtrado"
+                    optionLabel="descripcion"
+                    optionValue="id"
+                    [filter]="true"
+                    filterBy="descripcion"
+                    [showClear]="true"
+                    (onChange)="onChange(key, $event)"
+                >
+                    <!-- Opción seleccionada -->
+                    <ng-template #selectedItem let-selectedOption>
+                    <div>
+                        <div>{{ selectedOption?.descripcion }}</div>
+                    </div>
+                    </ng-template>
+
+                    <!-- Cada ítem del menú -->
+                    <ng-template let-option #item>
+                    <div>
+                        <div>{{ option.descripcion }}</div>
+                    </div>
+                    </ng-template>
+                </p-select>
+                <label>{{ filtros[key].placeholder }}</label>
+                </p-floatlabel>
+
+          }@else {
+            <div class="busqueda">
+                <p-floatlabel variant="on">
+                    <input pInputText [formControl]="busquedaControl" autocomplete="off" />
+                    <label>Código o Nombre</label>
+                </p-floatlabel>
+            </div>
+          }
+        }
+      </div>
+      <div class="talles">
+        @for (linea of lineasTalles; track $index) {
+          @if (linea.id != 4){
+            <div class="linea" [ngClass]="esDark ? 'talle-dark' + linea.id : 'talle-light' + linea.id">
+              @for (item of linea.talles; track $index) {
+                <div class="item">{{item}}</div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="tabla">
+        <p-table 
+        [value]="productos"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Editar</th>
+                    <th>Proceso</th>
+                    <th>Temporada</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Gen</th>
+                    <th>Material</th>
+                    <th>Color</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XS</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">S</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">M</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">L</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XL</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XXL</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">3XL</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">4XL</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">5XL</th>
+                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">6XL</th>
+                    <th class="col-total" [ngClass]="{ 'dark-mode': esDark }">T</th>
+
+                </tr>
+            </ng-template>
+            <ng-template #body let-producto>
+                <tr>
+                    <td>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(producto.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                    </td>
+                    <td [pTooltip]="producto.proceso" tooltipPosition="bottom"> {{producto.abrevProceso}} </td>
+                    <td [pTooltip]="producto.temporada" tooltipPosition="bottom">{{ producto.abrevTemporada }}</td>
+                    <td>{{ producto.codigo }}</td>
+                    <td>{{ producto.nombre }}</td>
+                    <td>{{ producto.tipo }}</td>
+                    <td>{{ producto.subtipo }}</td>
+                    <td [pTooltip]="producto.genero" tooltipPosition="bottom">{{ producto.abrevGenero }}</td>
+                    <td>{{ producto.material }}</td>
+                    <td>
+                        <div [pTooltip]="producto.color" tooltipPosition="bottom" class="cuadrado" [ngStyle]="{'background-color': producto.hexa}"></div>
+                    </td>
+                    <td class="col-talle">{{ producto.t1 }}</td>
+                    <td class="col-talle">{{ producto.t2 }}</td>
+                    <td class="col-talle">{{ producto.t3 }}</td>
+                    <td class="col-talle">{{ producto.t4 }}</td>
+                    <td class="col-talle">{{ producto.t5 }}</td>
+                    <td class="col-talle">{{ producto.t6 }}</td>
+                    <td class="col-talle">{{ producto.t7 }}</td>
+                    <td class="col-talle">{{ producto.t8 }}</td>
+                    <td class="col-talle">{{ producto.t9 }}</td>
+                    <td class="col-talle">{{ producto.t10 }}</td>
+                    <td class="col-total" [ngClass]="{ 'dark-mode': esDark }">{{ producto.total }}</td>
+                </tr>
+            </ng-template>
+            <!-- PIE DE TABLA (TOTALES) -->
+            <ng-template pTemplate="footer">
+                <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t1') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t2') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t3') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t4') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t5') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t6') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t7') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t8') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t9') }}</strong></td>
+                <td class="col-talle footer"><strong>{{ GetTotal('t10') }}</strong></td>
+                <td class="col-total footer"><strong>{{ GetTotal('total') }}</strong></td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<!-- <p-dialog [modal]="true" [(visible)]="mostrarmodalAddMod" [style]="{ width: '90vw' }">
+   <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-user"></i>
+            <span>
+                {{ clienteSeleccionado ? 'Editar Cliente' : 'Agregar Cliente' }}
+            </span>
+        </div>
+    </ng-template>
+    <app-addmod-clientes [clienteEditar]="clienteSeleccionado" (cerrar)="Actualizar($event)"/>
+</p-dialog> -->

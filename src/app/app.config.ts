@@ -8,6 +8,7 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@a
 import { MessageService } from 'primeng/api';
 import { HttpErrorHandlerService } from './services/http-error-handler.service';
 import { InterceptorService } from './services/interceptor.service';
+import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,6 +26,8 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: HttpErrorHandlerService, multi: true },
     //Inicia el spinner en cada petición http
     { provide: HTTP_INTERCEPTORS, useClass: InterceptorService, multi: true },
+    //Aplica la estrategia # para las recargas, error 404
+    { provide: LocationStrategy, useClass: HashLocationStrategy },
 
     // Animaciones y PrimeNG
     provideAnimationsAsync(),

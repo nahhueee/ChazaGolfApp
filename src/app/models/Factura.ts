@@ -3,7 +3,7 @@
     id?:number;
     idProceso?:number;
     proceso?:string;
-    nroNota?:string;
+    nroNota?:number;
     fecha?:Date;
     hora?:string;
     idCliente?:number;
@@ -17,7 +17,7 @@
     idTipoDescuento?:number;
     tipoDescuento?:string;
     descuento?:number;
-    codPromocion?:string;
+    codPromocion?:number;
     redondeo?:number;
     total?:number;
     productos?:ProductosFactura[];

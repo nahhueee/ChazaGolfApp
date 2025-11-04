@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
-import { AddModClientesComponent } from '../add-mod-clientes/add-mod-clientes.component';
+import { AddModClientesComponent } from '../addmod-clientes/addmod-clientes.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Cliente } from '../../../../models/Cliente';

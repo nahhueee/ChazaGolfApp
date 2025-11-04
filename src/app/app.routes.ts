@@ -3,8 +3,10 @@ import { LoginComponent } from './components/contenido/login/login.component';
 import { InicioComponent } from './components/contenido/inicio/inicio.component';
 import { FacturarComponent } from './components/contenido/ventas/facturar/facturar.component';
 import { ListadoClientesComponent } from './components/contenido/clientes/listado-clientes/listado-clientes.component';
-import { AddModClientesComponent } from './components/contenido/clientes/add-mod-clientes/add-mod-clientes.component';
+import { AddModClientesComponent } from './components/contenido/clientes/addmod-clientes/addmod-clientes.component';
 import { ListadoVentasComponent } from './components/contenido/ventas/listado-ventas/listado-ventas.component';
+import { ListadoProductosComponent } from './components/contenido/productos/listado-productos/listado-productos.component';
+import { AddmodProductosComponent } from './components/contenido/productos/addmod-productos.component/addmod-productos.component';
 
 export const routes: Routes = [
     {
@@ -35,5 +37,13 @@ export const routes: Routes = [
     {
         path: 'clientes/add',
         component:AddModClientesComponent
+    },
+    {
+        path: 'productos',
+        component:ListadoProductosComponent
+    },
+    {
+        path: 'productos/add',
+        component:AddmodProductosComponent
     },
 ];
