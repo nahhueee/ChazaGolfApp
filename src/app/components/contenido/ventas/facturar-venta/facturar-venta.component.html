@@ -1,0 +1,49 @@
+<div class="contenedor">
+    <div class="horizontal">
+        <div class="recuadro">
+            <p class="especial"><strong>{{datosFacturar.tipoFacturaDesc?.replace('FACTURA ', '')}}</strong></p>
+            <p-divider />
+            <span>Tipo de Comprobante</span>
+        </div>
+        <div class="recuadro">
+            <p class="especial"><strong>${{datosFacturar.total! | decimalFormat}}</strong></p>
+            <p-divider />
+            <span>Monto a Facturar</span>
+        </div>
+    </div>
+
+
+    <div class="factura-datos">
+    <div class="dato">
+        <span class="label">Cliente:</span>
+        <span class="valor">{{ datosFacturar.cliente }}</span>
+    </div>
+    <div class="dato">
+        <span class="label">Documento:</span>
+        <span class="valor">{{ datosFacturar.docNro }}</span>
+    </div>
+    <div class="dato">
+        <span class="label">Condición IVA:</span>
+        <span class="valor">{{ datosFacturar.condicion }}</span>
+    </div>
+    <div class="dato">
+        <span class="label">Facturante:</span>
+        <span class="valor">{{ datosFacturar.empresa }}</span>
+    </div>
+    </div>
+
+    <div class="alerta-warn">
+    <span class="alerta-icon">⚠️</span>
+    <div class="alerta-texto">
+        Vas a realizar una factura frente a la entidad <b>ARCA</b>.  
+        Revisá que todos los datos sean correctos.
+    </div>
+    </div>
+</div>
+
+
+<div class="botones">
+    <p-button label="Volver" severity="secondary" (click)="CerrarModal()" icon="pi pi-angle-left"/>
+    <p-button label="Confirmar" (onClick)="Facturar()" icon="pi pi-check" />
+</div>
+

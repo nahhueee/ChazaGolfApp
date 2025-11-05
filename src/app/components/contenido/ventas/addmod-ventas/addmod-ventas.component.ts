@@ -23,13 +23,17 @@ import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-clientes.component';
 import { VentasService } from '../../../../services/ventas.service';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TipoComprobante } from '../../../../models/TipoComprobante';
 import { MetodoPago } from '../../../../models/MetodoPago';
 import { ProcesoVenta } from '../../../../models/ProcesoVenta';
+import { ObjFacturar } from '../../../../models/ObjFacturar';
+import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
+import { FacturaVenta } from '../../../../models/FacturaVenta';
+import { TagModule } from 'primeng/tag';
 
 @Component({
-  selector: 'app-facturar',
+  selector: 'app-addmod-ventas',
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
@@ -42,16 +46,19 @@ import { ProcesoVenta } from '../../../../models/ProcesoVenta';
     ConfirmPopupModule,
     SplitButtonModule,
     Dialog,
+    TagModule,
     DividerModule,
-    AddModClientesComponent
+    AddModClientesComponent,
+    FacturarVentaComponent
   ],
   providers: [ConfirmationService],
-  templateUrl: './facturar.component.html',
-  styleUrl: './facturar.component.scss',
+  templateUrl: './addmod-ventas.component.html',
+  styleUrl: './addmod-ventas.component.scss',
 })
-export class FacturarComponent {
+export class AddModVentasComponent {
   decimal_mask: any;
   modificando:boolean;
+  idAnterior:number;
 
   venta:Venta = new Venta();
   totalItems:number = 0;
@@ -64,6 +71,7 @@ export class FacturarComponent {
   vistaPreviaVisible:boolean = false;
   modalClienteVisible:boolean = false;
   modalAddClienteVisible:boolean = false;
+  modalFacturarVisible:boolean = false;
 
   //PANTALLA 1
   formGenerales:FormGroup;
@@ -75,7 +83,7 @@ export class FacturarComponent {
     {id: 4, descripcion: 'LISTA 5'}
   ];
 
-  clienteSeleccionado:Cliente
+  clienteSeleccionado:Cliente | undefined;
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
 
@@ -114,7 +122,10 @@ export class FacturarComponent {
   comprobantes:TipoComprobante[]=[];
   metodosPago:MetodoPago[]=[];
 
+  objFacturar:ObjFacturar = new ObjFacturar();
+
   constructor(
+    private router:Router,
     private clientesService:ClientesService,
     private productosService:ProductosService,
     private miscService:MiscService,
@@ -134,7 +145,7 @@ export class FacturarComponent {
         {
             label: 'Guardar y facturar',
             command: () => {
-                this.GuardarFacturar();
+                this.ConfirmarFacturacion();
             }
         }
     ];
@@ -181,7 +192,6 @@ export class FacturarComponent {
     this.ObtenerLineasTalle();
     this.ObtenerServicios();
     this.ObtenerMetodosPago();
-    this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
   }
 
   ngAfterViewInit(){
@@ -198,13 +208,28 @@ export class FacturarComponent {
         signed: true
       }
 
-      if (this.rutaActiva.snapshot.params['id'] != 0) {
-        this.modificando = true;
-        this.ObtenerVenta(this.rutaActiva.snapshot.params['id']);
-      }else{
-        this.modificando = false;
-        this.venta.id = 0;
-      }
+      this.rutaActiva.paramMap.subscribe(params => {
+        const id = Number(params.get('id'));
+
+        if (id && id !== 0) {
+          this.modificando = true;
+          this.ObtenerVenta(id);
+        } else {
+          this.modificando = false;
+          this.venta = new Venta();
+          this.venta.id = 0;
+          this.redondeo.setValue('');
+          this.productosFactura = [];
+          this.serviciosFactura = [];
+          this.pagosFactura = [];
+          this.clienteSeleccionado = undefined;
+          this.formGenerales.reset({}, { emitEvent: false });
+          this.formFacturacion.reset({}, { emitEvent: false });
+          this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
+          this.formGenerales.get('fecha')?.setValue(new Date());
+          this.CalcularTotalGeneral();
+        }
+      });
     },10);
 
     //DEPENDIENDO EL PROCESO HABILITAMOS NOTA DE EMPAQUE
@@ -342,7 +367,7 @@ export class FacturarComponent {
           this.clienteSeleccionado = response;
           
           //Obtnemos los comprobantes disponibles para el cliente
-          this.miscService.ObtenerComprobantes(this.clienteSeleccionado.idCondicionIva!)
+          this.miscService.ObtenerComprobantes(this.clienteSeleccionado!.idCondicionIva!)
           .subscribe(response => {
             this.comprobantes = response;
             if(this.venta.idTipoComprobante)
@@ -447,6 +472,7 @@ export class FacturarComponent {
           idProducto: this.productoSeleccionado.id,
           codProducto: this.productoSeleccionado.codigo,
           nomProducto: this.productoSeleccionado.nombre,
+          idLineaTalle: talleSel.idLineaTalle,
           cantidad: cantidad,
           unitario: precio,
           total: precio * cantidad,
@@ -611,32 +637,66 @@ export class FacturarComponent {
   }
   //#endregion
 
-  Guardar(){
+  Guardar(factura?:FacturaVenta, finalizando:boolean = false){
     if(this.formFacturacion.invalid) return;
     if(this.formGenerales.invalid) return;
+
     this.ArmarObjetoVenta();
+    this.venta.factura = factura;
 
     if(!this.modificando){
       this.ventasService.Agregar(this.venta)
       .subscribe(response => {
         if(response){
-          this.Notificaciones.Success("Venta guardada correctamente");
-          this.venta.id = response.id;
+          if(!finalizando){
+            this.Notificaciones.Success("Venta guardada correctamente");
+            this.venta.id = parseInt(response);
+            this.venta.hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+          }else{
+            this.Notificaciones.Success("Venta guardada y facturada correctamente");
+            this.router.navigateByUrl("/ventas")
+          }          
         }
       });
     }else{
       this.ventasService.Modificar(this.venta)
       .subscribe(response => {
         if(response){
-          this.Notificaciones.Success("Venta actualizada correctamente");
-        }
+
+          if(!finalizando){
+            this.Notificaciones.Success("Venta actualizada correctamente");
+          }else{
+            this.Notificaciones.Success("Venta actualizada y facturada correctamente");
+            this.router.navigateByUrl("/ventas")
+          } 
+        }   
       });
     }
     
   }
 
-  GuardarFacturar(){
+  ConfirmarFacturacion(){
+    this.objFacturar.total = this.totalAPagar;
+    this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value.id;
+    this.objFacturar.tipoFacturaDesc = this.formFacturacion.get('tComprobante')?.value.descripcion;
+    this.objFacturar.docNro = this.clienteSeleccionado!.documento;
+    this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
+    this.objFacturar.docTipoDesc = this.clienteSeleccionado!.tipoDocumento;
+    this.objFacturar.condReceptor = this.clienteSeleccionado!.idCondicionIva;
+    this.objFacturar.condicion = this.clienteSeleccionado!.condicionIva;
+    this.objFacturar.cliente = this.clienteSeleccionado!.nombre;
+    this.objFacturar.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
+    this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
+    
+    this.modalFacturarVisible = true;
+  }
 
+  GuardarFacturar(factura?:FacturaVenta){
+    if(factura && factura!=undefined){
+      this.Guardar(factura, true);
+    }
+
+    this.modalFacturarVisible = false;
   }
 
   ArmarObjetoVenta(){
@@ -646,7 +706,12 @@ export class FacturarComponent {
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
     this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
     this.venta.cliente = this.formGenerales.get('cliente')?.value.descripcion;
-    this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
+
+    if(this.formGenerales.get('lista')?.value == "")
+      this.venta.idListaPrecio = 1;
+    else
+      this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
+
     this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
     this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
     this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;

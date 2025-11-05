@@ -12,9 +12,6 @@ export class MiscService {
   ObtenerLineasTalle(): Observable<any> {
     return this.apiService.get('misc/lineas-talle')
   }
-  // ObtenerLineaDeTalle(idLinea:number): Observable<any> {
-  //   return this.apiService.get(`misc/linea-talle/${idLinea}`)
-  // }
   ObtenerProcesos(): Observable<any> {
     return this.apiService.get('misc/procesos')
   }

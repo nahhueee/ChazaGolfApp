@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/contenido/login/login.component';
 import { InicioComponent } from './components/contenido/inicio/inicio.component';
-import { FacturarComponent } from './components/contenido/ventas/facturar/facturar.component';
+import { AddModVentasComponent } from './components/contenido/ventas/addmod-ventas/addmod-ventas.component';
 import { ListadoClientesComponent } from './components/contenido/clientes/listado-clientes/listado-clientes.component';
 import { AddModClientesComponent } from './components/contenido/clientes/addmod-clientes/addmod-clientes.component';
 import { ListadoVentasComponent } from './components/contenido/ventas/listado-ventas/listado-ventas.component';
@@ -28,7 +28,7 @@ export const routes: Routes = [
     },
     {
         path: 'ventas/administrar/:id',
-        component:FacturarComponent
+        component:AddModVentasComponent
     },
     {
         path: 'clientes',

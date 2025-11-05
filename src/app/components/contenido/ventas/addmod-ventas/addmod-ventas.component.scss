@@ -1,7 +1,25 @@
 .contenido{
-  display:flex;
   gap: 20px;
   padding-bottom: 60px;
+}
+
+.datos{
+  width: 100%;
+  height: 50px;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--surface-card);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .izq{
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
 }
 
 p-accordion-panel{
@@ -22,7 +40,6 @@ p-accordion-header{
 
 .enLinea{
     display: flex;
-    align-items: center;
     gap: 20px;
     width: 100%;
 

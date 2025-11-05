@@ -9,6 +9,7 @@ import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.
 import { Router } from '@angular/router';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { DatePipe } from '@angular/common';
+import { TagModule } from 'primeng/tag';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -19,7 +20,8 @@ import { DatePipe } from '@angular/common';
     TooltipModule,
     NavegacionComponent,
     DecimalFormatPipe,
-    DatePipe
+    DatePipe,
+    TagModule
   ],
   templateUrl: './listado-ventas.component.html',
   styleUrl: './listado-ventas.component.scss',
@@ -50,7 +52,6 @@ export class ListadoVentasComponent {
     }
 
     this.ventasService.ObtenerVentas(this.filtroActual).subscribe(response => {
-      console.log(response)
       this.ventas = response.registros;
       this.totalRecords = response.total;
       this.loading = false;

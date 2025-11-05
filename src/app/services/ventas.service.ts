@@ -4,6 +4,7 @@ import { Usuario } from '../models/Usuario';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Venta } from '../models/Factura';
+import { ObjFacturar } from '../models/ObjFacturar';
 
 @Injectable({
   providedIn: 'root'
@@ -33,5 +34,12 @@ export class VentasService {
     return this.apiService.delete(`ventas/eliminar/${id}`)
   }
   //#endregion
+
+  Facturar(objFacturar:ObjFacturar): Observable<any>{
+    return this.apiService.post('ventas/facturar', objFacturar)
+  }
+  ObtenerQR(idventa:number): Observable<any>{
+    return this.apiService.get(`ventas/obtenerQR/${idventa}`)
+  }
 
 }

@@ -2,7 +2,7 @@
    <app-navegacion></app-navegacion> 
 }
 
-<div class="contenido">
+<div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
 
         <div class="izq">
@@ -83,10 +83,10 @@
                         <small class="error">Completa con un documento.</small>
                     }
                     @if(documento?.hasError('pattern') && formulario.get('tDocumento')?.value.id === 96){
-                        <small class="error">El DNI debe tener entre 7 y 8 dígitos numéricos.</small>
+                        <small class="error">DNI inválido.</small>
                     }
                     @if(documento?.hasError('pattern') && (formulario.get('tDocumento')?.value.id === 80 || formulario.get('tDocumento')?.value.id === 86)){
-                        <small class="error">El CUIT/CUIL debe ser válido (11 dígitos sin guiones, comenzando con 20, 23, 24, 27, 30, 33 o 34).</small>
+                        <small class="error">CUIT/CUIL inválido (11 dígitos sin guiones).</small>
                     }
                 </p-floatlabel>
             </div>
@@ -171,7 +171,7 @@
 
 <div class="botones">
     @if(!desdeRouting){
-        <p-button label="Cancelar" severity="secondary" (click)="CerrarModal(false)" />
+        <p-button label="Volver" severity="secondary" (click)="CerrarModal(false)" icon="pi pi-angle-left"/>
     }
-    <p-button label="Guardar" (onClick)="Guardar()" />
+    <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
 </div>

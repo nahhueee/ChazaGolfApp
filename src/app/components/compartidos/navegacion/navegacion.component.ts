@@ -5,6 +5,7 @@ import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { TemaService } from '../../../services/tema.service';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-navegacion',
@@ -13,6 +14,7 @@ import { TemaService } from '../../../services/tema.service';
     MenuModule,
     ButtonModule,
     NgxSpinnerModule,
+    TooltipModule
   ],
   templateUrl: './navegacion.component.html',
   styleUrl: './navegacion.component.scss',

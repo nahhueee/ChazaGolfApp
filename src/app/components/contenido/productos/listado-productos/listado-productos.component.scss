@@ -1,6 +1,6 @@
 
 .contenido{
-    background-color: var(--p-datatable-header-cell-background);
+    background-color: var(--surface-card);
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -15,6 +15,7 @@
   column-gap: 10px; 
   align-items: start;
   flex: 2;
+  margin-bottom: -5px;
 }
 .filtroTalles{
     display: flex;
@@ -26,6 +27,7 @@
     display: flex;
     flex-direction: column;
     align-items: end;
+    margin-bottom: -5px;
 }
 .linea{
     display: flex;

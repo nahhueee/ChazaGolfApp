@@ -154,14 +154,12 @@
 </div>
 
 <!-- Modal Editar -->
-<!-- <p-dialog [modal]="true" [(visible)]="mostrarmodalAddMod" [style]="{ width: '90vw' }">
+<p-dialog [modal]="true" [(visible)]="mostrarmodalAddMod" [style]="{ width: '90vw' }">
    <ng-template #header>
         <div class="modal-header">
-            <i class="pi pi-user"></i>
-            <span>
-                {{ clienteSeleccionado ? 'Editar Cliente' : 'Agregar Cliente' }}
-            </span>
+            <i class="pi pi-box"></i>
+            <span> Editar Producto</span>
         </div>
     </ng-template>
-    <app-addmod-clientes [clienteEditar]="clienteSeleccionado" (cerrar)="Actualizar($event)"/>
-</p-dialog> -->
+    <app-addmod-productos [productoEditar]="productoSeleccionado" (cerrar)="Actualizar($event)"/>
+</p-dialog>

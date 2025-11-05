@@ -1,0 +1,92 @@
+.alerta-warn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+  padding: 12px 15px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.alerta-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.alerta-texto {
+  flex: 1;
+}
+
+
+.contenedor{
+    padding: 0px 15px;
+}
+.horizontal{
+    display: flex;
+    gap: 15px;
+}
+
+.especial{
+    text-align: center;
+    color: var(--p-primary-color);
+    font-size: 28px;
+    width: 100%;
+}
+
+p-divider{
+    margin: 0%;
+}
+
+.recuadro {
+    flex: 1 1 180px;
+    width: 180px; 
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border: 1px solid var(--surface-border);
+    margin-bottom: 20px;
+    background-color: var(--surface-card);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 5px;
+    span{
+        font-family: 'Poppins';
+        font-size: 14px;
+        color: var(--text-color-secondary);
+    }
+}
+
+.factura-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dato {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 4px;
+}
+
+.label {
+  color: var(--text-color-secondary);
+  font-weight: 600;
+}
+
+.botones{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+}

@@ -1,0 +1,150 @@
+.uppercase{
+    text-transform: uppercase !important;
+}
+
+.contenido{
+    background-color: var(--surface-card);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.modal.contenido{
+    margin: 0%;
+}
+
+.form{
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    border-radius: 10px;
+    padding: 10px;
+
+    .izq{
+        flex: 2;
+    }
+    .der{
+        flex: 1.5;
+    }
+}
+
+.horizontal{
+    width: 100%;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.subtitulo{
+    font-size: 18px;
+    font-family: 'Poppins';
+    margin-bottom: 15px;
+
+    i{
+        margin-right: 8px;
+        color: var(--p-primary-color);
+    }
+}
+
+.materiales{
+    margin: 30px 0px 10px 0px;
+    display: flex;
+    justify-content: center;
+}
+.info{
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-warn);
+}
+
+p-inputgroup-addon{
+    height: 53px;
+}
+.btnAdd{
+    height: 100%;
+}
+
+.botones{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 50px;
+  width: 100%;
+}
+
+.color-box {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: 0.2s ease;
+  border: 1px solid var(--surface-border);
+
+  &:hover {
+    transform: scale(1.08);
+  }
+
+  &.selected {
+    border: 5px solid var(--p-primary-color)
+  }
+}
+
+
+.talles-grid {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  margin-bottom: 30px;
+  width: 100%;
+}
+.talle-box{
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    &:hover {
+        cursor: pointer;
+        background-color: var(--surface-border);
+    }
+    &.selected {
+        background-color: var(--p-primary-color);
+        color: white;
+        border: 1px solid var(--surface-border);
+        border-radius: 6px;
+    }
+}
+
+.row-talle{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: var(--surface-overlay);
+    border-radius: 4px;
+
+    h5{
+        margin: 0%;
+        font-size: 15px;
+        font-family: "Poppins";
+        margin-right: 20px;
+        color: var(--text-color-secondary);
+        width: 230px;
+    }
+
+    input{
+        width: 100%;
+    }
+}
+
+

@@ -2,6 +2,24 @@
 <p-confirmpopup />
 
 <div class="contenido">
+    <div class="datos">
+        <div class="izq">
+            @if(venta.id != 0){
+                <p>Venta Nro: <strong>{{venta.id}}</strong></p>
+                <span>|</span>
+                <p>Actualización: <strong>{{venta.hora}}</strong> </p>
+            }@else {
+                <p>Nueva Venta</p>
+            }            
+        </div>
+       
+        @if(venta.factura){
+            <p-tag value="Facturada" severity="success" />
+        }@else{
+            <p-tag value="Pendiente" severity="warn" />
+        }
+    </div>
+
     <div class="acordeon">
         <p-accordion [value]="['0','1','2','3']" [multiple]="true">
             <p-accordion-panel value="0">
@@ -51,7 +69,9 @@
                                         </p-autocomplete>
                                         <label>Cliente</label>
                                     </p-floatlabel>
-                                    <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
+                                    <p-inputgroup-addon>
+                                        <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
+                                    </p-inputgroup-addon>                                
                                 </p-inputgroup>
 
                                 <!-- Listas Precio -->
@@ -61,7 +81,7 @@
                                 </p-floatlabel>
                             </div>
 
-                            @if(clienteSeleccionado){
+                            @if(clienteSeleccionado && clienteSeleccionado != undefined){
                                 <div class="cliente-card">
                                     <div class="cliente-header">
                                         <div class="icon">
@@ -389,9 +409,13 @@
 
 <div class="botones">
     <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true; ArmarObjetoVenta()" />
-    <p-splitbutton label="Guardar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-save"/>
+    <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura"/>
+    <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura" />
+    <!-- <p-splitbutton label="Finalizar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-check"/> -->
 </div>
 
+
+<!-- Modal Resumen -->
 <p-dialog header="Vista Previa" [modal]="true" [(visible)]="vistaPreviaVisible" [style]="{ width: '90vw' }" [maximizable]="true">
    <div class="vista-previa">
         <div class="data-cliente">
@@ -577,6 +601,7 @@
    </div>
 </p-dialog>
 
+<!-- Modal Datos Cliente -->
 <p-dialog header="Datos del Cliente" [modal]="true" [style]="{ width: '500px' }" [(visible)]="modalClienteVisible">
     @if(clienteSeleccionado){
         <div class="cliente-modal">
@@ -612,7 +637,7 @@
     }
 </p-dialog>
 
-
+<!-- Modal Nuevo Cliente -->
 <p-dialog [modal]="true" [(visible)]="modalAddClienteVisible" [style]="{ width: '90vw' }">
     <ng-template #header>
         <div class="modal-header">
@@ -621,4 +646,15 @@
         </div>
     </ng-template>
     <app-addmod-clientes (cerrar)="Actualizar($event)"/>
+</p-dialog>
+
+<!-- Modal Facturar -->
+<p-dialog [modal]="true" [(visible)]="modalFacturarVisible" [style]="{ width: '600px' }">
+   <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-dollar"></i>
+            <span> Facturar Venta</span>
+        </div>
+    </ng-template>
+    <app-facturar-venta [objFacturar]="objFacturar" (cerrar)="GuardarFacturar($event)"/>
 </p-dialog>

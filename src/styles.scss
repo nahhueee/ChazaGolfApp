@@ -29,7 +29,8 @@ body {
 
 p-floatlabel{
   width: 100% !important;
-  margin-bottom: 15px;
+  margin-bottom: 18px;
+  position: relative;
 }
 p-select:not(p-table p-select) {
   width: 100% !important;
@@ -39,6 +40,9 @@ p-datepicker{
 }
 p-autocomplete{
   width: 100% !important;
+}
+.pi:before{
+  position: relative !important;
 }
 input{
   width: 100% !important;
@@ -53,6 +57,9 @@ input{
 .error{
   margin-left: 13px;
   color: var(--error-text);
+  position: absolute;
+  bottom: -16px;
+  left: 0;
 }
 p{
   margin: 0%;

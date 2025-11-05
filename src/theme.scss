@@ -13,6 +13,9 @@
   --zinc-950: #09090b;
 
   --error-text: #ef4444;
+  --warn-text-dark: #ffad42;
+  --warn-text: #ff8819;
+
 
   /* App / body */
   --surface-ground: var(--zinc-100); /* Fondo general de la app */
@@ -35,6 +38,7 @@
   /* Texto */
   --text-color: var(--zinc-900); /* Color de texto estándar */
   --text-color-secondary: var(--zinc-700); /* Para descripciones o hints */
+  --text-warn: var(--warn-text);
 }
 
 html.dark-mode {
@@ -59,4 +63,5 @@ html.dark-mode {
   /* Texto */
   --text-color: var(--zinc-50); /* Color de texto estándar */
   --text-color-secondary: var(--zinc-300); /* Para descripciones o hints */
+  --text-warn: var(--warn-text-dark);
 }

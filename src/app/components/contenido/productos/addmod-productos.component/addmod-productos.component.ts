@@ -1,11 +1,397 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { FORMS_IMPORTS } from '../../../../imports/forms.import';
+import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { MiscService } from '../../../../services/misc.service';
+import { ClientesService } from '../../../../services/clientes.service';
+import { ProductosService } from '../../../../services/productos.service';
+import { GlobalesService } from '../../../../services/globales.service';
+import { Cliente } from '../../../../models/Cliente';
+import { Color, Genero, LineasTalle, Material, Producto, SubtipoProducto, TalleSeleccionable, Temporada, TipoProducto } from '../../../../models/Producto';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Tooltip } from "primeng/tooltip";
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 @Component({
-  selector: 'app-addmod-productos.component',
-  imports: [],
+  selector: 'app-addmod-productos',
+  standalone: true,
+  imports: [
+    ...FORMS_IMPORTS,
+    NavegacionComponent,
+    Tooltip,
+    SelectButtonModule
+],
   templateUrl: './addmod-productos.component.html',
   styleUrl: './addmod-productos.component.scss',
 })
 export class AddmodProductosComponent {
+  @Output() cerrar = new EventEmitter<boolean>(); //True: si hay que actualizar, False: si no hay que actualizar
+  @Input() set productoEditar(value: number | undefined) { //Cliente a editar
+    if (value){
+      this.ObtenerProducto(value);
+    } 
+    else this.formulario.reset(); //Si no hay valores reiniciamos el formulario
+  }
 
+  producto:Producto;
+  desdeRouting:boolean;
+
+  decimal_mask: any;
+  formulario: FormGroup;
+  modalAddClienteVisible: boolean = false;
+
+  empresas:string[] = ['SUCEDE', 'SERVICIOS'];
+  clientes:Cliente[]=[];
+  clientesFiltrados:Cliente[]=[];
+  temporadas: Temporada[] = [];
+  tiposProducto: TipoProducto[] = [];
+  subtiposProducto: SubtipoProducto[] = [];
+  generos: Genero[] = [];
+  materiales: Material[] = [];
+  coloresMaterial: Color[] = [];
+  colorSeleccionado: Color | null;
+  lineasTalles: LineasTalle[] = [];
+  tallesSeleccionables: TalleSeleccionable[] = [];
+
+  constructor(
+    private rutaActiva: ActivatedRoute,
+    private router:Router,
+    private miscService:MiscService,
+    private fb: FormBuilder,
+    private clientesService:ClientesService,
+    private productosService:ProductosService,
+    private Globales:GlobalesService,
+    private Notificaciones:NotificacionesService
+  ){
+     this.formulario = new FormGroup({
+      empresa: new FormControl(''),
+      cliente: new FormControl(''),
+      temporada: new FormControl(''),
+      producto: new FormControl(''),
+      tipo: new FormControl(''),
+      genero: new FormControl(''),
+      material: new FormControl(''),
+      lineaTalle: new FormControl(''),
+      codigo: new FormControl('', [Validators.required, Validators.maxLength(30)]),
+      nombre: new FormControl('', [Validators.required, Validators.maxLength(100)]),
+      moldeleria: new FormControl(''),
+      tallesProducto: this.fb.array([])
+    });
+
+    //#region VALUE CHANGES
+    // Suscripción para cuando cambia cliente
+    this.formulario.get('cliente')?.valueChanges.subscribe((value) => {
+      setTimeout(() => {
+        if(value){
+          const clienteId: string = this.clienteControl ? (this.clienteControl.id?.toString() ?? "") : "";
+          const cliente: string = this.clienteControl ? (this.clienteControl.nombre?.toString().split(' ')[0] ?? "") : "";
+          const tipoAbrev:string = this.tipoControl ? this.tipoControl.abreviatura?.toString() ?? "" : "";
+          const subtipoAbrev:string = this.subtipoControl ? this.subtipoControl.abreviatura?.toString() ?? "" : "";
+
+          // Actualiza efectivo sin disparar su valueChanges
+          this.formulario.get('codigo')?.setValue(clienteId + "-" + this.clienteControl.id?.toString(), { emitEvent: false });
+          this.formulario.get('nombre')?.setValue(cliente + "-" + tipoAbrev + "-" + subtipoAbrev , { emitEvent: false });
+        }
+        
+      }, 10);
+    });
+
+    // Suscripción para cuando cambia tipo de producto
+    this.formulario.get('producto')?.valueChanges.subscribe((value) => {
+      setTimeout(() => {
+        if(value){
+          const clienteId: string = this.clienteControl ? (this.clienteControl.id?.toString() ?? "") : "";
+          const cliente: string = this.clienteControl ? (this.clienteControl.nombre?.toString().split(' ')[0] ?? "") : "";
+          const tipoAbrev:string = this.tipoControl ? this.tipoControl.abreviatura?.toString() ?? "" : "";
+          const subtipoAbrev:string = this.subtipoControl ? this.subtipoControl.abreviatura?.toString() ?? "" : "";
+
+          // Actualiza efectivo sin disparar su valueChanges
+          this.formulario.get('codigo')?.setValue(clienteId + "-" + value.id, { emitEvent: false });
+          this.formulario.get('nombre')?.setValue(cliente + "-" + tipoAbrev + "-" + subtipoAbrev , { emitEvent: false });
+        }       
+      }, 10);
+    });
+
+    // Suscripción para cuando cambia subtipo de producto
+    this.formulario.get('tipo')?.valueChanges.subscribe((value) => {
+      setTimeout(() => {
+        if(value){
+          const cliente: string = this.clienteControl ? (this.clienteControl.nombre?.toString().split(' ')[0] ?? "") : "";
+          const tipoAbrev:string = this.tipoControl ? this.tipoControl.abreviatura?.toString() ?? "" : "";
+          const subtipoAbrev:string = this.subtipoControl ? this.subtipoControl.abreviatura?.toString() ?? "" : "";
+
+          // Actualiza efectivo sin disparar su valueChanges
+          this.formulario.get('nombre')?.setValue(cliente + "-" + tipoAbrev + "-" + subtipoAbrev , { emitEvent: false });
+        }        
+      }, 10);
+    });
+    //#endregion
+  }
+
+  ngOnInit(): void {
+    const path = this.rutaActiva.snapshot.routeConfig?.path;
+    if(path === 'productos/add'){
+      this.desdeRouting = true;
+    }
+
+    this.miscService.ObtenerLineasTalle()
+    .subscribe(response => {
+      this.lineasTalles = response;
+    });
+
+    this.miscService.ObtenerGeneros()
+    .subscribe(response => {
+      this.generos = response;
+    });
+
+    this.miscService.ObtenerMateriales()
+    .subscribe(response => {
+      this.materiales = response;
+    });
+
+    this.miscService.ObtenerTiposProducto()
+    .subscribe(response => {
+      this.tiposProducto = response;
+    });
+
+    this.miscService.ObtenerSubtiposProducto()
+    .subscribe(response => {
+      this.subtiposProducto = response;
+    });
+
+    this.miscService.ObtenerTemporadas()
+    .subscribe(response => {
+      this.temporadas = response;
+    });
+
+    this.clientesService.SelectorClientes()
+    .subscribe(response => {
+      this.clientes = response;
+    });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      //Configuracion para la mascara decimal Imask
+      this.decimal_mask = {
+        mask: Number,
+        scale: 2,
+        thousandsSeparator: '.',
+        radix: ',',
+        normalizeZeros: true,
+        padFractionalZeros: true,
+        lazy: false,
+        signed: true
+      }
+    },0);
+  }
+
+  //#region CONTROLES DEL FORMULARIO
+  get codigoControl() {return this.formulario.get('codigo');}
+  get nombreControl() {return this.formulario.get('nombre');}
+  get temporadaControl() {return this.formulario.get('temporada')?.value;}
+  get generoControl() {return this.formulario.get('genero')?.value;}
+  get clienteControl() {return this.formulario.get('cliente')?.value;}
+  get materialControl() {return this.formulario.get('material')?.value;}
+  get tipoControl() {return this.formulario.get('producto')?.value;}
+  get subtipoControl() {return this.formulario.get('tipo')?.value;}
+  get lineaTalleControl() {return this.formulario.get('lineaTalle')?.value;}
+  get tallesProductoControl(): FormArray {
+    return this.formulario.get('tallesProducto') as FormArray;
+  }
+
+  SelectContent(event: FocusEvent) {
+    const input = event.target as HTMLInputElement;
+    input.select();
+  }
+
+  campoInvalido(campo: string): boolean {
+    const control = this.formulario.get(campo);
+    return !!(control && control.invalid && control.dirty);
+  }
+
+  ObtenerProducto(idProducto){
+    this.productosService.ObtenerProducto(idProducto)
+    .subscribe(response => {
+      this.producto = new Producto(response);
+
+      this.formulario.get('empresa')?.setValue(this.producto.empresa);
+      this.formulario.get('temporada')?.setValue(this.temporadas.find(t=> t.id == this.producto.temporada?.id) ?? new Temporada());
+      this.formulario.get('producto')?.setValue(this.tiposProducto.find(t=> t.id == this.producto.tipo?.id) ?? new TipoProducto());
+      this.formulario.get('tipo')?.setValue(this.subtiposProducto.find(t=> t.id == this.producto.subtipo?.id) ?? new SubtipoProducto());
+      this.formulario.get('genero')?.setValue(this.generos.find(t=> t.id == this.producto.genero?.id) ?? new Genero());
+      this.formulario.get('material')?.setValue(this.producto.material?.id);
+      this.MaterialChange();
+      this.formulario.get('color')?.setValue(this.producto.color);
+      this.formulario.get('moldeleria')?.setValue(this.producto.moldeleria);
+      this.formulario.get('cliente')?.setValue(this.clientes.find(c=> c.id == this.producto.cliente) ?? new Cliente());
+      this.colorSeleccionado = this.coloresMaterial.find(c=> c.id == this.producto.color?.id) ?? new Color();
+
+      const idLineaTalle = this.producto.talles && this.producto.talles.length > 0 ? this.producto.talles[0].idLineaTalle : null
+      this.formulario.get('lineaTalle')?.setValue(this.lineasTalles.find(l=> l.id == idLineaTalle) ?? new LineasTalle());
+      this.LineaTalleChange();
+
+      setTimeout(() => {
+        this.formulario.get('nombre')?.setValue(this.producto.nombre);
+        this.formulario.get('codigo')?.setValue(this.producto.codigo);
+      }, 1000);
+
+
+      this.producto.talles?.forEach(pTalle => {
+        const talleSeleccionado = this.tallesSeleccionables.find(t=> t.talle == pTalle.talle);
+        if(talleSeleccionado){
+          talleSeleccionado.seleccionado = true;
+          const indice = this.tallesSeleccionables.indexOf(talleSeleccionado);
+
+          this.tallesProductoControl.push(
+            this.ConstruirRow(talleSeleccionado, indice)
+          );
+
+          setTimeout(() => {
+            const indexInForm = this.tallesProductoControl.controls.findIndex(
+              ctrl => ctrl.get('talle')?.value === talleSeleccionado.talle
+            );
+            if (indexInForm !== -1) {
+              this.tallesProductoControl.at(indexInForm).get('id')?.setValue(pTalle.id);
+              this.tallesProductoControl.at(indexInForm).get('cantidad')?.setValue(pTalle.cantidad);
+              this.tallesProductoControl.at(indexInForm).get('precio')?.setValue(pTalle.precio!.toString().replace('.', ','));
+            }
+          }, 100);
+        }
+      });
+    });
+  }
+  //#endregion
+
+  //#region EVENTOS DE SELECCION
+  MaterialChange(){
+    const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
+    this.coloresMaterial = materialSeleccionado?.colores!;
+    this.colorSeleccionado = null;
+  }
+
+  LineaTalleChange(){
+    const lineaTalleSeleccionada = this.lineasTalles.find(l=> l.id == this.lineaTalleControl.id);
+    this.formulario.setControl('tallesProducto', this.fb.array([]));
+    this.tallesSeleccionables = (lineaTalleSeleccionada?.talles ?? []).map(talle => {
+                                  return new TalleSeleccionable(
+                                    {talle, seleccionado:false}
+                                  )
+                                });
+  }
+  FiltrarClientes(event: any) {
+    const query = event.query.toLowerCase();
+    this.clientesFiltrados = this.clientes.filter(c => {
+      const nombre = c.nombre!.toLowerCase();
+      const dni = c.documento!.toString(); 
+      return nombre.includes(query) || dni.includes(query);
+    });
+  }
+
+  SeleccionarTalle(indice:number) {
+    this.tallesSeleccionables[indice].seleccionado = !this.tallesSeleccionables[indice].seleccionado;
+
+    if(this.tallesSeleccionables[indice].seleccionado){
+      this.tallesProductoControl.push(
+        this.ConstruirRow(this.tallesSeleccionables[indice], indice)
+      );
+    }else{
+      // buscar índice real dentro del FormArray
+      const indexInForm = this.tallesProductoControl.controls.findIndex(
+        ctrl => ctrl.get('talle')?.value === this.tallesSeleccionables[indice].talle
+      );
+
+      if (indexInForm !== -1) {
+        this.tallesProductoControl.removeAt(indexInForm);
+      }
+    }
+  }
+  
+  ConstruirRow(item: any, indice:number): FormGroup {
+    return this.fb.group({
+      id: 0,
+      ubicacion: indice,
+      talle: [item.talle],
+      cantidad: [''],
+      precio: [''],
+      idLineaTalle: [this.lineaTalleControl.id]
+    });
+  }
+  //#endregion
+
+  Guardar(){
+    this.markFormTouched(this.formulario);
+    if(this.formulario.invalid) return;
+
+    if(!this.producto){
+      this.producto = new Producto();
+    }
+
+    this.tallesProductoControl.value.forEach(element => {
+      element.precio = this.Globales.EstandarizarDecimal(element.precio.toString());
+    });
+
+    this.producto.empresa = this.formulario.get('empresa')?.value;
+    this.producto.cliente = this.clienteControl.id;
+    this.producto.temporada = this.temporadaControl.id;
+    this.producto.tipo = this.tipoControl.id;
+    this.producto.subtipo = this.subtipoControl.id;
+    this.producto.genero = this.generoControl.id;
+    this.producto.material = this.materialControl;
+    this.producto.color = this.colorSeleccionado!;
+    this.producto.codigo = this.formulario.get('codigo')?.value;
+    this.producto.nombre = this.formulario.get('nombre')?.value;
+    this.producto.moldeleria = this.formulario.get('moldeleria')?.value;
+    this.producto.talles = this.tallesProductoControl.value;
+
+    if(this.producto.id != 0){
+      this.Modificar();
+    } else{
+      this.producto.proceso = 1;
+      this.Agregar();
+    }
+  }
+
+  Agregar(){
+    this.productosService.Agregar(this.producto)
+      .subscribe(response => {
+        if(response=='OK'){
+          this.Notificaciones.Success("Producto creado correctamente");
+          if(this.desdeRouting)
+            this.router.navigateByUrl('/productos');
+          else
+            this.CerrarModal(true);    
+
+          }else{
+          this.Notificaciones.Warn(response);
+        }
+      });
+  }
+
+  Modificar(){
+    this.productosService.Modificar(this.producto)
+      .subscribe(response => {
+        if(response=='OK'){
+          this.Notificaciones.Success("Producto modificado correctamente");
+          this.CerrarModal(true);
+        }else{
+          this.Notificaciones.Warn(response);
+        }
+      });
+  }
+
+  CerrarModal(actualizar:boolean) {
+    this.cerrar.emit(actualizar);
+  }
+
+  //Marca los campos del formulario como tocados para validar
+  markFormTouched(control: AbstractControl) {
+    if (control instanceof FormGroup || control instanceof FormArray) {
+      Object.values(control.controls).forEach(c => this.markFormTouched(c));
+    } else {
+      control.markAsTouched();
+      control.markAsDirty();
+    }
+  }
 }

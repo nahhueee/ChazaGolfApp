@@ -52,7 +52,7 @@ export class ListadoProductosComponent {
   filtroActual!: FiltroProducto;
   lineasTalles: LineasTalle[] = [];
 
-  productoSeleccionado!: Producto | undefined;
+  productoSeleccionado: number;
   mostrarmodalAddMod: boolean = false;
   esDark:boolean = false;
   sub!: Subscription;
@@ -76,6 +76,11 @@ export class ListadoProductosComponent {
   ngOnInit(): void {
     this.sub = this.temaService.theme$.subscribe(theme => {
       this.esDark = theme === 'dark';
+    });
+
+    //Reacciona al input de busqueda
+    this.busquedaControl.valueChanges.subscribe(valor => {
+      this.Buscar(valor);
     });
 
     this.ObtenerLineasTalle();
@@ -122,7 +127,6 @@ export class ListadoProductosComponent {
         }
     
         this.productosService.ObtenerProductos(this.filtroActual).subscribe(response => {
-          console.log(response.registros)
           this.productos = response.registros;
           this.totalRecords = response.total;
           this.loading = false;
@@ -130,7 +134,7 @@ export class ListadoProductosComponent {
   }
   
   Editar(id:number){
-    this.productoSeleccionado = this.productos.find(p => p.id == id);
+    this.productoSeleccionado = id;
     this.mostrarmodalAddMod = true;
   }
 
