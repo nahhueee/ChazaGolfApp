@@ -4,7 +4,7 @@ import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.
 import { AccordionModule } from 'primeng/accordion';
 import { TableModule } from 'primeng/table';
 import { DatePickerModule } from 'primeng/datepicker';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
 import { LineasTalle, Producto } from '../../../../models/Producto';
@@ -151,10 +151,10 @@ export class AddModVentasComponent {
     ];
 
     this.formGenerales = new FormGroup({
-      proceso: new FormControl(''),
+      proceso: new FormControl('', [Validators.required]),
       nroNota: new FormControl({ value: '', disabled: true }),
-      fecha: new FormControl(new Date()),
-      cliente: new FormControl([null]),
+      fecha: new FormControl(new Date(), [Validators.required]),
+      cliente: new FormControl([null], [Validators.required]),
       lista: new FormControl(''),
     });
 
@@ -170,8 +170,8 @@ export class AddModVentasComponent {
     });
 
     this.formFacturacion = new FormGroup({
-      empresa: new FormControl(''),
-      tComprobante: new FormControl(''),
+      empresa: new FormControl('', [Validators.required]),
+      tComprobante: new FormControl('', [Validators.required]),
       tDescuento: new FormControl([null]),
       descuento: new FormControl('', [Validators.min(0), Validators.max(100)]),
       codPromo: new FormControl(''),
@@ -638,6 +638,8 @@ export class AddModVentasComponent {
   //#endregion
 
   Guardar(factura?:FacturaVenta, finalizando:boolean = false){
+    this.markFormTouched(this.formGenerales);
+    this.markFormTouched(this.formFacturacion);
     if(this.formFacturacion.invalid) return;
     if(this.formGenerales.invalid) return;
 
@@ -707,12 +709,18 @@ export class AddModVentasComponent {
     this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
     this.venta.cliente = this.formGenerales.get('cliente')?.value.descripcion;
 
-    if(this.formGenerales.get('lista')?.value == "")
-      this.venta.idListaPrecio = 1;
-    else
-      this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
+    const idLista = this.formGenerales.get('lista')?.value;
 
-    this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
+    if(idLista == null || idLista == ""){
+      this.venta.idListaPrecio = 1;
+      this.venta.listaPrecio = "CONSUMIDOR FINAL";
+    }
+    else
+    {
+      this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
+      this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
+    }
+      
     this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
     this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
     this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value.id;
@@ -726,5 +734,15 @@ export class AddModVentasComponent {
     this.venta.productos = this.productosFactura;
     this.venta.servicios = this.serviciosFactura;
     this.venta.pagos = this.pagosFactura;
+  }
+
+  //Marca los campos del formulario como tocados para validar
+  markFormTouched(control: AbstractControl) {
+    if (control instanceof FormGroup || control instanceof FormArray) {
+      Object.values(control.controls).forEach(c => this.markFormTouched(c));
+    } else {
+      control.markAsTouched();
+      control.markAsDirty();
+    }
   }
 }

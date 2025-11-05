@@ -6,6 +6,11 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.cabecera{
+    display: flex;
+    gap: 20px;
+}
+
 
 //Filtros
 .filtros {
@@ -20,6 +25,7 @@
 .filtroTalles{
     display: flex;
     gap: 20px;
+    margin-top: 20px;
 }
 
 //Linea de Talles

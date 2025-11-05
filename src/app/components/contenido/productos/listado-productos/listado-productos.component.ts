@@ -56,6 +56,7 @@ export class ListadoProductosComponent {
   mostrarmodalAddMod: boolean = false;
   esDark:boolean = false;
   sub!: Subscription;
+  primeraCarga:boolean = true;
 
   //Filtros
   filtros = crearFiltros();
@@ -106,31 +107,36 @@ export class ListadoProductosComponent {
   }
 
   Buscar(event?: TableLazyLoadEvent, recargaConFiltro = false){
+    if (this.primeraCarga) {
+      this.primeraCarga = false;
+      return;
+    }
+
     this.loading = true;
     
-        const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
-        const pageSize = event?.rows ?? 10;
-    
-        if (!recargaConFiltro) {
-          this.filtroActual = new FiltroProducto({
-            pagina: pageIndex + 1,  
-            tamanioPagina: pageSize,
-            busqueda: this.busquedaControl.value,
-            proceso: this.filtros.procesos.seleccionado,
-            tipo: this.filtros.tipos.seleccionado,
-            subtipo: this.filtros.subtipos.seleccionado,
-            genero: this.filtros.generos.seleccionado,
-            material: this.filtros.materiales.seleccionado,
-            color: this.filtros.colores.seleccionado,
-            temporada: this.filtros.temporadas.seleccionado
-          });
-        }
-    
-        this.productosService.ObtenerProductos(this.filtroActual).subscribe(response => {
-          this.productos = response.registros;
-          this.totalRecords = response.total;
-          this.loading = false;
-        });
+    const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
+    const pageSize = event?.rows ?? 10;
+
+    if (!recargaConFiltro) {
+      this.filtroActual = new FiltroProducto({
+        pagina: pageIndex + 1,  
+        tamanioPagina: pageSize,
+        busqueda: this.busquedaControl.value,
+        proceso: this.filtros.procesos.seleccionado,
+        tipo: this.filtros.tipos.seleccionado,
+        subtipo: this.filtros.subtipos.seleccionado,
+        genero: this.filtros.generos.seleccionado,
+        material: this.filtros.materiales.seleccionado,
+        color: this.filtros.colores.seleccionado,
+        temporada: this.filtros.temporadas.seleccionado
+      });
+    }
+
+    this.productosService.ObtenerProductos(this.filtroActual).subscribe(response => {
+      this.productos = response.registros;
+      this.totalRecords = response.total;
+      this.loading = false;
+    });
   }
   
   Editar(id:number){
@@ -151,6 +157,8 @@ export class ListadoProductosComponent {
 
   //Descarga los resultados en excel
   DescargarResultados(){
+    if(this.productos.length == 0) return;
+
     this.filesService.DescargarResultadosExcel(this.filtroActual).subscribe(blob => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

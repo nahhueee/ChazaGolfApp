@@ -87,3 +87,48 @@ h6{
   margin: 20px 30px;
   border-radius: 10px;
 }
+
+
+//#region ALERTAS
+/* Estilo base común */
+.alerta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border: 1px solid transparent;
+}
+
+.alerta-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.alerta-texto {
+  flex: 1;
+}
+
+/* Variante de advertencia */
+.alerta-warn {
+  background-color: #fff3cd;
+  color: #856404;
+  border-color: #ffeeba;
+}
+
+.alerta-warn .alerta-icon {
+  color: #d39e00;
+}
+
+/* Variante informativa */
+.alerta-info {
+  background-color: #cce5ff;
+  color: #004085;
+  border-color: #b8daff;
+}
+//#endregion

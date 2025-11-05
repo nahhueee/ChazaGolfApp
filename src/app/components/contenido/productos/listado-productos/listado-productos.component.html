@@ -1,6 +1,17 @@
 <app-navegacion></app-navegacion>
 
 <div class="contenido">
+    <div class="cabecera">
+      <p-button label="Exportar" icon="pi pi-file-excel" raised (onClick)="DescargarResultados()"/>
+
+      <div class="alerta alerta-info">
+        <span class="alerta-icon">ℹ️</span>
+        <div class="alerta-texto">
+            Selecciona algun filtro para comenzar la busqueda.
+        </div>
+    </div>
+    </div>
+
     <div class="filtroTalles">
       <div class="filtros">
         @for(key of filtroKeys; track $index){
