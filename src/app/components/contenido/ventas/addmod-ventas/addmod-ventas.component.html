@@ -41,11 +41,10 @@
                                         <label>Fecha</label>
                                     </p-floatlabel>
                                 </div>
-                               
-                                <!-- Nota Empaque -->
+                                <!-- Puntos -->
                                 <p-floatlabel variant="in">
-                                    <input pInputText formControlName="nroNota"  type="text"/>
-                                    <label>N° Nota Empaque</label>
+                                    <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" />
+                                    <label>Punto de Venta</label>
                                 </p-floatlabel>
                             </div>
                             <div class="centro">
@@ -74,10 +73,10 @@
                                     </p-inputgroup-addon>                                
                                 </p-inputgroup>
 
-                                <!-- Listas Precio -->
+                                <!-- Nota Empaque -->
                                 <p-floatlabel variant="in">
-                                    <p-select [options]="listaPrecios" formControlName="lista" optionLabel="descripcion" />
-                                    <label>Lista De Precio</label>
+                                    <input pInputText formControlName="nroNota"  type="text"/>
+                                    <label>N° Nota Empaque</label>
                                 </p-floatlabel>
                             </div>
 
@@ -94,7 +93,8 @@
                                     </div>
                                     <div class="datos-seccion">
                                         <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
-                                        <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p>
+                                        <!-- <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p> -->
+                                        <p><strong>Último Descuento:</strong> {{ clienteSeleccionado.ultimoDescuento?.tipoDescuento }} | {{ clienteSeleccionado.ultimoDescuento?.descuento }}</p>
                                     </div>
 
                                     <p class="link" (click)="modalClienteVisible = true">Ver Más</p>

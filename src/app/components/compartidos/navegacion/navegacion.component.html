@@ -5,7 +5,7 @@
         <div class="items">
             <button pButton label="Inicio" icon="pi pi-home" class="p-button-text" (click)="Navegar('inicio')"></button>
 
-            <button pButton label="Ventas" icon="pi pi-shopping-cart" class="p-button-text" (click)="menuVentas.toggle($event)"></button>
+            <button pButton label="Facturacion" icon="pi pi-shopping-cart" class="p-button-text" (click)="menuVentas.toggle($event)"></button>
             <p-menu #menuVentas [model]="itemsVenta" [popup]="true" />
 
             <button pButton label="Productos" icon="pi pi-box" class="p-button-text" (click)="menuProductos.toggle($event)"></button>

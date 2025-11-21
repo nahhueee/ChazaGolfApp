@@ -1,0 +1,84 @@
+<app-navegacion></app-navegacion> 
+<p-confirmpopup />
+
+<div class="contenido">
+    <div class="tabla">
+        <p-table 
+        [value]="servicios"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Editar</th>
+                    <th>Código</th>
+                    <th>Descripcion</th>
+                    <th>Precio Sugerido</th>
+                    <th>Tope Desc.</th>
+                    <th>Borrar</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-servicio>
+                <tr>
+                    <td>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(servicio)" pTooltip="Editar" tooltipPosition="bottom"/>
+                    </td>
+                    <td>{{ servicio.codigo }}</td>
+                    <td>{{ servicio.descripcion }}</td>
+                    <td>${{ servicio.sugerido | decimalFormat}}</td>
+                    <td>{{ servicio.topeDescuento}}%</td>
+                    <td>
+                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.id)" />
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+    <form [formGroup]="formulario" class="formulario" [class.edicion]="editando">
+        @if(editando){
+            <div class="titulo">
+                <span>Editar Servicio</span>
+                <p-button icon="pi pi-times" severity="danger" [rounded]="true" [outlined]="true" (click)="CancelarEdicion()" pTooltip="Cancelar Edición" tooltipPosition="bottom"/>
+            </div>
+        }@else{
+            <div class="titulo">
+                <span>Nuevo Servicio</span>
+                <p-button icon="pi pi-plus" severity="success" [rounded]="true" [outlined]="true" [disabled]="true"/>
+            </div>
+        }
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="codigo" class="uppercase" type="text" (focus)="SelectContent($event)"/>
+            <label>Código</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="descripcion" class="uppercase" type="text" (focus)="SelectContent($event)"/>
+            <label>Descripción</label>
+            @if(campoInvalido('descripcion')){
+                <small class="error">La descripción es requerida.</small>
+            }
+        </p-floatlabel>
+
+        <div class="horizontal">
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="sugerido" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)"/>
+                <label>Precio Sugerido</label>
+            </p-floatlabel>
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="topeDescuento" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" placeholder="Máximo descuento en porcentaje"/>
+                <label>Tope Descuento</label>
+            </p-floatlabel>
+        </div>
+        
+        <div class="botones">
+            <p-button label="Guardar" severity="primary" (click)="Guardar()" icon="pi pi-save" [disabled]="!formulario.valid"/>
+        </div>
+    </form>
+</div>  

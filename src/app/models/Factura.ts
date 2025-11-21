@@ -5,6 +5,8 @@ import { FacturaVenta } from "./FacturaVenta";
     id?:number;
     idProceso?:number;
     proceso?:string;
+    idPunto?:number;
+    punto?:string;
     nroNota?:number;
     fecha?:Date;
     hora?:string;

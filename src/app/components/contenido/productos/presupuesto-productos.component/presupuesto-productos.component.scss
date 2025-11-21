@@ -1,0 +1,45 @@
+.contenido{
+    background-color: var(--surface-card);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.uppercase{
+    text-transform: uppercase !important;
+}
+
+.tabla{
+    flex: 2;
+}
+.formulario{
+    flex: 1;
+    padding: 30px;
+    border-radius: 10px;
+    border: 1px solid #268656;
+}
+.edicion{
+    border-color: #ffd196 !important;
+}
+
+.titulo{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-family: 'Poppins';
+    color: var(--text-color-secondary);
+}
+
+.botones{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}

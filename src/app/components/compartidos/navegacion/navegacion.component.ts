@@ -38,7 +38,10 @@ export class NavegacionComponent {
 
     this.itemsProducto = [
         { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/productos/add' },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' }
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' },
+        { separator: true }, 
+        { label: 'Prod Presupuesto', icon: 'pi pi-wallet', routerLink: '/productos-presupuesto' },
+        { label: 'Servicios', icon: 'pi pi-verified', routerLink: '/servicios' },
     ];
 
     this.itemsCliente = [

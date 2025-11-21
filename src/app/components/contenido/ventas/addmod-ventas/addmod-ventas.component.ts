@@ -31,6 +31,9 @@ import { ObjFacturar } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { TagModule } from 'primeng/tag';
+import { ServiciosService } from '../../../../services/servicios.service';
+import { PuntoVenta } from '../../../../models/PuntoVenta';
+import { TipoDescuento } from '../../../../models/TipoDescuento';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -76,12 +79,7 @@ export class AddModVentasComponent {
   //PANTALLA 1
   formGenerales:FormGroup;
   procesos:ProcesoVenta[] = [];
-  listaPrecios = [
-    {id: 1, descripcion: 'CONSUMIDOR FINAL'},
-    {id: 2, descripcion: 'LISTA 3'},
-    {id: 3, descripcion: 'LISTA 4'},
-    {id: 4, descripcion: 'LISTA 5'}
-  ];
+  puntos:PuntoVenta[] = [];
 
   clienteSeleccionado:Cliente | undefined;
   clientes:Cliente[]=[];
@@ -114,11 +112,7 @@ export class AddModVentasComponent {
     {id: 2, descripcion: 'GABEL MARIELA'},
     {id: 3, descripcion: 'OMAR CHAZA'},
   ];
-  tiposDescuento=[
-    {id: 1, descripcion: 'PORCENTAJE'},
-    {id: 2, descripcion: 'VOUCHER'},
-    {id: 3, descripcion: 'PROMOCION'},
-  ];
+  tiposDescuento:TipoDescuento[]=[];
   comprobantes:TipoComprobante[]=[];
   metodosPago:MetodoPago[]=[];
 
@@ -133,7 +127,8 @@ export class AddModVentasComponent {
     private Notificaciones: NotificacionesService,
     private globalesService:GlobalesService,
     private ventasService:VentasService,
-    private rutaActiva:ActivatedRoute
+    private rutaActiva:ActivatedRoute,
+    private serviciosService:ServiciosService
   ){
     this.itemsMenu = [
         {
@@ -152,6 +147,7 @@ export class AddModVentasComponent {
 
     this.formGenerales = new FormGroup({
       proceso: new FormControl('', [Validators.required]),
+      punto: new FormControl('', [Validators.required]),
       nroNota: new FormControl({ value: '', disabled: true }),
       fecha: new FormControl(new Date(), [Validators.required]),
       cliente: new FormControl([null], [Validators.required]),
@@ -188,10 +184,12 @@ export class AddModVentasComponent {
 
   ngOnInit(): void {
     this.ObtenerProcesosVenta();
+    this.ObtenerPuntosVenta();
     this.ObtenerClientes();
     this.ObtenerLineasTalle();
     this.ObtenerServicios();
     this.ObtenerMetodosPago();
+    this.ObtenerTiposDescuento();
   }
 
   ngAfterViewInit(){
@@ -233,7 +231,7 @@ export class AddModVentasComponent {
     },10);
 
     //DEPENDIENDO EL PROCESO HABILITAMOS NOTA DE EMPAQUE
-    this.formGenerales.get('proceso')?.valueChanges.subscribe((valor) => {
+    this.formGenerales.get('punto')?.valueChanges.subscribe((valor) => {
     const nroNotaControl = this.formGenerales.get('nroNota');
       if (valor.id != 5) {
         nroNotaControl?.disable({ emitEvent: false });
@@ -258,9 +256,9 @@ export class AddModVentasComponent {
       .subscribe(response => {
         this.venta = response;
         this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
+        this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formGenerales.get('nroNota')?.setValue(this.venta.nroNota);
         this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
-        this.formGenerales.get('lista')?.setValue(this.listaPrecios.find(l => l.id == this.venta.idListaPrecio));
         this.formFacturacion.get('empresa')?.setValue(this.empresas.find(e => e.id == this.venta.idEmpresa));
         this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == this.venta.idTipoDescuento));
         this.formFacturacion.get('descuento')?.setValue(this.venta.descuento);
@@ -309,6 +307,12 @@ export class AddModVentasComponent {
       });
   }
 
+  ObtenerPuntosVenta(){
+    this.miscService.ObtenerPuntosVenta()
+      .subscribe(response => {
+        this.puntos = response;
+      });
+  }
 
   ObtenerLineasTalle(){
     this.miscService.ObtenerLineasTalle()
@@ -318,7 +322,7 @@ export class AddModVentasComponent {
   }
 
   ObtenerServicios(){
-    this.miscService.ObtenerServicios()
+    this.serviciosService.Selector()
       .subscribe(response => {
         this.servicios = response;
       });
@@ -328,6 +332,13 @@ export class AddModVentasComponent {
     this.miscService.ObtenerMetodosPago()
       .subscribe(response => {
         this.metodosPago = response;
+      });
+  }
+
+  ObtenerTiposDescuento(){
+    this.miscService.ObtenerTiposDescuento()
+      .subscribe(response => {
+        this.tiposDescuento = response;
       });
   }
 
@@ -704,6 +715,8 @@ export class AddModVentasComponent {
   ArmarObjetoVenta(){
     this.venta.idProceso = this.formGenerales.get('proceso')?.value.id;
     this.venta.proceso = this.formGenerales.get('proceso')?.value.descripcion;
+    this.venta.idPunto = this.formGenerales.get('punto')?.value.id;
+    this.venta.punto = this.formGenerales.get('punto')?.value.descripcion;
     this.venta.nroNota = 0;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
     this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;

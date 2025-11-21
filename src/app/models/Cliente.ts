@@ -16,6 +16,7 @@ export class Cliente {
     idCategoria?:number;
     fechaAlta?:Date;
     direcciones?:DireccionesCliente[];
+    ultimoDescuento?:UltimoDescuentoCliente;
 }
 
 export class DireccionesCliente {
@@ -28,4 +29,11 @@ export class DireccionesCliente {
     localidad?:string = "";
     provincia?:string = "";
     observaciones?:string = "";
+}
+
+
+export class UltimoDescuentoCliente {
+    descuento?:number;
+    idTipoDescuento?:number;
+    tipoDescuento?:string;
 }

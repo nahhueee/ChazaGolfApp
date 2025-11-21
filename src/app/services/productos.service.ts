@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { FiltroProducto } from '../models/filtros/FiltroProducto';
 import { Producto } from '../models/Producto';
+import { FiltroGral } from '../models/filtros/FiltroGral';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +22,10 @@ export class ProductosService {
 
   BuscarProductos(filtro:string): Observable<any>{
     return this.apiService.get(`productos/buscar-productos/${filtro}`)
+  }
+
+  ObtenerProductosPresupuesto(filtro:FiltroGral): Observable<any> {
+    return this.apiService.post(`productos/obtener-prod-presupuesto`, filtro);
   }
   //#endregion
 
@@ -44,6 +49,16 @@ export class ProductosService {
 
   ActualizarImagen(imagen:string, idProducto:number){
     return this.apiService.put('productos/actualizar-imagen', {imagen, idProducto})
+  }
+
+  AgregarProdPresupuesto(prodPresupuesto:any): Observable<any>{
+    return this.apiService.post('productos/agregar-prod-presupuesto', prodPresupuesto);
+  }
+  ModificarProdPresupuesto(prodPresupuesto:any): Observable<any>{
+    return this.apiService.put('productos/modificar-prod-presupuesto', prodPresupuesto);
+  }
+  EliminarProdPresupuesto(id:number): Observable<any>{
+    return this.apiService.delete(`productos/eliminar-prod-presupuesto/${id}`);
   }
   //#endregion
 }

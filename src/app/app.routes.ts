@@ -7,6 +7,8 @@ import { AddModClientesComponent } from './components/contenido/clientes/addmod-
 import { ListadoVentasComponent } from './components/contenido/ventas/listado-ventas/listado-ventas.component';
 import { ListadoProductosComponent } from './components/contenido/productos/listado-productos/listado-productos.component';
 import { AddmodProductosComponent } from './components/contenido/productos/addmod-productos.component/addmod-productos.component';
+import { PresupuestoProductosComponent } from './components/contenido/productos/presupuesto-productos.component/presupuesto-productos.component';
+import { ServiciosComponent } from './components/contenido/servicios/listado-servicios.component';
 
 export const routes: Routes = [
     {
@@ -45,5 +47,13 @@ export const routes: Routes = [
     {
         path: 'productos/add',
         component:AddmodProductosComponent
+    },
+    {
+        path: 'productos-presupuesto',
+        component:PresupuestoProductosComponent
+    },
+    {
+        path: 'servicios',
+        component:ServiciosComponent
     },
 ];

@@ -1,0 +1,76 @@
+<app-navegacion></app-navegacion> 
+<p-confirmpopup />
+
+<div class="contenido">
+    <div class="tabla">
+        <p-table 
+        [value]="productosPresupuesto"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Editar</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Sugerido</th>
+                    <th>Borrar</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-prodPresupuesto>
+                <tr>
+                    <td>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(prodPresupuesto)" pTooltip="Editar" tooltipPosition="bottom"/>
+                    </td>
+                    <td>{{ prodPresupuesto.codigo }}</td>
+                    <td>{{ prodPresupuesto.nombre }}</td>
+                    <td>{{ prodPresupuesto.sugerido | decimalFormat}}</td>
+                    <td>
+                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, prodPresupuesto.id)" />
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+    <form [formGroup]="formulario" class="formulario" [class.edicion]="editando">
+        @if(editando){
+            <div class="titulo">
+                <span>Editar Producto Presupuesto</span>
+                <p-button icon="pi pi-times" severity="danger" [rounded]="true" [outlined]="true" (click)="CancelarEdicion()" pTooltip="Cancelar Edición" tooltipPosition="bottom"/>
+            </div>
+        }@else{
+            <div class="titulo">
+                <span>Nuevo Producto Presupuesto</span>
+                <p-button icon="pi pi-plus" severity="success" [rounded]="true" [outlined]="true" [disabled]="true"/>
+            </div>
+        }
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="codigo" class="uppercase" type="text" (focus)="SelectContent($event)"/>
+            <label>Código</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="nombre" class="uppercase" type="text" (focus)="SelectContent($event)"/>
+            <label>Nombre</label>
+            @if(campoInvalido('nombre')){
+                <small class="error">El nombre es requerido.</small>
+            }
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="sugerido" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)"/>
+            <label>Precio Sugerido</label>
+        </p-floatlabel>
+
+        <div class="botones">
+            <p-button label="Guardar" severity="primary" (click)="Guardar()" icon="pi pi-save" [disabled]="!formulario.valid"/>
+        </div>
+    </form>
+</div>  
