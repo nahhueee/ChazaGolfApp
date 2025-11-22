@@ -60,7 +60,7 @@ export class ListadoProductosComponent {
 
   //Filtros
   filtros = crearFiltros();
-  filtroKeys: PropKey[] = ['procesos', 'temporadas', 'codigo', 'tipos', 'subtipos', 'generos', 'materiales', 'colores']; // para recorrer
+  filtroKeys: PropKey[] = ['procesos', 'temporadas', 'codigo', 'tipos', 'subtipos', 'generos', 'materiales']; // para recorrer
   busquedaControl: FormControl = new FormControl('');
 
   constructor(
@@ -91,7 +91,7 @@ export class ListadoProductosComponent {
     this.cargarDatos('procesos', this.miscService.ObtenerProcesos.bind(this.miscService));
     this.cargarDatos('generos', this.miscService.ObtenerGeneros.bind(this.miscService));
     this.cargarDatos('materiales', this.miscService.ObtenerMateriales.bind(this.miscService));
-    this.cargarDatos('colores', this.miscService.ObtenerColores.bind(this.miscService));
+    //this.cargarDatos('colores', this.miscService.ObtenerColores.bind(this.miscService));
     this.cargarDatos('temporadas', this.miscService.ObtenerTemporadas.bind(this.miscService));
   }
 

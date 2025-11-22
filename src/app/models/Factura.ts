@@ -1,4 +1,5 @@
 import { FacturaVenta } from "./FacturaVenta";
+import { TallesProducto } from "./Producto";
 
   
   export class Venta{
@@ -34,6 +35,10 @@ import { FacturaVenta } from "./FacturaVenta";
     idProducto? : number;
     codProducto?: string;
     nomProducto?: string;
+    tallesProducto?: TallesProducto[];
+    idColor?: number;
+    color?: string;
+    hexa?: string;
     cantidad?: number;
     idLineaTalle?:number;
     t1?: number;
@@ -54,7 +59,11 @@ import { FacturaVenta } from "./FacturaVenta";
       if (data) {
         this.idProducto = data.idProducto;
         this.codProducto = data.codProducto;
+        this.tallesProducto = data.tallesProducto;
         this.cantidad = data.cantidad;
+        this.idColor = data.idColor;
+        this.color = data.color;
+        this.hexa = data.hexa;
         this.idLineaTalle = data.idLineaTalle;
         this.t1 = data.t1;
         this.t2 = data.t2;

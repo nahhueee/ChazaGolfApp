@@ -101,11 +101,6 @@
             </p-floatlabel>
 
             <!-- Material -->
-            <!-- <p-floatlabel variant="in">
-                <p-select [options]="materiales" formControlName="material" optionLabel="descripcion" (onChange)="MaterialChange()"/>
-                <label>Material</label>
-            </p-floatlabel> -->
-
             <div class="materiales">
                 <p-selectbutton 
                 [options]="materiales" 
@@ -117,18 +112,20 @@
             
 
             @if(materialControl != ''){
-                @if(colorSeleccionado){
-                    <p class="info">Color seleccionado: <span>{{colorSeleccionado.descripcion}}</span></p>
+                @if(coloresSeleccionados.length > 0){
+                    <p class="info">Colores seleccionados:
+                        <span>{{coloresSeleccionadosDescriptions}}</span>
+                    </p>
                 }@else{
-                    <p class="info">Selecciona un color</p>
+                    <p class="info">Selecciona al menos un color</p>
                 }
 
                 <div class="color-grid">
                     @for (color of coloresMaterial; track $index) {
                         <div
                             class="color-box"
-                            [class.selected]="colorSeleccionado && colorSeleccionado.id === color.id"
-                            (click)="colorSeleccionado = color"
+                            [class.selected]="EsColorSeleccionado(color)"
+                            (click)="SeleccionarColor(color)"
                             [pTooltip]="color.descripcion"
                             tooltipPosition="bottom"
                             [ngStyle]="{'background-color':color.hexa}"

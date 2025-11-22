@@ -118,30 +118,59 @@
                 <p-accordion-content>
 
                     <form [formGroup]="formProductos" class="formProducto" autocomplete="off">
-                        <div class="enLinea">
-                            <!-- Codigo - Nombre -->
-                            <p-floatlabel variant="in" class="completeProductos">
-                                <p-autocomplete
-                                    formControlName="producto"
-                                    [suggestions]="productosFiltrados"
-                                    placeholder="Buscar por código o nombre"
-                                    emptyMessage="No se encontraron resultados"
-                                    (completeMethod)="FiltrarProductos($event)"
-                                    (onSelect)="SeleccionarProducto();"
-                                    optionLabel="nombre"
-                                >
-                                    <!-- Template para las sugerencias -->
-                                    <ng-template let-producto pTemplate="item">
-                                        <div class="box-color" [ngStyle]="{'background': producto.color?.hexa}"></div>
-                                        {{ producto.codigo }} - {{ producto.nombre }}
-                                    </ng-template>
+                        <div class="LineaProducto">
 
-                                </p-autocomplete>
-                                <label>Producto</label>
-                            </p-floatlabel>  
+                            <div class="completeProductos">
+                                <!-- Codigo - Nombre -->
+                                <p-floatlabel variant="in">
+                                    <p-autocomplete
+                                        formControlName="producto"
+                                        [suggestions]="productosFiltrados"
+                                        placeholder="Buscar por código o nombre"
+                                        emptyMessage="No se encontraron resultados"
+                                        (completeMethod)="FiltrarProductos($event)"
+                                        (onSelect)="SeleccionarProducto();"
+                                        optionLabel="nombre"
+                                    >
+                                        <!-- Template para las sugerencias -->
+                                        <ng-template let-producto pTemplate="item">
+                                            <div class="box-color" [ngStyle]="{'background': producto.color?.hexa}"></div>
+                                            {{ producto.codigo }} - {{ producto.nombre }}
+                                        </ng-template>
+
+                                    </p-autocomplete>
+                                    <label>Producto</label>
+                                </p-floatlabel>  
+                                <div class="acciones">
+                                    <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
+                                </div>
+                            </div>
+                            
+
+                            <div class="colores">
+                                @if(productoSeleccionado && productoSeleccionado.id != 0){
+                                    @for (color of productoSeleccionado.colores; track color) {
+                                        <div class="color" 
+                                             [class.selected]="color === colorSeleccionado"
+                                             (click)="colorSeleccionado = color"
+                                             [pTooltip]="color.descripcion"
+                                             tooltipPosition="bottom"
+                                             [ngStyle]="{'background-color':color.hexa}"
+                                            >
+                                        </div>
+                                    }
+                                }@else{
+                                    <div class="NoColor"></div>
+                                    <div class="NoColor"></div>
+                                    <div class="NoColor"></div>
+                                    <div class="NoColor"></div>
+                                    <div class="NoColor"></div>
+                                    <div class="NoColor"></div>
+                                }
+                            </div>
                             
                             <div class="talles">
-                                @if(productoSeleccionado && productoSeleccionado.id != 0){
+                                @if(productoSeleccionado && productoSeleccionado.id != 0 && colorSeleccionado && colorSeleccionado.id != 0){
                                     @for (talle of tallesProducto; track talle) {
                                         <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
                                             @if(ObtenerCantidad(talle, 'agregar') != 0){
@@ -160,11 +189,7 @@
                                 }
                             </div>
                         </div>
-                        
-                        <div class="acciones">
-                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
-                            <p-button label="Busqueda Avanzada" variant="outlined" severity="secondary" icon="pi pi-search"/>
-                        </div>
+                       
                     </form>
 
                     <p-table [value]="productosFactura" editable="true" dataKey="codProducto">
@@ -172,6 +197,7 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre</th>
+                                <th>Color</th>
                                 <th>XS</th>
                                 <th>S</th>
                                 <th>M</th>
@@ -192,6 +218,12 @@
                             <tr>
                                 <td>{{ producto.codProducto }}</td>
                                 <td>{{ producto.nomProducto }}</td>
+                                <td>
+                                    <div class="color-cell">
+                                        <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                                        {{ producto.color }}
+                                    </div>
+                                </td>
                                 <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
                                     [pEditableColumn]="producto[t]" 
                                     [pEditableColumnField]="t">
@@ -252,7 +284,7 @@
                             </p-floatlabel>
 
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="precio" type="text" [imask]="decimal_mask"/>
+                                <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + ServicioControl.sugerido : 'Precio Sugerido:'"/>
                                 <label>Precio</label>
                             </p-floatlabel>
                         </div>
@@ -313,7 +345,7 @@
                                     <label>Tipo Descuento</label>
                                 </p-floatlabel>
 
-                                @if(TipoDescuentoControl.id != "3"){
+                                @if(TipoDescuentoControl && TipoDescuentoControl.id != "3"){
                                    <!-- Descuento -->
                                     <p-inputgroup>
                                         <p-floatlabel variant="in">
@@ -461,6 +493,7 @@
                     <tr>
                         <th>Código</th>
                         <th>Nombre</th>
+                        <th>Color</th>
                         <th>XS</th>
                         <th>S</th>
                         <th>M</th>
@@ -480,6 +513,7 @@
                     <tr>
                         <td>{{ producto.codProducto }}</td>
                         <td>{{ producto.nomProducto }}</td>
+                        <td>{{ producto.color }}</td>
                         <td>{{ producto.t1 }}</td>
                         <td>{{ producto.t2 }}</td>
                         <td>{{ producto.t3 }}</td>

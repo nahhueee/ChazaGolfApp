@@ -10,10 +10,10 @@ export class Producto {
     genero?: Genero;
     temporada?: Temporada;
     material?: Material;
-    color?: Color;
     moldeleria?: number;
     imagen: string = "";
     talles?: TallesProducto[];
+    colores?: Color[];
     activo:boolean;
 
     constructor(data?: any) {
@@ -28,9 +28,9 @@ export class Producto {
           this.subtipo = data.subtipo;
           this.genero = data.genero;
           this.material = data.material;
-          this.color = data.color;
           this.moldeleria = data.moldeleria;
           this.temporada = data.temporada;
+          this.colores = Array.isArray(data.colores) ? data.colores.map((colorData: any) => new Color(colorData)) : [];
           this.talles = Array.isArray(data.talles) ? data.talles.map((talleData: any) => new TallesProducto(talleData)) : [];
         } 
     }
@@ -155,7 +155,7 @@ export class Material {
     }
 }
 export class Color {
-    id?:number;
+    id?:number = 0;
     descripcion?:string;
     hexa?:string;
 

@@ -174,31 +174,77 @@ p-accordion-header{
   justify-content: center;
   //align-items: center;
 }
-.completeProductos{
-  flex: 1;
+
+.LineaProducto{
+  display: flex;
+  gap: 30px;
+  width: 100%;
+  margin-bottom: 15px;
+
+  .completeProductos{
+    flex: 2;
+  }
+}
+
+.color-cell{
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .box-color{
-  width: 15px;
-  height: 15px;
-  border-radius: 10%;
-  margin-right: 5px;
-  margin-top: -3px;
+  height: 20px;
+  width: 20px;
+  border-radius: 4px;
 }
+
+.colores {
+  display: grid;
+  grid-auto-flow: column;   
+  grid-template-rows: repeat(2, auto);
+  gap: 5px; 
+  flex: 0.5;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: 100%;
+}
+
+.color {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: 0.2s ease;
+  border: 1px solid var(--surface-border);
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  &.selected {
+    border: 5px solid var(--p-primary-color)
+  }
+}
+
+.NoColor{
+  border-radius: 4px;
+  background-color: var(--surface-ground);
+}
+
 .talles{
-  display: flex;
-  gap: 5px;
-  flex: 1.5;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); 
+  grid-template-rows: repeat(2, auto);  
+  gap: 5px; 
+  flex: 2;
   
   .talle, .NoTalle{
     position: relative;
     flex: 1;
     display: flex;
+    flex-wrap: wrap;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 5px;
 
-    height: 53px;
     width: 100%;
     border-radius: 8px;
     background-color: var(--surface-ground);

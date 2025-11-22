@@ -50,7 +50,8 @@ export class AddmodProductosComponent {
   generos: Genero[] = [];
   materiales: Material[] = [];
   coloresMaterial: Color[] = [];
-  colorSeleccionado: Color | null;
+  coloresSeleccionados: Color[] = [];
+  coloresSeleccionadosDescriptions: string = '';
   lineasTalles: LineasTalle[] = [];
   tallesSeleccionables: TalleSeleccionable[] = [];
 
@@ -223,10 +224,9 @@ export class AddmodProductosComponent {
       this.formulario.get('genero')?.setValue(this.generos.find(t=> t.id == this.producto.genero?.id) ?? new Genero());
       this.formulario.get('material')?.setValue(this.producto.material?.id);
       this.MaterialChange();
-      this.formulario.get('color')?.setValue(this.producto.color);
       this.formulario.get('moldeleria')?.setValue(this.producto.moldeleria);
       this.formulario.get('cliente')?.setValue(this.clientes.find(c=> c.id == this.producto.cliente) ?? new Cliente());
-      this.colorSeleccionado = this.coloresMaterial.find(c=> c.id == this.producto.color?.id) ?? new Color();
+      
 
       const idLineaTalle = this.producto.talles && this.producto.talles.length > 0 ? this.producto.talles[0].idLineaTalle : null
       this.formulario.get('lineaTalle')?.setValue(this.lineasTalles.find(l=> l.id == idLineaTalle) ?? new LineasTalle());
@@ -237,6 +237,8 @@ export class AddmodProductosComponent {
         this.formulario.get('codigo')?.setValue(this.producto.codigo);
       }, 1000);
 
+      this.coloresSeleccionados = this.producto.colores ?? [];
+      this.coloresSeleccionadosDescriptions = this.coloresSeleccionados.map(c => c.descripcion).join(', ');
 
       this.producto.talles?.forEach(pTalle => {
         const talleSeleccionado = this.tallesSeleccionables.find(t=> t.talle == pTalle.talle);
@@ -268,7 +270,7 @@ export class AddmodProductosComponent {
   MaterialChange(){
     const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
     this.coloresMaterial = materialSeleccionado?.colores!;
-    this.colorSeleccionado = null;
+    this.coloresSeleccionados = [];
   }
 
   LineaTalleChange(){
@@ -280,6 +282,7 @@ export class AddmodProductosComponent {
                                   )
                                 });
   }
+
   FiltrarClientes(event: any) {
     const query = event.query.toLowerCase();
     this.clientesFiltrados = this.clientes.filter(c => {
@@ -288,6 +291,23 @@ export class AddmodProductosComponent {
       return nombre.includes(query) || dni.includes(query);
     });
   }
+
+  SeleccionarColor(color: Color) {
+    const existe = this.coloresSeleccionados.some(c => c.id === color.id);
+
+    if (existe) {
+      this.coloresSeleccionados = this.coloresSeleccionados.filter(c => c.id !== color.id);
+    } else {
+      this.coloresSeleccionados = [...this.coloresSeleccionados, color];
+    }
+
+    this.coloresSeleccionadosDescriptions = this.coloresSeleccionados.map(c => c.descripcion).join(', ');
+  }
+
+  EsColorSeleccionado(color: Color): boolean {
+    return this.coloresSeleccionados.some(c => c.id === color.id);
+  }
+
 
   SeleccionarTalle(indice:number) {
     this.tallesSeleccionables[indice].seleccionado = !this.tallesSeleccionables[indice].seleccionado;
@@ -339,11 +359,11 @@ export class AddmodProductosComponent {
     this.producto.subtipo = this.subtipoControl.id;
     this.producto.genero = this.generoControl.id;
     this.producto.material = this.materialControl;
-    this.producto.color = this.colorSeleccionado!;
     this.producto.codigo = this.formulario.get('codigo')?.value;
     this.producto.nombre = this.formulario.get('nombre')?.value;
     this.producto.moldeleria = this.formulario.get('moldeleria')?.value;
     this.producto.talles = this.tallesProductoControl.value;
+    this.producto.colores = this.coloresSeleccionados;
 
     if(this.producto.id != 0){
       this.Modificar();

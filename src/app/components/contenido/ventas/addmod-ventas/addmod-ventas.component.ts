@@ -7,7 +7,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
-import { LineasTalle, Producto } from '../../../../models/Producto';
+import { Color, LineasTalle, Producto } from '../../../../models/Producto';
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
@@ -34,6 +34,7 @@ import { TagModule } from 'primeng/tag';
 import { ServiciosService } from '../../../../services/servicios.service';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { TipoDescuento } from '../../../../models/TipoDescuento';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -52,7 +53,8 @@ import { TipoDescuento } from '../../../../models/TipoDescuento';
     TagModule,
     DividerModule,
     AddModClientesComponent,
-    FacturarVentaComponent
+    FacturarVentaComponent,
+    TooltipModule
   ],
   providers: [ConfirmationService],
   templateUrl: './addmod-ventas.component.html',
@@ -89,6 +91,7 @@ export class AddModVentasComponent {
   formProductos:FormGroup;
   productosFiltrados:Producto[]=[];
   productoSeleccionado:Producto = new Producto();
+  colorSeleccionado:Color = new Color();
   tallesBase:string[] = ["X","X","X","X","X","X","X","X","X","X"]
   tallesProducto:string[] = [];
 
@@ -99,7 +102,6 @@ export class AddModVentasComponent {
   formServicios:FormGroup;
   servicios:Servicio[]=[];
   serviciosFiltrado:Servicio[]=[];
-
   serviciosFactura:ServiciosFactura[]=[];
 
   //PANTALLA 4
@@ -181,6 +183,7 @@ export class AddModVentasComponent {
 
   get TipoDescuentoControl(){return this.formFacturacion.get('tDescuento')?.value;}
   get DescuentoControl(){return this.formFacturacion.get('descuento')?.value;}
+  get ServicioControl(){return this.formServicios.get('servicio')?.value;}
 
   ngOnInit(): void {
     this.ObtenerProcesosVenta();
@@ -448,7 +451,7 @@ export class AddModVentasComponent {
 
   //#region PRODUCTOS VENTA
   AgregarProducto() {
-    if (!this.productoSeleccionado || !this.productoSeleccionado.talles) return;
+    if (!this.productoSeleccionado || !this.productoSeleccionado.talles || this.colorSeleccionado.id === 0) return;
 
     // Tomar solo los talles que el usuario seleccionó
     const tallesSeleccionados = this.productoSeleccionado.talles.filter((t: any) => t.cantAgregar > 0);
@@ -483,6 +486,10 @@ export class AddModVentasComponent {
           idProducto: this.productoSeleccionado.id,
           codProducto: this.productoSeleccionado.codigo,
           nomProducto: this.productoSeleccionado.nombre,
+          tallesProducto: this.productoSeleccionado.talles,
+          idColor: this.colorSeleccionado.id,
+          color: this.colorSeleccionado.descripcion,
+          hexa: this.colorSeleccionado.hexa,
           idLineaTalle: talleSel.idLineaTalle,
           cantidad: cantidad,
           unitario: precio,
@@ -500,6 +507,7 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
+    this.colorSeleccionado = new Color();
   }
 
   AsignarTalle(productoFactura: ProductosFactura, talle: string, cantidad: number, idLineaTalle: number) {
@@ -514,7 +522,14 @@ export class AddModVentasComponent {
   }
 
   ActualizarCantidad(producto: any, field: string, event: any) {
+    
     if(producto[field] === undefined) return;
+
+    console.log(field)
+    const talleReal = this.ObtenerTalleReal(field, producto);
+    console.log(talleReal, producto)
+    const talleEncontrado = producto.tallesProducto.find((t: any) => t.talle === talleReal);
+    console.log(talleEncontrado)
 
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
@@ -535,6 +550,19 @@ export class AddModVentasComponent {
     producto.total = producto.cantidad * producto.unitario;
     this.CalcularTotalGeneral();
   }
+
+  ObtenerTalleReal(tx: string, objeto: any): string | null {
+    const talles = objeto.tallesSeleccionados.split(',').map(t => t.trim());
+
+    const clavesConValor = Object.keys(objeto)
+      .filter(k => k.startsWith('t') && objeto[k] != null && objeto[k] !== 0)
+      .sort((a,b) => Number(a.replace('t','')) - Number(b.replace('t','')));
+
+    const index = clavesConValor.indexOf(tx);
+
+    return talles[index] ?? null;
+  }
+
   
   EliminarProducto(event: Event, idProducto:number){
     this.confirmationService.confirm({
