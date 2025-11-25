@@ -20,7 +20,8 @@ import { TooltipModule } from 'primeng/tooltip';
   styleUrl: './navegacion.component.scss',
 })
 export class NavegacionComponent {
-  itemsVenta: MenuItem[] | undefined;
+  itemsFacturacion: MenuItem[] | undefined;
+  itemsPreFacturacion: MenuItem[] | undefined;
   itemsProducto: MenuItem[] | undefined;
   itemsCliente: MenuItem[] | undefined;
   esDark: boolean = false;
@@ -31,11 +32,16 @@ export class NavegacionComponent {
   ){}
 
   ngOnInit() {
-    this.itemsVenta = [
-        { label: 'Facturar', icon: 'pi pi-plus', routerLink: '/ventas/administrar/0' },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/ventas'}
+   this.itemsFacturacion = [
+      { label: 'Facturar', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'factura' } },
+      { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'factura' }}
     ];
 
+    this.itemsPreFacturacion = [
+      { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'pre' } },
+      { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'pre' } }
+    ];
+    
     this.itemsProducto = [
         { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/productos/add' },
         { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' },

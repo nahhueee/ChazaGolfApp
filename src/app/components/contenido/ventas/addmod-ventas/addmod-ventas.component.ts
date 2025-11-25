@@ -35,6 +35,7 @@ import { ServiciosService } from '../../../../services/servicios.service';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { TipoDescuento } from '../../../../models/TipoDescuento';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -61,6 +62,8 @@ import { TooltipModule } from 'primeng/tooltip';
   styleUrl: './addmod-ventas.component.scss',
 })
 export class AddModVentasComponent {
+  tipo: 'factura' | 'pre' = 'factura';
+
   decimal_mask: any;
   modificando:boolean;
   idAnterior:number;
@@ -97,6 +100,8 @@ export class AddModVentasComponent {
 
   productosFactura:ProductosFactura[]=[];
   lineasTalles: LineasTalle[] = [];
+
+  productosPreFiltrados:ProductoPresupuesto[]=[];
 
   //PANTALLA 3
   formServicios:FormGroup;
@@ -159,6 +164,10 @@ export class AddModVentasComponent {
     this.formProductos = new FormGroup({
       producto: new FormControl([null]),
       descuento: new FormControl(''),
+
+      //Solo para presupuestos
+      precio: new FormControl(''),
+      cantidad: new FormControl(''),
     });
 
     this.formServicios = new FormGroup({
@@ -183,10 +192,23 @@ export class AddModVentasComponent {
 
   get TipoDescuentoControl(){return this.formFacturacion.get('tDescuento')?.value;}
   get DescuentoControl(){return this.formFacturacion.get('descuento')?.value;}
-  get ServicioControl(){return this.formServicios.get('servicio')?.value;}
+  get ServicioControl(){return this.formServicios.get('servicio')?.value ?? '';}
+  get ProcesoControl(){return this.formGenerales.get('proceso')?.value;}
+  get ProductoControl(){return this.formProductos.get('producto')?.value ?? '';}
+  get esPresupuesto(): boolean {
+    return this.ProcesoControl?.descripcion === 'PRESUPUESTO';
+  }
+
 
   ngOnInit(): void {
-    this.ObtenerProcesosVenta();
+    this.rutaActiva.queryParams.subscribe(params => {
+      this.tipo = params['tipo'] ?? 'factura';
+
+      this.ObtenerProcesosVenta();
+    });
+
+    console.log(this.tipo)
+
     this.ObtenerPuntosVenta();
     this.ObtenerClientes();
     this.ObtenerLineasTalle();
@@ -304,7 +326,7 @@ export class AddModVentasComponent {
   }
   
   ObtenerProcesosVenta(){
-    this.miscService.ObtenerProcesosVenta()
+    this.miscService.ObtenerProcesosVenta(this.tipo)
       .subscribe(response => {
         this.procesos = response;
       });
@@ -408,31 +430,54 @@ export class AddModVentasComponent {
       return;
     }
     
-    this.productosService.BuscarProductos(query)
-    .subscribe(response => {
-      this.productosFiltrados = response;
-    });
+    if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
+      this.productosService.BuscarProductosPresupuesto(query)
+      .subscribe(response => {
+        this.productosPreFiltrados = response;
+      });
+    }else{
+      this.productosService.BuscarProductos(query)
+      .subscribe(response => {
+        this.productosFiltrados = response;
+      });
+    }
+    
   }
 
   SeleccionarProducto(){
     const seleccionado = this.formProductos.get('producto')?.value;
     this.productoSeleccionado = seleccionado;
 
-    let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
-    if(!linea) return;
+    if(this.ProcesoControl.descripcion !== 'PRESUPUESTO'){
+      let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
+      if(!linea) return;
 
-    this.tallesProducto = linea.talles!;
+      this.tallesProducto = linea.talles!;
+
+      //Para nota de empaque buscamos la disponibilidad actual
+      if(this.ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
+        this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString())
+        .subscribe(response => {
+          this.productoSeleccionado.talles = response;
+        });
+      }
+    }
+
   }
 
   ObtenerCantidad(talle: string, proceso:string) {
     if (!this.productoSeleccionado?.talles) return 0;
 
     const encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
-
+    console.log(encontrado);
     if(proceso=="stock")
       return encontrado ? encontrado.cantidad : 0;
-    else
+    else if(proceso=="agregar")
       return encontrado && encontrado.cantAgregar! > 0 ? encontrado.cantAgregar : 0;
+    else if(proceso=="disponible")
+      return encontrado && encontrado.disponible! > 0 ? encontrado.disponible : 0;
+
+    return 0;
   }
 
   DefinirCantidadAgregarTalle(talle:string){
@@ -451,59 +496,95 @@ export class AddModVentasComponent {
 
   //#region PRODUCTOS VENTA
   AgregarProducto() {
-    if (!this.productoSeleccionado || !this.productoSeleccionado.talles || this.colorSeleccionado.id === 0) return;
+    if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
+      if (!this.productoSeleccionado) return;
 
-    // Tomar solo los talles que el usuario seleccionó
-    const tallesSeleccionados = this.productoSeleccionado.talles.filter((t: any) => t.cantAgregar > 0);
+      const cantidad = this.formProductos.get('cantidad')?.value;
+      const precio = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value);
+      const nuevo = new ProductosFactura({
+        idProducto: this.productoSeleccionado.id,
+        codProducto: this.productoSeleccionado.codigo,
+        nomProducto: this.productoSeleccionado.nombre,
+        cantidad: cantidad,
+        unitario: precio,
+        total: precio * cantidad,
+      });
 
-    tallesSeleccionados.forEach((talleSel: any) => {
-      const cantidad = talleSel.cantAgregar;
-      const precio = talleSel.precio;
-
-      // Ver si ya existe ese producto con ese precio en el detalle
-      let existente = this.productosFactura.find(
-        (p: ProductosFactura) =>
-          p.idProducto === this.productoSeleccionado.id && p.unitario === precio
-      );
-
-      if (existente) {
-        // Sumar cantidad y total
-        existente.cantidad = (existente.cantidad ?? 0) + cantidad;
-        existente.total = (existente.unitario ?? 0) * (existente.cantidad ?? 0);
-
-        // Asignar cantidad a tX
-        this.AsignarTalle(existente, talleSel.talle, cantidad, talleSel.idLineaTalle);
-
-        // Agregar el talle si no estaba ya en tallesSeleccionados
-        const tallesExistentes = existente.tallesSeleccionados ? existente.tallesSeleccionados.split(",").map(t => t.trim()) : [];
-        if (!tallesExistentes.includes(talleSel.talle)) {
-          tallesExistentes.push(talleSel.talle);
-          existente.tallesSeleccionados = tallesExistentes.join(", ");
-        }
-      } else {
-        // Crear nueva línea de producto
-        const nuevo = new ProductosFactura({
-          idProducto: this.productoSeleccionado.id,
-          codProducto: this.productoSeleccionado.codigo,
-          nomProducto: this.productoSeleccionado.nombre,
-          tallesProducto: this.productoSeleccionado.talles,
-          idColor: this.colorSeleccionado.id,
-          color: this.colorSeleccionado.descripcion,
-          hexa: this.colorSeleccionado.hexa,
-          idLineaTalle: talleSel.idLineaTalle,
-          cantidad: cantidad,
-          unitario: precio,
-          total: precio * cantidad,
-          tallesSeleccionados: talleSel.talle
-        });
-
-        // Asignar cantidad a tX
-        this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
-
-        this.productosFactura.push(nuevo);
+      if(nuevo.unitario === 0){
+        nuevo.unitario = this.ProductoControl.sugerido;
+        nuevo.total = nuevo.unitario! * nuevo.cantidad!;
       }
-    });
 
+      this.productosFactura.push(nuevo);
+    }
+    else{
+      if (!this.productoSeleccionado || !this.productoSeleccionado.talles || this.colorSeleccionado.id === 0) return;
+
+      let tallesSeleccionados:any[] = [];
+
+      if(this.ProcesoControl.descripcion == 'PEDIDO'){
+        // Tomar todos los talles disponibles
+        tallesSeleccionados = this.productoSeleccionado.talles;
+      }else{
+        // Tomar solo los talles que el usuario seleccionó
+        tallesSeleccionados = this.productoSeleccionado.talles.filter((t: any) => t.cantAgregar > 0);
+        if(tallesSeleccionados.length === 0) {
+          this.Notificaciones.Warn("Asegurate de seleccionar al menos un talle.");
+          return;
+        }
+      }
+
+      console.log(tallesSeleccionados, this.productoSeleccionado.talles)
+     
+      tallesSeleccionados.forEach((talleSel: any) => {
+        const cantidad = talleSel.cantAgregar ?? 0;
+        const precio = talleSel.precio;
+
+        // Ver si ya existe ese producto con ese precio en el detalle
+        let existente = this.productosFactura.find(
+          (p: ProductosFactura) =>
+            p.idProducto === this.productoSeleccionado.id && p.unitario === precio
+        );
+
+        if (existente) {
+          // Sumar cantidad y total
+          existente.cantidad = (existente.cantidad ?? 0) + cantidad;
+          existente.total = (existente.unitario ?? 0) * (existente.cantidad ?? 0);
+
+          // Asignar cantidad a tX
+          this.AsignarTalle(existente, talleSel.talle, cantidad, talleSel.idLineaTalle);
+
+          // Agregar el talle si no estaba ya en tallesSeleccionados
+          const tallesExistentes = existente.tallesSeleccionados ? existente.tallesSeleccionados.split(",").map(t => t.trim()) : [];
+          if (!tallesExistentes.includes(talleSel.talle)) {
+            tallesExistentes.push(talleSel.talle);
+            existente.tallesSeleccionados = tallesExistentes.join(", ");
+          }
+        } else {
+          // Crear nueva línea de producto
+          const nuevo = new ProductosFactura({
+            idProducto: this.productoSeleccionado.id,
+            codProducto: this.productoSeleccionado.codigo,
+            nomProducto: this.productoSeleccionado.nombre,
+            tallesProducto: this.productoSeleccionado.talles,
+            idColor: this.colorSeleccionado.id,
+            color: this.colorSeleccionado.descripcion,
+            hexa: this.colorSeleccionado.hexa,
+            idLineaTalle: talleSel.idLineaTalle,
+            cantidad: cantidad,
+            unitario: precio,
+            total: precio * cantidad,
+            tallesSeleccionados: talleSel.talle
+          });
+
+          // Asignar cantidad a tX
+          this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
+
+          this.productosFactura.push(nuevo);
+        }
+      });
+    }
+    
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
@@ -522,17 +603,24 @@ export class AddModVentasComponent {
   }
 
   ActualizarCantidad(producto: any, field: string, event: any) {
-    
     if(producto[field] === undefined) return;
 
-    console.log(field)
     const talleReal = this.ObtenerTalleReal(field, producto);
-    console.log(talleReal, producto)
+        
     const talleEncontrado = producto.tallesProducto.find((t: any) => t.talle === talleReal);
-    console.log(talleEncontrado)
-
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
+
+    if(value <= 0) return;
+
+    if(this.ProcesoControl.descripcion !== 'PEDIDO'){
+      if(value > talleEncontrado.cantidad){
+        this.Notificaciones.Warn(`La cantidad ingresada supera el stock disponible (${talleEncontrado.cantidad}) para el talle ${talleReal}.`);
+        input.value = producto[field];
+        return;
+      }
+    }
+
     producto[field] = value;
    
     producto.cantidad =
@@ -551,15 +639,27 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
   }
 
+  ActualizarValoresPresupuesto(producto: any, event: any, tipo: 'cantidad' | 'precio') {
+    const input = event.target as HTMLInputElement;
+    const value = this.globalesService.EstandarizarDecimal(input.value);
+    if(value <= 0) return;
+
+    if(tipo === 'cantidad')
+      producto.cantidad = value;
+
+    if(tipo === 'precio')
+      producto.unitario = value;
+
+    producto.total = producto.cantidad * producto.unitario;
+    this.CalcularTotalGeneral();
+  }
+
   ObtenerTalleReal(tx: string, objeto: any): string | null {
     const talles = objeto.tallesSeleccionados.split(',').map(t => t.trim());
-
     const clavesConValor = Object.keys(objeto)
-      .filter(k => k.startsWith('t') && objeto[k] != null && objeto[k] !== 0)
-      .sort((a,b) => Number(a.replace('t','')) - Number(b.replace('t','')));
-
+    .filter(k => /^t\d+$/.test(k) && objeto[k] != null && objeto[k] !== undefined)
+    .sort((a,b) => Number(a.replace('t','')) - Number(b.replace('t','')));
     const index = clavesConValor.indexOf(tx);
-
     return talles[index] ?? null;
   }
 
@@ -605,6 +705,9 @@ export class AddModVentasComponent {
     nuevoServicio.nomServicio = seleccionado.descripcion;
     nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value;
     nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value);
+    if(nuevoServicio.unitario === 0){
+      nuevoServicio.unitario = seleccionado.sugerido;
+    }
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
 
     this.serviciosFactura.push(nuevoServicio);
@@ -678,23 +781,25 @@ export class AddModVentasComponent {
 
   Guardar(factura?:FacturaVenta, finalizando:boolean = false){
     this.markFormTouched(this.formGenerales);
-    this.markFormTouched(this.formFacturacion);
-    if(this.formFacturacion.invalid) return;
+    if(this.tipo === 'factura'){
+      this.markFormTouched(this.formFacturacion);
+      if(this.formFacturacion.invalid) return;
+    }
+
     if(this.formGenerales.invalid) return;
 
     this.ArmarObjetoVenta();
     this.venta.factura = factura;
-
     if(!this.modificando){
       this.ventasService.Agregar(this.venta)
       .subscribe(response => {
         if(response){
           if(!finalizando){
-            this.Notificaciones.Success("Venta guardada correctamente");
+            this.Notificaciones.Success(this.venta.proceso + " agregado/a correctamente");
             this.venta.id = parseInt(response);
             this.venta.hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
           }else{
-            this.Notificaciones.Success("Venta guardada y facturada correctamente");
+            this.Notificaciones.Success("Se guardaron los cambios y se facturó correctamente");
             this.router.navigateByUrl("/ventas")
           }          
         }
@@ -705,7 +810,7 @@ export class AddModVentasComponent {
         if(response){
 
           if(!finalizando){
-            this.Notificaciones.Success("Venta actualizada correctamente");
+            this.Notificaciones.Success(this.venta.proceso + " actualizado/a correctamente");
           }else{
             this.Notificaciones.Success("Venta actualizada y facturada correctamente");
             this.router.navigateByUrl("/ventas")
@@ -762,15 +867,18 @@ export class AddModVentasComponent {
       this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
     }
       
-    this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
-    this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
-    this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value.id;
-    this.venta.tipoComprobante = this.formFacturacion.get('tComprobante')?.value.descripcion;
-    this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
-    this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
-    this.venta.descuento = this.formFacturacion.get('descuento')?.value;
-    this.venta.codPromocion = 0;
-    this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
+    if(this.tipo === 'factura'){
+      this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
+      this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
+      this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value.id;
+      this.venta.tipoComprobante = this.formFacturacion.get('tComprobante')?.value.descripcion;
+      this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
+      this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
+      this.venta.descuento = this.formFacturacion.get('descuento')?.value;
+      this.venta.codPromocion = 0;
+      this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
+    }
+    
     this.venta.total = this.totalAPagar;
     this.venta.productos = this.productosFactura;
     this.venta.servicios = this.serviciosFactura;

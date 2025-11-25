@@ -57,6 +57,9 @@ p-accordion-header{
       width: 100%;
     }
 }
+.pre{
+  justify-content: right;
+}
 
 .horizontal{
   display: flex;
@@ -180,6 +183,7 @@ p-accordion-header{
   gap: 30px;
   width: 100%;
   margin-bottom: 15px;
+  align-items: start;
 
   .completeProductos{
     flex: 2;
@@ -206,6 +210,7 @@ p-accordion-header{
   border: 1px solid var(--border-color);
   border-radius: 4px;
   width: 100%;
+  height: -webkit-fill-available;
 }
 
 .color {
@@ -268,6 +273,12 @@ p-accordion-header{
     right: -6px;
     z-index: 2;
   }
+}
+
+.campos-presupuesto{
+  display: flex;
+  gap: 15px;
+  flex: 2;
 }
 
 .acciones{

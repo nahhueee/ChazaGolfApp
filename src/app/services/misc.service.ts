@@ -45,8 +45,8 @@ export class MiscService {
   ObtenerMetodosPago(): Observable<any> {
     return this.apiService.get('misc/metodos-pago')
   }
-  ObtenerProcesosVenta(): Observable<any> {
-    return this.apiService.get('misc/procesos-venta')
+  ObtenerProcesosVenta(tipo:string): Observable<any> {
+    return this.apiService.get('misc/procesos-venta/'+ tipo)
   }
   ObtenerPuntosVenta(): Observable<any> {
     return this.apiService.get('misc/puntos-venta')

@@ -21,7 +21,9 @@
                     <th>Hora</th>
                     <th>Cliente</th>
                     <th>Total</th>
-                    <th>Estado</th>
+                    @if(tipo == 'factura'){
+                        <th>Estado</th>
+                    }
                 </tr>
             </ng-template>
             <ng-template #body let-venta>
@@ -34,13 +36,15 @@
                     <td>{{ venta.hora }}</td>
                     <td>{{ venta.cliente }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
-                    <td>
-                        @if(venta.factura){
-                            <p-tag value="Facturada" severity="success" />
-                        }@else{
-                            <p-tag value="Pendiente" severity="warn" />
-                        }
-                    </td>
+                    @if(tipo == 'factura'){
+                        <td>
+                            @if(venta.factura){
+                                <p-tag value="Facturada" severity="success" />
+                            }@else{
+                                <p-tag value="Pendiente" severity="warn" />
+                            }
+                        </td>
+                    }
                 </tr>
             </ng-template>
         </p-table>

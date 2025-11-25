@@ -27,6 +27,14 @@ export class ProductosService {
   ObtenerProductosPresupuesto(filtro:FiltroGral): Observable<any> {
     return this.apiService.post(`productos/obtener-prod-presupuesto`, filtro);
   }
+
+  BuscarProductosPresupuesto(filtro:string): Observable<any>{
+    return this.apiService.get(`productos/buscar-prod-presupuesto/${filtro}`)
+  }
+
+  ObtenerStockDisponiblePorProducto(idProducto:string): Observable<any>{
+    return this.apiService.get(`productos/obtener-stock-disponible/${idProducto}`)
+  }
   //#endregion
 
 

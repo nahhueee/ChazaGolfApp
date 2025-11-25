@@ -175,6 +175,8 @@ export class TallesProducto {
     cantidad?:number;
     precio?:number;
     cantAgregar?:number = 0; //Propiedad para generar una venta
+    disponible?:number = 0; //Propiedad para nota de empaque
+    vendido?:number = 0; //Propiedad para nota de empaque
 
     constructor(data?: any) {
         if (data) {

@@ -23,7 +23,7 @@ import { TallesProducto } from "./Producto";
     tipoDescuento?:string;
     descuento?:number;
     codPromocion?:number;
-    redondeo?:number;
+    redondeo:number = 0;
     total?:number;
     productos?:ProductosFactura[];
     servicios?:ServiciosFactura[];

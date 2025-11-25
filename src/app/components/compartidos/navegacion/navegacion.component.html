@@ -5,8 +5,11 @@
         <div class="items">
             <button pButton label="Inicio" icon="pi pi-home" class="p-button-text" (click)="Navegar('inicio')"></button>
 
-            <button pButton label="Facturacion" icon="pi pi-shopping-cart" class="p-button-text" (click)="menuVentas.toggle($event)"></button>
-            <p-menu #menuVentas [model]="itemsVenta" [popup]="true" />
+            <button pButton label="Facturacion" icon="pi pi-money-bill" class="p-button-text" (click)="menuFactura.toggle($event)"></button>
+            <p-menu #menuFactura [model]="itemsFacturacion" [popup]="true" />
+
+            <button pButton label="Pre-Facturacion" icon="pi pi-file-edit" class="p-button-text" (click)="menuPre.toggle($event)"></button>
+            <p-menu #menuPre [model]="itemsPreFacturacion" [popup]="true" />
 
             <button pButton label="Productos" icon="pi pi-box" class="p-button-text" (click)="menuProductos.toggle($event)"></button>
             <p-menu #menuProductos [model]="itemsProducto" [popup]="true" />
