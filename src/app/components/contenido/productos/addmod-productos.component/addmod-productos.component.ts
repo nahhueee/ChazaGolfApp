@@ -12,6 +12,9 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { ActivatedRoute, Router } from '@angular/router';
 import { Tooltip } from "primeng/tooltip";
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { forkJoin, Observable } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
 
 @Component({
   selector: 'app-addmod-productos',
@@ -20,8 +23,10 @@ import { SelectButtonModule } from 'primeng/selectbutton';
     ...FORMS_IMPORTS,
     NavegacionComponent,
     Tooltip,
-    SelectButtonModule
+    SelectButtonModule,
+    ConfirmPopupModule,
 ],
+  providers: [ConfirmationService],
   templateUrl: './addmod-productos.component.html',
   styleUrl: './addmod-productos.component.scss',
 })
@@ -50,8 +55,8 @@ export class AddmodProductosComponent {
   generos: Genero[] = [];
   materiales: Material[] = [];
   coloresMaterial: Color[] = [];
-  coloresSeleccionados: Color[] = [];
   coloresSeleccionadosDescriptions: string = '';
+  coloresExistentes: number[] = [];
   lineasTalles: LineasTalle[] = [];
   tallesSeleccionables: TalleSeleccionable[] = [];
 
@@ -63,7 +68,8 @@ export class AddmodProductosComponent {
     private clientesService:ClientesService,
     private productosService:ProductosService,
     private Globales:GlobalesService,
-    private Notificaciones:NotificacionesService
+    private Notificaciones:NotificacionesService,
+    private confirmationService: ConfirmationService,
   ){
      this.formulario = new FormGroup({
       empresa: new FormControl(''),
@@ -237,9 +243,21 @@ export class AddmodProductosComponent {
         this.formulario.get('codigo')?.setValue(this.producto.codigo);
       }, 1000);
 
-      this.coloresSeleccionados = this.producto.colores ?? [];
-      this.coloresSeleccionadosDescriptions = this.coloresSeleccionados.map(c => c.descripcion).join(', ');
 
+      //Marcamos los colores relacionados
+      this.coloresExistentes = this.producto.relacionados!.map(r => r.color?.id!);
+      this.coloresExistentes.push(this.producto.color?.id!); //Agregamos tambien el color del producto actual
+
+      this.coloresMaterial.forEach(c => {
+        c.seleccionado = this.coloresExistentes.includes(c.id!);
+      });
+
+      //Armamos la descripcion de seleccionados
+      this.coloresSeleccionadosDescriptions = this.coloresMaterial
+      .filter(c => c.seleccionado)
+      .map(c => c.descripcion)
+      .join(', ');
+      
       this.producto.talles?.forEach(pTalle => {
         const talleSeleccionado = this.tallesSeleccionables.find(t=> t.talle == pTalle.talle);
         if(talleSeleccionado){
@@ -270,7 +288,6 @@ export class AddmodProductosComponent {
   MaterialChange(){
     const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
     this.coloresMaterial = materialSeleccionado?.colores!;
-    this.coloresSeleccionados = [];
   }
 
   LineaTalleChange(){
@@ -292,22 +309,52 @@ export class AddmodProductosComponent {
     });
   }
 
-  SeleccionarColor(color: Color) {
-    const existe = this.coloresSeleccionados.some(c => c.id === color.id);
+  SeleccionarColor(event: Event, idColor: number) {
+    const color = this.coloresMaterial.find(c => c.id === idColor) ?? new Color();
 
-    if (existe) {
-      this.coloresSeleccionados = this.coloresSeleccionados.filter(c => c.id !== color.id);
-    } else {
-      this.coloresSeleccionados = [...this.coloresSeleccionados, color];
+    if(this.coloresExistentes.length > 0){
+      if(this.producto.color?.id == idColor){
+        this.Notificaciones.Warn("No puedes quitar el color del producto actual.")
+        return;
+      }
+
+      if(color.seleccionado){
+        this.confirmationService.confirm({
+          target: event.target as EventTarget, 
+          message: '¿Seguro que deseas desmarcar este color? \nSe eliminará el producto relacionado a dicho color',
+          icon: 'pi pi-exclamation-triangle',
+          acceptLabel: 'Sí',
+          rejectLabel: 'No',
+          rejectButtonProps: {
+              severity: 'secondary',
+              outlined: true
+          },
+          accept: () => {
+            const productoEliminar = this.producto.relacionados.find(p=> p.color!.id === idColor);
+            this.productosService.Eliminar(productoEliminar?.idProducto!)
+            .subscribe(response => {
+              if(response == 'OK'){
+                color.seleccionado = false;
+                this.Notificaciones.Success("Color quitado correctamente");
+              }else{
+                this.Notificaciones.Warn("Ocurrió un error al intentar quitar el color.")
+              }
+            });
+
+          }
+        });
+      }else{
+        color.seleccionado = true;
+      }
+    }else{
+      color.seleccionado = !color?.seleccionado;
     }
 
-    this.coloresSeleccionadosDescriptions = this.coloresSeleccionados.map(c => c.descripcion).join(', ');
+    this.coloresSeleccionadosDescriptions = this.coloresMaterial
+      .filter(c => c.seleccionado)
+      .map(c => c.descripcion)
+      .join(', ');
   }
-
-  EsColorSeleccionado(color: Color): boolean {
-    return this.coloresSeleccionados.some(c => c.id === color.id);
-  }
-
 
   SeleccionarTalle(indice:number) {
     this.tallesSeleccionables[indice].seleccionado = !this.tallesSeleccionables[indice].seleccionado;
@@ -363,42 +410,50 @@ export class AddmodProductosComponent {
     this.producto.nombre = this.formulario.get('nombre')?.value;
     this.producto.moldeleria = this.formulario.get('moldeleria')?.value;
     this.producto.talles = this.tallesProductoControl.value;
-    this.producto.colores = this.coloresSeleccionados;
+    
+    let operaciones$: Observable<any>[] = [];
+        
+    //Agregando
+    if(this.producto.id == 0){
+       //Obtenemos los relacionados
+      const coloresSeleccionados = this.coloresMaterial.filter(c => c.seleccionado);
 
-    if(this.producto.id != 0){
-      this.Modificar();
-    } else{
-      this.producto.proceso = 1;
-      this.Agregar();
+      operaciones$ = coloresSeleccionados.map(color => {
+        const productoAInsertar = { ...this.producto };
+
+        productoAInsertar.color = color;
+        productoAInsertar.proceso = 1;
+        return this.productosService.Agregar(productoAInsertar);      
+      });
     }
-  }
+    //Modificando
+    else{
+      const idsModificar = this.producto.relacionados!.map(r => r.idProducto);
+      idsModificar.push(this.producto.id);
 
-  Agregar(){
-    this.productosService.Agregar(this.producto)
-      .subscribe(response => {
-        if(response=='OK'){
-          this.Notificaciones.Success("Producto creado correctamente");
-          if(this.desdeRouting)
-            this.router.navigateByUrl('/productos');
-          else
-            this.CerrarModal(true);    
+      idsModificar.forEach(idProd => {
+        let productoAModificar = { ...this.producto };
+        productoAModificar.id = idProd!;
 
-          }else{
-          this.Notificaciones.Warn(response);
-        }
+        operaciones$.push(this.productosService.Modificar(productoAModificar))
       });
-  }
+    }
+   
 
-  Modificar(){
-    this.productosService.Modificar(this.producto)
-      .subscribe(response => {
-        if(response=='OK'){
-          this.Notificaciones.Success("Producto modificado correctamente");
-          this.CerrarModal(true);
-        }else{
-          this.Notificaciones.Warn(response);
-        }
-      });
+    forkJoin(operaciones$).subscribe(respuestas => {
+      const ok = respuestas.filter(r => r === 'OK').length;
+
+      if (ok === respuestas.length) {
+        this.Notificaciones.Success("Los productos fueron procesados correctamente");
+      } else {
+        this.Notificaciones.Warn(`Solo ${ok} de ${respuestas.length} productos se procesaron correctamente.`);
+      }
+
+      if(this.desdeRouting)
+        this.router.navigateByUrl('/productos');
+      else
+        this.CerrarModal(true);    
+    });
   }
 
   CerrarModal(actualizar:boolean) {

@@ -150,7 +150,7 @@
                             @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
                                 <div class="colores">
                                     @if(productoSeleccionado && productoSeleccionado.id != 0){
-                                        @for (color of productoSeleccionado.colores; track color) {
+                                        <!-- @for (color of productoSeleccionado.colores; track color) {
                                             <div class="color" 
                                                 [class.selected]="color === colorSeleccionado"
                                                 (click)="this.colorSeleccionado = color;"
@@ -159,7 +159,7 @@
                                                 [ngStyle]="{'background-color':color.hexa}"
                                                 >
                                             </div>
-                                        }
+                                        } -->
                                     }@else{
                                         <div class="NoColor"></div>
                                         <div class="NoColor"></div>

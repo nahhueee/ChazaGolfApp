@@ -2,6 +2,8 @@
    <app-navegacion></app-navegacion> 
 }
 
+<p-confirmpopup />
+
 <div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
 
@@ -103,6 +105,7 @@
             <!-- Material -->
             <div class="materiales">
                 <p-selectbutton 
+                [disabled]="producto && producto.id != 0"
                 [options]="materiales" 
                 formControlName="material" 
                 optionLabel="descripcion" 
@@ -112,7 +115,7 @@
             
 
             @if(materialControl != ''){
-                @if(coloresSeleccionados.length > 0){
+                @if(coloresSeleccionadosDescriptions.length > 0){
                     <p class="info">Colores seleccionados:
                         <span>{{coloresSeleccionadosDescriptions}}</span>
                     </p>
@@ -124,8 +127,8 @@
                     @for (color of coloresMaterial; track $index) {
                         <div
                             class="color-box"
-                            [class.selected]="EsColorSeleccionado(color)"
-                            (click)="SeleccionarColor(color)"
+                            [class.selected]="color.seleccionado"
+                            (click)="SeleccionarColor($event, color.id!)"
                             [pTooltip]="color.descripcion"
                             tooltipPosition="bottom"
                             [ngStyle]="{'background-color':color.hexa}"

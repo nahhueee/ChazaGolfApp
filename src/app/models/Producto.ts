@@ -7,13 +7,14 @@ export class Producto {
     proceso?: number;
     tipo?: TipoProducto;
     subtipo?: SubtipoProducto;
+    color?:Color;
     genero?: Genero;
     temporada?: Temporada;
     material?: Material;
     moldeleria?: number;
     imagen: string = "";
     talles?: TallesProducto[];
-    colores?: Color[];
+    relacionados: Relacionado[] = [];
     activo:boolean;
 
     constructor(data?: any) {
@@ -30,8 +31,9 @@ export class Producto {
           this.material = data.material;
           this.moldeleria = data.moldeleria;
           this.temporada = data.temporada;
-          this.colores = Array.isArray(data.colores) ? data.colores.map((colorData: any) => new Color(colorData)) : [];
+          this.color = data.color;
           this.talles = Array.isArray(data.talles) ? data.talles.map((talleData: any) => new TallesProducto(talleData)) : [];
+          this.relacionados = Array.isArray(data.relacionados) ? data.relacionados.map((relacionadoData: any) => new Relacionado(relacionadoData)) : [];
         } 
     }
 }
@@ -158,6 +160,7 @@ export class Color {
     id?:number = 0;
     descripcion?:string;
     hexa?:string;
+    seleccionado?:boolean;
 
     constructor(data?: any) {
         if (data) {
@@ -202,3 +205,14 @@ export class TalleSeleccionable{
 }
 }
 
+export class Relacionado {
+    idProducto?:number;
+    color?:Color;
+    
+    constructor(data?: any) {
+        if (data) {
+          this.idProducto = data.idProducto;
+          this.color = data.color;
+        }
+    }
+}
