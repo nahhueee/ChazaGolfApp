@@ -7,8 +7,6 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Cliente } from '../../../../models/Cliente';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ClientesService } from '../../../../services/clientes.service';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
-
 @Component({
   selector: 'app-listado-clientes',
   standalone: true,
@@ -17,8 +15,7 @@ import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.
     Button,
     Dialog,
     AddModClientesComponent,
-    TooltipModule,
-    NavegacionComponent
+    TooltipModule
   ],
   templateUrl: './listado-clientes.component.html',
   styleUrl: './listado-clientes.component.scss',

@@ -1,16 +1,17 @@
-<app-navegacion></app-navegacion>
 <p-confirmpopup />
 
 <div class="contenido">
     <div class="datos">
         <div class="izq">
-            @if(venta.id != 0){
+            <i [class]="icono"></i>
+            <p>{{titulo}}</p>
+            <!-- @if(venta.id != 0){
                 <p>Venta Nro: <strong>{{venta.id}}</strong></p>
                 <span>|</span>
                 <p>Actualización: <strong>{{venta.hora}}</strong> </p>
             }@else {
                 <p>Nueva Venta</p>
-            }            
+            }             -->
         </div>
        
         @if(venta.factura){
@@ -20,381 +21,197 @@
         }
     </div>
 
-    <div class="acordeon">
-        <p-accordion [value]="['0','1','2','3']" [multiple]="true">
-            <p-accordion-panel value="0">
-                <p-accordion-header>Datos Generales</p-accordion-header>
-                <p-accordion-content>
+    <!-- Datos Generales -->
+    <div class="seccion">
+        <h3>Datos Generales</h3>
+
+        <form [formGroup]="formGenerales" autocomplete="off">
+            <div class="enLinea">
+                <div class="izq">
+                    <div class="horizontal">
+                        <!-- Proceso -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"
+                            [disabled]="productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO'" (onChange)="SetearTitulo()" />
+                            <label>Proceso</label>
+                        </p-floatlabel>
+                        <!-- Fecha -->
+                        <p-floatlabel variant="in">
+                            <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+                            <label>Fecha</label>
+                        </p-floatlabel>
+                    </div>
+                    <!-- Puntos -->
+                    <p-floatlabel variant="in">
+                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" />
+                        <label>Punto de Venta</label>
+                    </p-floatlabel>
+                </div>
+                <div class="centro">
+                    <p-inputgroup>
+                        <!-- Cliente -->
+                        <p-floatlabel variant="in">
+                            <p-autocomplete
+                                formControlName="cliente"
+                                [suggestions]="clientesFiltrados"
+                                placeholder="Buscar por nombre o DNI"
+                                emptyMessage="No se encontraron resultados"
+                                (completeMethod)="FiltrarClientes($event)"
+                                (onSelect)="SeleccionarCliente();"
+                                optionLabel="nombre"
+                            >
+                                <!-- Template para las sugerencias -->
+                                <ng-template let-cliente pTemplate="item">
+                                    {{ cliente.nombre }} - {{ cliente.documento }}
+                                </ng-template>
+
+                            </p-autocomplete>
+                            <label>Cliente</label>
+                        </p-floatlabel>
+                        <p-inputgroup-addon>
+                            <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
+                        </p-inputgroup-addon>                                
+                    </p-inputgroup>
+
+                    <!-- Nota Empaque -->
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="nroNota"  type="text"/>
+                        <label>N° Nota Empaque</label>
+                    </p-floatlabel>
+                </div>
+
+                @if(clienteSeleccionado && clienteSeleccionado != undefined){
+                    <div class="cliente-card">
+                        <div class="cliente-header">
+                            <div class="icon">
+                                <i class="pi pi-user"></i>
+                            </div>
+                            <div class="info">
+                            <h4>{{ clienteSeleccionado.nombre }}</h4>
+                            <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
+                            </div>
+                        </div>
+                        <div class="datos-seccion">
+                            <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
+                            <!-- <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p> -->
+                            <p><strong>Último Descuento:</strong> {{ clienteSeleccionado.ultimoDescuento?.tipoDescuento }} | {{ clienteSeleccionado.ultimoDescuento?.descuento }}</p>
+                        </div>
+
+                        <p class="link" (click)="modalClienteVisible = true">Ver Más</p>
+                    </div>
+
+                }@else {
+                    <div class="noSeleccionado">
+                        <div class="icon">
+                            <i class="pi pi-user"></i>
+                        </div>
+                        <p>Selecciona un cliente para ver sus datos</p>
+                    </div>
+                }
+            </div>
+        </form>
+    </div>
+
+    <!-- Productos -->
+    <div class="seccion">
+        <h3>Productos</h3>
+
+        @if(ProcesoControl){
+            <form [formGroup]="formProductos" class="formProducto" autocomplete="off">
+                <div class="LineaProducto">
+
+                    <div class="completeProductos">
+                        <!-- Codigo - Nombre -->
+                        <p-floatlabel variant="in">
+                            <p-autocomplete
+                                formControlName="producto"
+                                [suggestions]="ProcesoControl && ProcesoControl.descripcion == 'PRESUPUESTO' ? productosPreFiltrados : productosFiltrados"
+                                placeholder="Buscar por código o nombre"
+                                emptyMessage="No se encontraron resultados"
+                                (completeMethod)="FiltrarProductos($event)"
+                                (onSelect)="SeleccionarProducto();"
+                                optionLabel="nombre"
+                            >
+                                <!-- Template para las sugerencias -->
+                                <ng-template let-producto pTemplate="item">
+                                    {{ producto.codigo }} - {{ producto.nombre }}
+                                </ng-template>
+
+                            </p-autocomplete>
+                            <label>Producto</label>
+                        </p-floatlabel>  
+                        <div class="acciones">
+                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
+                        </div>
+                    </div>
                     
-                    <form [formGroup]="formGenerales" autocomplete="off">
-                        <div class="enLinea">
-                            <div class="izq">
-                                <div class="horizontal">
-                                    <!-- Proceso -->
-                                    <p-floatlabel variant="in">
-                                        <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"
-                                        [disabled]="productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO'" />
-                                        <label>Proceso</label>
-                                    </p-floatlabel>
-                                    <!-- Fecha -->
-                                    <p-floatlabel variant="in">
-                                        <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
-                                        <label>Fecha</label>
-                                    </p-floatlabel>
-                                </div>
-                                <!-- Puntos -->
-                                <p-floatlabel variant="in">
-                                    <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" />
-                                    <label>Punto de Venta</label>
-                                </p-floatlabel>
-                            </div>
-                            <div class="centro">
-                                <p-inputgroup>
-                                    <!-- Cliente -->
-                                    <p-floatlabel variant="in">
-                                        <p-autocomplete
-                                            formControlName="cliente"
-                                            [suggestions]="clientesFiltrados"
-                                            placeholder="Buscar por nombre o DNI"
-                                            emptyMessage="No se encontraron resultados"
-                                            (completeMethod)="FiltrarClientes($event)"
-                                            (onSelect)="SeleccionarCliente();"
-                                            optionLabel="nombre"
-                                        >
-                                            <!-- Template para las sugerencias -->
-                                            <ng-template let-cliente pTemplate="item">
-                                                {{ cliente.nombre }} - {{ cliente.documento }}
-                                            </ng-template>
-
-                                        </p-autocomplete>
-                                        <label>Cliente</label>
-                                    </p-floatlabel>
-                                    <p-inputgroup-addon>
-                                        <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
-                                    </p-inputgroup-addon>                                
-                                </p-inputgroup>
-
-                                <!-- Nota Empaque -->
-                                <p-floatlabel variant="in">
-                                    <input pInputText formControlName="nroNota"  type="text"/>
-                                    <label>N° Nota Empaque</label>
-                                </p-floatlabel>
-                            </div>
-
-                            @if(clienteSeleccionado && clienteSeleccionado != undefined){
-                                <div class="cliente-card">
-                                    <div class="cliente-header">
-                                        <div class="icon">
-                                            <i class="pi pi-user"></i>
-                                        </div>
-                                        <div class="info">
-                                        <h4>{{ clienteSeleccionado.nombre }}</h4>
-                                        <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
-                                        </div>
+                    @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                        <p-floatlabel variant="in" class="selectorColores">
+                            <p-select 
+                                [options]="coloresDisponibles"
+                                optionLabel="color"
+                                [showClear]="true"
+                                (onChange)="SeleccionarVariante($event)"
+                            >
+                                <!-- Template de cada opción -->
+                                <ng-template pTemplate="item" let-item>
+                                    <div class="opcion-color">
+                                        <div class="cuadro-color" [style.background]="item.hexa"></div>
+                                        <span>{{ item.color }}</span>
                                     </div>
-                                    <div class="datos-seccion">
-                                        <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
-                                        <!-- <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p> -->
-                                        <p><strong>Último Descuento:</strong> {{ clienteSeleccionado.ultimoDescuento?.tipoDescuento }} | {{ clienteSeleccionado.ultimoDescuento?.descuento }}</p>
+                                </ng-template>
+
+                                <!-- Template para la opción seleccionada -->
+                                <ng-template pTemplate="selectedItem" let-item>
+                                    <div class="opcion-color">
+                                        <div class="cuadro-color" [style.background]="item?.hexa"></div>
+                                        <span>{{ item?.color }}</span>
                                     </div>
+                                </ng-template>
+                            </p-select>
 
-                                    <p class="link" (click)="modalClienteVisible = true">Ver Más</p>
-                                </div>
-
-                            }@else {
-                                <div class="noSeleccionado">
-                                    <div class="icon">
-                                        <i class="pi pi-user"></i>
-                                    </div>
-                                    <p>Selecciona un cliente para ver sus datos</p>
-                                </div>
-                            }
-                        </div>
-                    </form>
-
-                </p-accordion-content>
-            </p-accordion-panel>
-            <p-accordion-panel value="1">
-                <p-accordion-header>Productos</p-accordion-header>
-                <p-accordion-content>
-                    @if(ProcesoControl){
-                    <form [formGroup]="formProductos" class="formProducto" autocomplete="off">
-                        <div class="LineaProducto">
-
-                            <div class="completeProductos">
-                                <!-- Codigo - Nombre -->
-                                <p-floatlabel variant="in">
-                                    <p-autocomplete
-                                        formControlName="producto"
-                                        [suggestions]="ProcesoControl && ProcesoControl.descripcion == 'PRESUPUESTO' ? productosPreFiltrados : productosFiltrados"
-                                        placeholder="Buscar por código o nombre"
-                                        emptyMessage="No se encontraron resultados"
-                                        (completeMethod)="FiltrarProductos($event)"
-                                        (onSelect)="SeleccionarProducto();"
-                                        optionLabel="nombre"
-                                    >
-                                        <!-- Template para las sugerencias -->
-                                        <ng-template let-producto pTemplate="item">
-                                            {{ producto.codigo }} - {{ producto.nombre }}
-                                        </ng-template>
-
-                                    </p-autocomplete>
-                                    <label>Producto</label>
-                                </p-floatlabel>  
-                                <div class="acciones">
-                                    <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
-                                </div>
-                            </div>
-                            
-                            @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                                <p-floatlabel variant="in" class="selectorColores">
-                                    <p-select 
-                                        [options]="coloresDisponibles"
-                                        optionLabel="color"
-                                        [showClear]="true"
-                                        (onChange)="SeleccionarVariante($event)"
-                                    >
-                                        <!-- Template de cada opción -->
-                                        <ng-template pTemplate="item" let-item>
-                                            <div class="opcion-color">
-                                                <div class="cuadro-color" [style.background]="item.hexa"></div>
-                                                <span>{{ item.color }}</span>
-                                            </div>
-                                        </ng-template>
-
-                                        <!-- Template para la opción seleccionada -->
-                                        <ng-template pTemplate="selectedItem" let-item>
-                                            <div class="opcion-color">
-                                                <div class="cuadro-color" [style.background]="item?.hexa"></div>
-                                                <span>{{ item?.color }}</span>
-                                            </div>
-                                        </ng-template>
-                                    </p-select>
-
-                                    <label>Color</label>
-                                </p-floatlabel>
-                            }
-                            
-                            <!-- Si esta realizando una factura o nota de empaque puede seleccionar los talles y cantidades a agregar -->
-                            @if(tipo == 'factura' || ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
-                                <div class="talles"> 
-                                    @if(productoSeleccionado && productoSeleccionado.id != 0){
-                                        @for (talle of tallesProducto; track talle) {
-                                            <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
-                                                @if(ObtenerCantidad(talle, 'agregar') != 0){
-                                                    <p-badge [value]="ObtenerCantidad(talle, 'agregar')" badgeSize="small" severity="success" class="badge-flotante"/>
-                                                }
-                                                <p>{{ talle }}</p>
-                                                @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
-                                                    <span>Disp: {{ ObtenerCantidad(talle, 'disponible') }}</span>
-                                                }
-                                                <span>Stock: {{ ObtenerCantidad(talle, 'stock') }}</span>
-                                                @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
-                                                    <span>Prod: 0</span>
-                                                }
-                                            </div>
-                                        }
-                                    }@else{
-                                        @for (opcion of tallesBase; track $index) {
-                                            <div class="NoTalle">
-                                                <p>{{opcion}}</p>
-                                            </div>
-                                        }
-                                    }
-                            </div>
-                            <!-- Si esta realizando un presupuesto puede ingresar cantidad manualmente en la tabla -->
-                            }@else if(ProcesoControl && ProcesoControl.descripcion === 'PEDIDO'){
-                                <div class="alerta alerta-info">
-                                    <span class="alerta-icon">ℹ️</span>
-                                    <div class="alerta-texto">
-                                        Puedes editar la cantidad una vez confirmes el producto al pedido desde la tabla de productos.
-                                    </div>
-                                </div>
-                            <!-- Si esta realizando un presupuesto puede ingresar cantidad y precio manualmente en la tabla o en los inputs -->
-                            }@else {
-                                <div class="campos-presupuesto">
-                                    <!-- Cantidad -->
-                                    <p-floatlabel variant="in">
-                                        <input pInputText formControlName="cantidad"  type="number"/>
-                                        <label>Cantidad</label>
-                                    </p-floatlabel>
-
-                                    <!-- Precio -->
-                                    <p-floatlabel variant="in">
-                                        <input pInputText formControlName="precio" type="text" 
-                                        [imask]="decimal_mask" 
-                                        [placeholder]="ProductoControl.sugerido != undefined ? 'Precio Sugerido: $' + ProductoControl.sugerido : 'Precio Sugerido:'"/>
-                                        <label>Precio</label>
-                                    </p-floatlabel>
-                                </div>
-                            }
-                        </div>
-                       
-                    </form>
-
-                    <p-table [value]="productosFactura" editable="true" dataKey="codProducto">
-                        <ng-template #header>
-                            <tr>
-                                <th>Código</th>
-                                <th>Nombre</th>
-
-                                @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                                    <th>Color</th>
-                                    <th>XS</th>
-                                    <th>S</th>
-                                    <th>M</th>
-                                    <th>L</th>
-                                    <th>XL</th>
-                                    <th>XXL</th>
-                                    <th>3XL</th>
-                                    <th>4XL</th>
-                                    <th>5XL</th>
-                                    <th>6XL</th>
-                                }
-                                
-                                <th>Cant.</th>
-                                <th>Precio</th>
-                                <th>Total</th>
-                                <th>Quitar</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template #body let-producto let-editing="editing">
-                            <tr>
-                                <td>{{ producto.codProducto }}</td>
-                                <td>{{ producto.nomProducto }}</td>
-                                @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                                    <td>
-                                        <div class="color-cell">
-                                            <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
-                                            {{ producto.color }}
-                                        </div>
-                                    </td>
-                                    <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
-                                        [pEditableColumn]="producto[t]" 
-                                        [pEditableColumnField]="t">
-                                        <p-cellEditor>
-                                        <ng-template pTemplate="input">
-                                            <input 
-                                            pInputText 
-                                            type="number" 
-                                            [value]="producto[t]"
-                                            [disabled]="producto[t] === undefined" 
-                                            (keydown.enter)="ActualizarCantidad(producto, t, $event)"
-                                            style="max-width: 70px;" />
-                                        </ng-template>
-                                        <ng-template pTemplate="output">
-                                            {{ producto[t] }}
-                                        </ng-template>
-                                        </p-cellEditor>
-                                    </td>
-                                }
-                               
-                                <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
-                                    pEditableColumnField="cantidad">
-
-                                    <ng-container *ngIf="esPresupuesto; else soloLecturaCant">
-                                        <p-cellEditor>
-
-                                            <ng-template pTemplate="input">
-                                                <input
-                                                    pInputText
-                                                    type="text"
-                                                    fluid
-                                                    [value]="producto.cantidad"
-                                                    style="max-width: 70px;"
-                                                    (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
-                                                    (keydown.arrowRight)="$event.stopPropagation()"
-                                                />
-                                            </ng-template>
-
-                                            <ng-template pTemplate="output">
-                                                {{ producto.cantidad }}
-                                            </ng-template>
-
-                                        </p-cellEditor>
-
-                                    </ng-container>
-
-                                    <ng-template #soloLecturaCant>
-                                        {{ producto.cantidad }}
-                                    </ng-template>
-                                </td>
-
-                                <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
-                                    pEditableColumnField="unitario">
-
-                                    <ng-container *ngIf="esPresupuesto; else soloLecturaPrecio">
-                                        <p-cellEditor>
-
-                                            <ng-template pTemplate="input">
-                                                <input
-                                                    pInputText
-                                                    type="text"
-                                                    fluid
-                                                    [imask]="decimal_mask"
-                                                    [value]="producto.unitario"
-                                                    style="max-width: 100px;"
-                                                    (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
-                                                    (keydown.arrowLeft)="$event.stopPropagation()"
-                                                />
-                                            </ng-template>
-
-                                            <ng-template pTemplate="output">
-                                                {{ producto.unitario | decimalFormat }}
-                                            </ng-template>
-
-                                        </p-cellEditor>
-
-                                    </ng-container>
-
-                                    <ng-template #soloLecturaPrecio>
-                                        {{ producto.unitario | decimalFormat }}
-                                    </ng-template>
-                                </td>
-
-                                <td>{{ producto.total | decimalFormat }}</td>
-                                <td class="acciones-tabla">
-                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
-                                </td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
+                            <label>Color</label>
+                        </p-floatlabel>
                     }
-                    @else {
-                        <div class="alerta alerta-warn">
-                            <span class="alerta-icon">⚠️</span>
+                    
+                    <!-- Si esta realizando una factura o nota de empaque puede seleccionar los talles y cantidades a agregar -->
+                    @if(tipo == 'factura' || ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
+                        <div class="talles"> 
+                            @if(productoSeleccionado && productoSeleccionado.id != 0){
+                                @for (talle of tallesProducto; track talle) {
+                                    <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
+                                        @if(ObtenerCantidad(talle, 'agregar') != 0){
+                                            <p-badge [value]="ObtenerCantidad(talle, 'agregar')" badgeSize="small" severity="success" class="badge-flotante"/>
+                                        }
+                                        <p>{{ talle }}</p>
+                                        @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
+                                            <span>Disp: {{ ObtenerCantidad(talle, 'disponible') }}</span>
+                                        }
+                                        <span>Stock: {{ ObtenerCantidad(talle, 'stock') }}</span>
+                                        @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
+                                            <span>Prod: 0</span>
+                                        }
+                                    </div>
+                                }
+                            }@else{
+                                @for (opcion of tallesBase; track $index) {
+                                    <div class="NoTalle">
+                                        <p>{{opcion}}</p>
+                                    </div>
+                                }
+                            }
+                    </div>
+                    <!-- Si esta realizando un presupuesto puede ingresar cantidad manualmente en la tabla -->
+                    }@else if(ProcesoControl && ProcesoControl.descripcion === 'PEDIDO'){
+                        <div class="alerta alerta-info">
+                            <span class="alerta-icon">ℹ️</span>
                             <div class="alerta-texto">
-                                Selecciona un proceso en los datos generales para habilitar esta sección.
+                                Puedes editar la cantidad una vez confirmes el producto al pedido desde la tabla de productos.
                             </div>
                         </div>
-                    }
-
-                </p-accordion-content>
-            </p-accordion-panel>
-            <p-accordion-panel value="2">
-                <p-accordion-header>Servicios</p-accordion-header>
-                <p-accordion-content>
-                    <form [formGroup]="formServicios" class="formServicio" autocomplete="off">
-                        <div class="horizontal">
-                            <!-- Codigo - Nombre -->
-                            <p-floatlabel variant="in">
-                                <p-autocomplete
-                                    formControlName="servicio"
-                                    [suggestions]="serviciosFiltrado"
-                                    placeholder="Buscar por código o nombre"
-                                    emptyMessage="No se encontraron resultados"
-                                    (completeMethod)="FiltrarServicios($event)"
-                                    optionLabel="descripcion"
-                                >
-                                    <!-- Template para las sugerencias -->
-                                    <ng-template let-servicio pTemplate="item">
-                                        {{ servicio.codigo }} - {{ servicio.descripcion }}
-                                    </ng-template>
-
-                                </p-autocomplete>
-                                <label>Servicio</label>
-                            </p-floatlabel>  
-
+                    <!-- Si esta realizando un presupuesto puede ingresar cantidad y precio manualmente en la tabla o en los inputs -->
+                    }@else {
+                        <div class="campos-presupuesto">
                             <!-- Cantidad -->
                             <p-floatlabel variant="in">
                                 <input pInputText formControlName="cantidad"  type="number"/>
@@ -403,166 +220,341 @@
 
                             <!-- Precio -->
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + ServicioControl.sugerido : 'Precio Sugerido:'"/>
+                                <input pInputText formControlName="precio" type="text" 
+                                [imask]="decimal_mask" 
+                                [placeholder]="ProductoControl.sugerido != undefined ? 'Precio Sugerido: $' + ProductoControl.sugerido : 'Precio Sugerido:'"/>
                                 <label>Precio</label>
                             </p-floatlabel>
                         </div>
-                    </form>
-                    <div class="acciones">
-                        <p-button label="Confirmar Servicio" [raised]="true" icon="pi pi-check" (onClick)="AgregarServicio()"/>
-                    </div>
-
-                    <p-table [value]="serviciosFactura">
-                        <ng-template #header>
-                            <tr>
-                                <th>Código</th>
-                                <th>Nombre</th>
-                                <th>Cant.</th>
-                                <th>Precio</th>
-                                <th>Total</th>
-                                <th>Quitar</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template #body let-servicio>
-                            <tr>
-                                <td>{{ servicio.codServicio }}</td>
-                                <td>{{ servicio.nomServicio }}</td>
-                                <td>{{ servicio.cantidad }}</td>
-                                <td>{{ servicio.unitario | decimalFormat}}</td>
-                                <td>{{ servicio.total | decimalFormat }}</td>
-                                <td class="acciones-tabla">
-                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.idServicio)" />
-                                </td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
-                </p-accordion-content>
-            </p-accordion-panel>
-            <p-accordion-panel value="3">
-                <p-accordion-header>
-                    @if(tipo == 'factura'){
-                        Datos Facturación
-                    }@else{
-                        Totales
                     }
-                </p-accordion-header>
-                <p-accordion-content>
+                </div>
+                
+            </form>
 
-                    <div class="enLinea" [ngClass]="{'pre': tipo == 'pre'}">
-                        <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion" *ngIf="tipo == 'factura'">
-                            <div class="horizontal">
-                                <!-- Empresa -->
-                                <p-floatlabel variant="in">
-                                    <p-select [options]="empresas" formControlName="empresa" optionLabel="descripcion" />
-                                    <label>Empresa</label>
-                                </p-floatlabel>
+            <p-table [value]="productosFactura" editable="true" dataKey="codProducto">
+                <ng-template #header>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
 
-                                <!-- Tipo Comprobante -->
-                                <p-floatlabel variant="in">
-                                    <p-select [options]="comprobantes" formControlName="tComprobante" optionLabel="descripcion" />
-                                    <label>Tipo Comprobante</label>
-                                </p-floatlabel>
-                            </div>
-                            <div class="horizontal">
-                                <!-- Tipo Descuento -->
-                                <p-floatlabel variant="in">
-                                    <p-select [options]="tiposDescuento" formControlName="tDescuento" optionLabel="descripcion" />
-                                    <label>Tipo Descuento</label>
-                                </p-floatlabel>
-
-                                @if(TipoDescuentoControl && TipoDescuentoControl.id != "3"){
-                                   <!-- Descuento -->
-                                    <p-inputgroup>
-                                        <p-floatlabel variant="in">
-                                            <input pInputText formControlName="descuento" type="number"/>
-                                            <label>Descuento</label>
-                                        </p-floatlabel>
-                                        <p-inputgroup-addon>%</p-inputgroup-addon>
-                                    </p-inputgroup>
-                                }@else {
-                                    <!-- Cod Promocion -->
-                                    <p-floatlabel variant="in">
-                                        <input pInputText formControlName="codPromo" type="text"/>
-                                        <label>Cod. Promocional</label>
-                                    </p-floatlabel>
-                                }
-                            </div>
-                        </form>
-
-                        <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'">
-                            <div class="horizontal">
-                                <!-- Metodo pago -->
-                                <p-floatlabel variant="in">
-                                    <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
-                                    <label>Metodo Pago</label>
-                                </p-floatlabel>  
-
-                                <!-- Monto -->
-                                <p-floatlabel variant="in">
-                                    <input pInputText formControlName="monto" type="text" [imask]="decimal_mask"/>
-                                    <label>Precio</label>
-                                </p-floatlabel>
-
-                                <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
-
-                            </div>
-                            <p-table [value]="pagosFactura">
-                                <ng-template #header>
-                                    <tr>
-                                        <th>Metodo</th>
-                                        <th>Monto</th>
-                                        <th>Quitar</th>
-                                    </tr>
-                                </ng-template>
-                                <ng-template #body let-pago>
-                                    <tr>
-                                        <td>{{ pago.metodo }}</td>
-                                        <td>{{ pago.monto | decimalFormat}}</td>
-                                        <td class="acciones-tabla">
-                                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago($event, pago.idMetodo)" />
-                                        </td>
-                                    </tr>
-                                </ng-template>
-                            </p-table>
-                        </form>
-
-                        <div class="resumen">
-                           
-                            <div class="fila">
-                                <span>Total Items:</span>
-                                <span class="monto">${{totalItems | decimalFormat}}</span>
-                            </div>
-
-                            @if(tipo == 'factura'){
-                                <div class="fila">
-                                    <span>Descuento:</span>
-                                    <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <th>Color</th>
+                            <th>XS</th>
+                            <th>S</th>
+                            <th>M</th>
+                            <th>L</th>
+                            <th>XL</th>
+                            <th>XXL</th>
+                            <th>3XL</th>
+                            <th>4XL</th>
+                            <th>5XL</th>
+                            <th>6XL</th>
+                        }
+                        
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Quitar</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-producto let-editing="editing">
+                    <tr>
+                        <td>{{ producto.codProducto }}</td>
+                        <td>{{ producto.nomProducto }}</td>
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <td>
+                                <div class="color-cell">
+                                    <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                                    {{ producto.color }}
                                 </div>
+                            </td>
+                            <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
+                                [pEditableColumn]="producto[t]" 
+                                [pEditableColumnField]="t">
+                                <p-cellEditor>
+                                <ng-template pTemplate="input">
+                                    <input 
+                                    pInputText 
+                                    type="number" 
+                                    [value]="producto[t]"
+                                    [disabled]="producto[t] === undefined" 
+                                    (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                    (focus)="SelectContent($event)"
+                                    style="max-width: 70px;" />
+                                </ng-template>
+                                <ng-template pTemplate="output">
+                                    {{ producto[t] }}
+                                </ng-template>
+                                </p-cellEditor>
+                            </td>
+                        }
+                        
+                        <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
+                            pEditableColumnField="cantidad">
 
-                                <br>
+                            <ng-container *ngIf="esPresupuesto; else soloLecturaCant">
+                                <p-cellEditor>
 
-                                <div class="fila">
-                                    <span>Total General:</span>
-                                    <span class="monto">${{totalGeneral | decimalFormat}}</span>
-                                </div> 
-                                <div class="fila">
-                                    <span>Redondeo:</span>
-                                    <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>
-                                </div>
-                            }
-                           
-                            <div class="fila total-final">
-                                <span>Total A Pagar:</span>
-                                <span class="monto">${{totalAPagar | decimalFormat}}</span>
-                            </div>
-                        </div>
+                                    <ng-template pTemplate="input">
+                                        <input
+                                            pInputText
+                                            type="text"
+                                            fluid
+                                            [value]="producto.cantidad"
+                                            style="max-width: 70px;"
+                                            (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
+                                            (keydown.arrowRight)="$event.stopPropagation()"
+                                        />
+                                    </ng-template>
+
+                                    <ng-template pTemplate="output">
+                                        {{ producto.cantidad }}
+                                    </ng-template>
+
+                                </p-cellEditor>
+
+                            </ng-container>
+
+                            <ng-template #soloLecturaCant>
+                                {{ producto.cantidad }}
+                            </ng-template>
+                        </td>
+
+                        <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
+                            pEditableColumnField="unitario">
+
+                            <ng-container *ngIf="esPresupuesto; else soloLecturaPrecio">
+                                <p-cellEditor>
+
+                                    <ng-template pTemplate="input">
+                                        <input
+                                            pInputText
+                                            type="text"
+                                            fluid
+                                            [imask]="decimal_mask"
+                                            [value]="producto.unitario"
+                                            style="max-width: 100px;"
+                                            (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
+                                            (keydown.arrowLeft)="$event.stopPropagation()"
+                                        />
+                                    </ng-template>
+
+                                    <ng-template pTemplate="output">
+                                        {{ producto.unitario | decimalFormat }}
+                                    </ng-template>
+
+                                </p-cellEditor>
+
+                            </ng-container>
+
+                            <ng-template #soloLecturaPrecio>
+                                {{ producto.unitario | decimalFormat }}
+                            </ng-template>
+                        </td>
+
+                        <td>{{ producto.total | decimalFormat }}</td>
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
+            @else {
+                <div class="alerta alerta-warn">
+                    <span class="alerta-icon">⚠️</span>
+                    <div class="alerta-texto">
+                        Selecciona un proceso en los datos generales para habilitar esta sección.
                     </div>
-                    
-                    
+                </div>
+            }
+    </div>
 
-                </p-accordion-content>
-            </p-accordion-panel>
-        </p-accordion>
+    <!-- Servicios -->
+    <div class="seccion">
+        <h3>Servicios</h3>
+
+        <form [formGroup]="formServicios" class="formServicio" autocomplete="off">
+            <div class="horizontal">
+                <!-- Codigo - Nombre -->
+                <p-floatlabel variant="in">
+                    <p-autocomplete
+                        formControlName="servicio"
+                        [suggestions]="serviciosFiltrado"
+                        placeholder="Buscar por código o nombre"
+                        emptyMessage="No se encontraron resultados"
+                        (completeMethod)="FiltrarServicios($event)"
+                        optionLabel="descripcion"
+                    >
+                        <!-- Template para las sugerencias -->
+                        <ng-template let-servicio pTemplate="item">
+                            {{ servicio.codigo }} - {{ servicio.descripcion }}
+                        </ng-template>
+
+                    </p-autocomplete>
+                    <label>Servicio</label>
+                </p-floatlabel>  
+
+                <!-- Cantidad -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="cantidad"  type="number"/>
+                    <label>Cantidad</label>
+                </p-floatlabel>
+
+                <!-- Precio -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + ServicioControl.sugerido : 'Precio Sugerido:'"/>
+                    <label>Precio</label>
+                </p-floatlabel>
+            </div>
+        </form>
+        <div class="acciones">
+            <p-button label="Confirmar Servicio" [raised]="true" icon="pi pi-check" (onClick)="AgregarServicio()"/>
+        </div>
+
+        <p-table [value]="serviciosFactura">
+            <ng-template #header>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cant.</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                    <th>Quitar</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-servicio>
+                <tr>
+                    <td>{{ servicio.codServicio }}</td>
+                    <td>{{ servicio.nomServicio }}</td>
+                    <td>{{ servicio.cantidad }}</td>
+                    <td>{{ servicio.unitario | decimalFormat}}</td>
+                    <td>{{ servicio.total | decimalFormat }}</td>
+                    <td class="acciones-tabla">
+                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.idServicio)" />
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    <!-- Datos Facturacion -->
+    <div class="seccion">
+        @if(tipo == 'factura'){
+            <h3>Datos Facturación</h3>
+        }@else{
+            <h3>Totales</h3>
+        }
+
+        <div class="enLinea" [ngClass]="{'pre': tipo == 'pre'}">
+            <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion" *ngIf="tipo == 'factura'">
+                <div class="horizontal">
+                    <!-- Empresa -->
+                    <p-floatlabel variant="in">
+                        <p-select [options]="empresas" formControlName="empresa" optionLabel="descripcion" />
+                        <label>Empresa</label>
+                    </p-floatlabel>
+
+                    <!-- Tipo Comprobante -->
+                    <p-floatlabel variant="in">
+                        <p-select [options]="comprobantes" formControlName="tComprobante" optionLabel="descripcion" />
+                        <label>Tipo Comprobante</label>
+                    </p-floatlabel>
+                </div>
+                <div class="horizontal">
+                    <!-- Tipo Descuento -->
+                    <p-floatlabel variant="in">
+                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionLabel="descripcion" />
+                        <label>Tipo Descuento</label>
+                    </p-floatlabel>
+
+                    @if(TipoDescuentoControl && TipoDescuentoControl.id != "3"){
+                        <!-- Descuento -->
+                        <p-inputgroup>
+                            <p-floatlabel variant="in">
+                                <input pInputText formControlName="descuento" type="number"/>
+                                <label>Descuento</label>
+                            </p-floatlabel>
+                            <p-inputgroup-addon>%</p-inputgroup-addon>
+                        </p-inputgroup>
+                    }@else {
+                        <!-- Cod Promocion -->
+                        <p-floatlabel variant="in">
+                            <input pInputText formControlName="codPromo" type="text"/>
+                            <label>Cod. Promocional</label>
+                        </p-floatlabel>
+                    }
+                </div>
+            </form>
+
+            <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'">
+                <div class="horizontal">
+                    <!-- Metodo pago -->
+                    <p-floatlabel variant="in">
+                        <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
+                        <label>Metodo Pago</label>
+                    </p-floatlabel>  
+
+                    <!-- Monto -->
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="monto" type="text" [imask]="decimal_mask"/>
+                        <label>Precio</label>
+                    </p-floatlabel>
+
+                    <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
+
+                </div>
+                <p-table [value]="pagosFactura">
+                    <ng-template #header>
+                        <tr>
+                            <th>Metodo</th>
+                            <th>Monto</th>
+                            <th>Quitar</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template #body let-pago>
+                        <tr>
+                            <td>{{ pago.metodo }}</td>
+                            <td>{{ pago.monto | decimalFormat}}</td>
+                            <td class="acciones-tabla">
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago($event, pago.idMetodo)" />
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </form>
+
+            <div class="resumen">
+                
+                <div class="fila">
+                    <span>Total Items:</span>
+                    <span class="monto">${{totalItems | decimalFormat}}</span>
+                </div>
+
+                @if(tipo == 'factura'){
+                    <div class="fila">
+                        <span>Descuento:</span>
+                        <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                    </div>
+
+                    <br>
+
+                    <div class="fila">
+                        <span>Total General:</span>
+                        <span class="monto">${{totalGeneral | decimalFormat}}</span>
+                    </div> 
+                    <div class="fila">
+                        <span>Redondeo:</span>
+                        <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>
+                    </div>
+                }
+                
+                <div class="fila total-final">
+                    <span>Total A Pagar:</span>
+                    <span class="monto">${{totalAPagar | decimalFormat}}</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

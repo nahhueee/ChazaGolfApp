@@ -3,18 +3,18 @@
 <div class="contenedor">
     <div class="navegacion">
         <div class="items">
-            <button pButton label="Inicio" icon="pi pi-home" class="p-button-text" (click)="Navegar('inicio')"></button>
+            <button pButton label="Inicio" [ngClass]="{ 'activo': activo === 'inicio' }" icon="pi pi-home" class="p-button-text" (click)="activo = 'inicio'; Navegar('inicio')" ></button>
 
-            <button pButton label="Facturacion" icon="pi pi-money-bill" class="p-button-text" (click)="menuFactura.toggle($event)"></button>
+            <button pButton label="Facturacion" [ngClass]="{ 'activo': activo === 'facturacion' }" icon="pi pi-money-bill" class="p-button-text" (click)="activo = 'facturacion'; menuFactura.toggle($event)"></button>
             <p-menu #menuFactura [model]="itemsFacturacion" [popup]="true" />
 
-            <button pButton label="Pre-Facturacion" icon="pi pi-file-edit" class="p-button-text" (click)="menuPre.toggle($event)"></button>
+            <button pButton label="Pre-Facturacion" [ngClass]="{ 'activo': activo === 'pre' }" icon="pi pi-file-edit" class="p-button-text" (click)="activo = 'pre'; menuPre.toggle($event)"></button>
             <p-menu #menuPre [model]="itemsPreFacturacion" [popup]="true" />
 
-            <button pButton label="Productos" icon="pi pi-box" class="p-button-text" (click)="menuProductos.toggle($event)"></button>
+            <button pButton label="Productos" [ngClass]="{ 'activo': activo === 'productos' }" icon="pi pi-box" class="p-button-text" (click)="activo = 'productos'; menuProductos.toggle($event)"></button>
             <p-menu #menuProductos [model]="itemsProducto" [popup]="true" />
 
-            <button pButton label="Clientes" icon="pi pi-users" class="p-button-text" (click)="menuClientes.toggle($event)"></button>
+            <button pButton label="Clientes" [ngClass]="{ 'activo': activo === 'clientes' }" icon="pi pi-users" class="p-button-text" (click)="activo = 'clientes'; menuClientes.toggle($event)"></button>
             <p-menu #menuClientes [model]="itemsCliente" [popup]="true" />
         </div>
         

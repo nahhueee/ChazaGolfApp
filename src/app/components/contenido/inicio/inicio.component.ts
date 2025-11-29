@@ -1,15 +1,12 @@
 import { Component } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { NavegacionComponent } from '../../compartidos/navegacion/navegacion.component';
 import { Subscription } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [
-    NavegacionComponent
-  ],
+  imports: [],
   templateUrl: './inicio.component.html',
   styleUrl: './inicio.component.scss',
 })

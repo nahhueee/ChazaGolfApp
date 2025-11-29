@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
 import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { MiscService } from '../../../../services/misc.service';
 import { ClientesService } from '../../../../services/clientes.service';
@@ -23,7 +22,6 @@ import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-c
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
-    NavegacionComponent,
     Tooltip,
     SelectButtonModule,
     ConfirmPopupModule,

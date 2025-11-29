@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-navegacion',
@@ -14,7 +15,8 @@ import { TooltipModule } from 'primeng/tooltip';
     MenuModule,
     ButtonModule,
     NgxSpinnerModule,
-    TooltipModule
+    TooltipModule,
+    CommonModule
   ],
   templateUrl: './navegacion.component.html',
   styleUrl: './navegacion.component.scss',
@@ -25,6 +27,7 @@ export class NavegacionComponent {
   itemsProducto: MenuItem[] | undefined;
   itemsCliente: MenuItem[] | undefined;
   esDark: boolean = false;
+  activo: string = 'inicio';
 
   constructor(
     private router:Router,
@@ -32,6 +35,12 @@ export class NavegacionComponent {
   ){}
 
   ngOnInit() {
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.ActualizarActivo(event.urlAfterRedirects);
+      }
+    });
+
    this.itemsFacturacion = [
       { label: 'Facturar', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'factura' } },
       { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'factura' }}
@@ -56,6 +65,22 @@ export class NavegacionComponent {
     ];
 
     this.esDark = localStorage.getItem('theme') === 'dark';
+  }
+
+  ActualizarActivo(url: string) {
+    if (url.startsWith('/inicio')) {
+      this.activo = 'inicio';
+    } else if (url.startsWith('/ventas') && url.includes('tipo=factura')) {
+      this.activo = 'facturacion';
+    } else if (url.startsWith('/ventas') && url.includes('tipo=pre')) {
+      this.activo = 'pre';
+    } else if (url.startsWith('/productos')) {
+      this.activo = 'productos';
+    } else if (url.startsWith('/clientes')) {
+      this.activo = 'clientes';
+    } else {
+      this.activo = '';
+    }
   }
 
   Navegar(ruta:string){

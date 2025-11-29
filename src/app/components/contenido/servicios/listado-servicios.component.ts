@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { DecimalFormatPipe } from '../../../pipes/decimal-format.pipe';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { TooltipModule } from 'primeng/tooltip';
-import { NavegacionComponent } from '../../compartidos/navegacion/navegacion.component';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { FORMS_IMPORTS } from '../../../imports/forms.import';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
@@ -19,7 +18,6 @@ import { GlobalesService } from '../../../services/globales.service';
   imports: [
      ...FORMS_IMPORTS,
     TableModule,
-    NavegacionComponent,
     TooltipModule,
     ConfirmPopupModule,
     DecimalFormatPipe

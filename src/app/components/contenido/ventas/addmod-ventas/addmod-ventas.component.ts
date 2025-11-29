@@ -7,7 +7,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
-import { Color, ColorDisponible, LineasTalle, Producto, ProductoBusqueda } from '../../../../models/Producto';
+import { ColorDisponible, LineasTalle, Producto, ProductoBusqueda } from '../../../../models/Producto';
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
@@ -42,7 +42,6 @@ import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
-    NavegacionComponent,
     AccordionModule,
     DatePickerModule,
     TableModule,
@@ -63,6 +62,9 @@ import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 })
 export class AddModVentasComponent {
   tipo: 'factura' | 'pre' = 'factura';
+  icono: string = "pi pi-plus-circle";
+  titulo: string = "";
+  proximoNroVenta:number = 0;
 
   decimal_mask: any;
   modificando:boolean;
@@ -155,6 +157,10 @@ export class AddModVentasComponent {
         }
     ];
 
+    this.ArmarFormularios();
+  }
+
+  ArmarFormularios(){
     this.formGenerales = new FormGroup({
       proceso: new FormControl('', [Validators.required]),
       punto: new FormControl('', [Validators.required]),
@@ -208,10 +214,19 @@ export class AddModVentasComponent {
     this.rutaActiva.queryParams.subscribe(params => {
       this.tipo = params['tipo'] ?? 'factura';
 
+      if(this.tipo == "factura"){
+        this.titulo = "Nueva Facturación";
+      }else{
+        this.titulo = "Nueva PreFacturación"
+      }
+      this.ReiniciarTodo();
       this.ObtenerProcesosVenta();
     });
 
-    console.log(this.tipo)
+    this.ventasService.ObtenerProximaVenta()
+    .subscribe(response => {
+      this.proximoNroVenta = response;
+    });
 
     this.ObtenerPuntosVenta();
     this.ObtenerClientes();
@@ -242,19 +257,7 @@ export class AddModVentasComponent {
           this.modificando = true;
           this.ObtenerVenta(id);
         } else {
-          this.modificando = false;
-          this.venta = new Venta();
-          this.venta.id = 0;
-          this.redondeo.setValue('');
-          this.productosFactura = [];
-          this.serviciosFactura = [];
-          this.pagosFactura = [];
-          this.clienteSeleccionado = undefined;
-          this.formGenerales.reset({}, { emitEvent: false });
-          this.formFacturacion.reset({}, { emitEvent: false });
-          this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
-          this.formGenerales.get('fecha')?.setValue(new Date());
-          this.CalcularTotalGeneral();
+          this.ReiniciarTodo();
         }
       });
     },10);
@@ -280,10 +283,34 @@ export class AddModVentasComponent {
     });
   }
 
+  ReiniciarTodo() {
+    this.modificando = false;
+    this.venta = new Venta();
+    this.venta.id = 0;
+
+    this.redondeo.setValue('');
+
+    this.productosFactura = [];
+    this.serviciosFactura = [];
+    this.pagosFactura = [];
+    this.clienteSeleccionado = undefined;
+
+    this.ArmarFormularios();
+    this.CalcularTotalGeneral();
+  }
+
+  SetearTitulo(){
+    if(this.venta.id == 0){
+      let antelacion = this.ProcesoControl.descripcion == "PRESUPUESTO" || this.ProcesoControl.descripcion == "PEDIDO" ? "Nuevo " : "Nueva ";
+      this.titulo = antelacion + this.ProcesoControl.descripcion + " Nro: " + this.proximoNroVenta;
+    }
+  }
+
   ObtenerVenta(idVenta){
     this.ventasService.ObtenerVenta(idVenta)
       .subscribe(response => {
         this.venta = response;
+        
         this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formGenerales.get('nroNota')?.setValue(this.venta.nroNota);
@@ -301,6 +328,7 @@ export class AddModVentasComponent {
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
 
+        this.titulo = "Editar " + this.ProcesoControl.descripcion + " Nro: " + this.venta.id;
         this.CalcularTotalGeneral();
       });
   }
@@ -520,6 +548,7 @@ export class AddModVentasComponent {
         this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString())
         .subscribe(response => {
           this.productoSeleccionado.talles = response;
+          console.log(this.productoSeleccionado.talles);
         });
       }
     }
@@ -534,7 +563,7 @@ export class AddModVentasComponent {
     else if(proceso=="agregar")
       return encontrado && encontrado.cantAgregar! > 0 ? encontrado.cantAgregar : 0;
     else if(proceso=="disponible")
-      return encontrado && encontrado.disponible! > 0 ? encontrado.disponible : 0;
+      return encontrado ? encontrado.disponible : 0;
 
     return 0;
   }
@@ -556,7 +585,6 @@ export class AddModVentasComponent {
 
   //#region PRODUCTOS VENTA
   AgregarProducto() {
-    console.log(this.productoSeleccionado)
     if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
       if (!this.productoSeleccionado) return;
 
@@ -595,8 +623,6 @@ export class AddModVentasComponent {
         }
       }
 
-      console.log(tallesSeleccionados, this.productoSeleccionado.talles)
-     
       tallesSeleccionados.forEach((talleSel: any) => {
         const cantidad = talleSel.cantAgregar ?? 0;
         const precio = talleSel.precio;
@@ -627,7 +653,7 @@ export class AddModVentasComponent {
             idProducto: this.productoSeleccionado.id,
             codProducto: this.productoSeleccionado.codigo,
             nomProducto: this.productoSeleccionado.nombre,
-            tallesProducto: this.productoSeleccionado.talles,
+            talles: this.productoSeleccionado.talles,
             idColor: this.productoSeleccionado.color!.id,
             color: this.productoSeleccionado.color!.descripcion,
             hexa: this.productoSeleccionado.color!.hexa,
@@ -666,12 +692,13 @@ export class AddModVentasComponent {
     if(producto[field] === undefined) return;
 
     const talleReal = this.ObtenerTalleReal(field, producto);
-        
-    const talleEncontrado = producto.tallesProducto.find((t: any) => t.talle === talleReal);
+        console.log(producto)
+    const talleEncontrado = producto.talles.find((t: any) => t.talle === talleReal);
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
 
     if(value <= 0) return;
+    console.log(value)
 
     if(this.ProcesoControl.descripcion !== 'PEDIDO'){
       if(value > talleEncontrado.cantidad){

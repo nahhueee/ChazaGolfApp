@@ -12,3 +12,8 @@
     gap: 5px;
     padding: 5px 0px;
 }
+
+.activo {
+  background: var(--surface-overlay) !important;
+  color: var(--text-color) !important;
+}

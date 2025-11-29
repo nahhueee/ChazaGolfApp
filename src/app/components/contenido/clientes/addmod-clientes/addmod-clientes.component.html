@@ -1,7 +1,3 @@
-@if(desdeRouting){
-   <app-navegacion></app-navegacion> 
-}
-
 <div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
 

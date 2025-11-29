@@ -19,6 +19,9 @@ export class VentasService {
   ObtenerVenta(idVenta:number): Observable<any> {
     return this.apiService.get(`ventas/obtener-una/${idVenta}`);
   }
+  ObtenerProximaVenta(): Observable<any> {
+    return this.apiService.get(`ventas/obtener-proxima`);
+  }
   //#endregion
 
   //#region ABM

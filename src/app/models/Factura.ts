@@ -35,7 +35,7 @@ import { TallesProducto } from "./Producto";
     idProducto? : number;
     codProducto?: string;
     nomProducto?: string;
-    tallesProducto?: TallesProducto[];
+    talles?: TallesProducto[];
     idColor?: number;
     color?: string;
     hexa?: string;
@@ -59,7 +59,7 @@ import { TallesProducto } from "./Producto";
       if (data) {
         this.idProducto = data.idProducto;
         this.codProducto = data.codProducto;
-        this.tallesProducto = data.tallesProducto;
+        this.talles = data.talles;
         this.cantidad = data.cantidad;
         this.idColor = data.idColor;
         this.color = data.color;

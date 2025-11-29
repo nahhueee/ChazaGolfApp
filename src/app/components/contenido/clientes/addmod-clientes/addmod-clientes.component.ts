@@ -8,14 +8,11 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { DireccionesService } from '../../../../services/direcciones.service';
 import { MiscService } from '../../../../services/misc.service';
 import { ActivatedRoute, Route, Router } from '@angular/router';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
-
 @Component({
   selector: 'app-addmod-clientes',
   standalone: true,
   imports: [
-    ...FORMS_IMPORTS,
-    NavegacionComponent
+    ...FORMS_IMPORTS
   ],
   templateUrl: './addmod-clientes.component.html',
   styleUrl: './addmod-clientes.component.scss',

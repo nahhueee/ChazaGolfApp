@@ -1,5 +1,3 @@
-<app-navegacion></app-navegacion>
-
 <div class="contenido">
     <div class="cabecera">
       <p-button label="Exportar" icon="pi pi-file-excel" raised (onClick)="DescargarResultados()"/>
@@ -108,7 +106,7 @@
             <ng-template #body let-producto>
                 <tr>
                     <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(producto.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [disabled]="producto.abrevProceso != 'STK'" icon="pi pi-pencil" (onClick)="Editar(producto.id)" pTooltip="Editar" tooltipPosition="bottom"/>
                     </td>
                     <td [pTooltip]="producto.proceso" tooltipPosition="bottom"> {{producto.abrevProceso}} </td>
                     <td [pTooltip]="producto.temporada" tooltipPosition="bottom">{{ producto.abrevTemporada }}</td>

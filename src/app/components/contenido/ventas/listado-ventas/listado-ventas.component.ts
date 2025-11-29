@@ -5,7 +5,6 @@ import { VentasService } from '../../../../services/ventas.service';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { DatePipe } from '@angular/common';
@@ -19,7 +18,6 @@ import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
     TableModule,
     Button,
     TooltipModule,
-    NavegacionComponent,
     DecimalFormatPipe,
     DatePipe,
     TagModule

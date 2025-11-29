@@ -5,7 +5,6 @@ import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ProductosService } from '../../../../services/productos.service';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { ConfirmationService } from 'primeng/api';
@@ -19,7 +18,6 @@ import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
   imports: [
     ...FORMS_IMPORTS,
     TableModule,
-    NavegacionComponent,
     TooltipModule,
     ConfirmPopupModule,
     DecimalFormatPipe

@@ -4,9 +4,7 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { ParametrosService } from '../../../../services/parametros.service';
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
-import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
 import { TooltipModule } from 'primeng/tooltip';
-import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-clientes.component';
 import { Dialog } from 'primeng/dialog';
 import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
@@ -35,7 +33,6 @@ import { SelectModule } from 'primeng/select';
     Dialog,
     AddmodProductosComponent,
     TooltipModule,
-    NavegacionComponent,
     InputTextModule,
     FormsModule,
     ReactiveFormsModule,
