@@ -185,8 +185,8 @@ p-accordion-header{
   margin-bottom: 15px;
   align-items: start;
 
-  .completeProductos{
-    flex: 2;
+  .completeProductos, .selectorColores{
+    flex: 1;
   }
 }
 
@@ -201,37 +201,19 @@ p-accordion-header{
   border-radius: 4px;
 }
 
-.colores {
-  display: grid;
-  grid-auto-flow: column;   
-  grid-template-rows: repeat(2, auto);
-  gap: 5px; 
-  flex: 0.5;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  width: 100%;
-  height: -webkit-fill-available;
+.opcion-color {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.color {
-  cursor: pointer;
-  border-radius: 4px;
-  transition: 0.2s ease;
-  border: 1px solid var(--surface-border);
-
-  &:hover {
-    transform: scale(1.02);
-  }
-
-  &.selected {
-    border: 5px solid var(--p-primary-color)
-  }
+.cuadro-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
 }
 
-.NoColor{
-  border-radius: 4px;
-  background-color: var(--surface-ground);
-}
 
 .talles{
   display: grid;

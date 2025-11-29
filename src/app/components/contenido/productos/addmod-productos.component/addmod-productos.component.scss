@@ -124,11 +124,12 @@ p-inputgroup-addon{
     }
 }
 
-.row-talle{
-    display: flex;
-    align-items: center;
+.tallesProducto{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* dos columnas */
     gap: 10px;
-    margin-bottom: 10px;
+}
+.row-talle{
     padding: 10px;
     background-color: var(--surface-overlay);
     border-radius: 4px;
@@ -140,6 +141,7 @@ p-inputgroup-addon{
         margin-right: 20px;
         color: var(--text-color-secondary);
         width: 230px;
+        margin-left: 10px;
     }
 
     input{

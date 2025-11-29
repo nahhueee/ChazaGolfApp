@@ -15,6 +15,8 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { forkJoin, Observable } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { Dialog } from 'primeng/dialog';
+import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-clientes.component';
 
 @Component({
   selector: 'app-addmod-productos',
@@ -25,6 +27,8 @@ import { ConfirmPopupModule } from 'primeng/confirmpopup';
     Tooltip,
     SelectButtonModule,
     ConfirmPopupModule,
+    Dialog,
+    AddModClientesComponent
 ],
   providers: [ConfirmationService],
   templateUrl: './addmod-productos.component.html',
@@ -284,6 +288,18 @@ export class AddmodProductosComponent {
   }
   //#endregion
 
+  Actualizar(valor:boolean){
+    if(valor){
+      this.clientesService.SelectorClientes()
+      .subscribe(response => {
+        this.clientes = response;
+      });
+    }
+      
+    this.modalAddClienteVisible = false;
+  }
+
+
   //#region EVENTOS DE SELECCION
   MaterialChange(){
     const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
@@ -380,7 +396,6 @@ export class AddmodProductosComponent {
       id: 0,
       ubicacion: indice,
       talle: [item.talle],
-      cantidad: [''],
       precio: [''],
       idLineaTalle: [this.lineaTalleControl.id]
     });
@@ -408,7 +423,7 @@ export class AddmodProductosComponent {
     this.producto.material = this.materialControl;
     this.producto.codigo = this.formulario.get('codigo')?.value;
     this.producto.nombre = this.formulario.get('nombre')?.value;
-    this.producto.moldeleria = this.formulario.get('moldeleria')?.value;
+    this.producto.moldeleria = this.formulario.get('moldeleria')?.value == '' ? 0 : this.formulario.get('moldeleria')?.value;
     this.producto.talles = this.tallesProductoControl.value;
     
     let operaciones$: Observable<any>[] = [];

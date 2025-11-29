@@ -7,7 +7,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
-import { Color, LineasTalle, Producto } from '../../../../models/Producto';
+import { Color, ColorDisponible, LineasTalle, Producto, ProductoBusqueda } from '../../../../models/Producto';
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
@@ -92,9 +92,12 @@ export class AddModVentasComponent {
 
   //PANTALLA 2
   formProductos:FormGroup;
-  productosFiltrados:Producto[]=[];
+  productosFiltrados:ProductoBusqueda[]=[];
+  resultadoBusqueda:Producto[]=[];
+  variantesDisponibles:Producto[]=[];
+  coloresDisponibles: ColorDisponible[] = [];
+
   productoSeleccionado:Producto = new Producto();
-  colorSeleccionado:Color = new Color();
   tallesBase:string[] = ["X","X","X","X","X","X","X","X","X","X"]
   tallesProducto:string[] = [];
 
@@ -164,6 +167,7 @@ export class AddModVentasComponent {
     this.formProductos = new FormGroup({
       producto: new FormControl([null]),
       descuento: new FormControl(''),
+      colorSeleccionado: new FormControl([null]),
 
       //Solo para presupuestos
       precio: new FormControl(''),
@@ -438,20 +442,77 @@ export class AddModVentasComponent {
     }else{
       this.productosService.BuscarProductos(query)
       .subscribe(response => {
-        this.productosFiltrados = response;
+        this.resultadoBusqueda = response;
+        this.productosFiltrados = this.AgruparProductos(this.resultadoBusqueda);
       });
     }
     
   }
 
+  AgruparProductos(productos: Producto[]) {
+      const mapa = new Map<string, { codigo: string, nombre: string }>();
+
+      for (const p of productos) {
+          const key = `${p.codigo}|${p.nombre}`;
+          if (!mapa.has(key)) {
+              mapa.set(key, {
+                  codigo: p.codigo ?? "",
+                  nombre: p.nombre ?? ""
+              });
+          }
+      }
+
+      return Array.from(mapa.values());
+  }
+
+
   SeleccionarProducto(){
     const seleccionado = this.formProductos.get('producto')?.value;
-    this.productoSeleccionado = seleccionado;
+    this.variantesDisponibles = this.resultadoBusqueda.filter(p=> p.codigo == seleccionado.codigo)
 
+    this.coloresDisponibles = this.variantesDisponibles.map(p => {
+        const cd = new ColorDisponible();
+        cd.idProducto = p.id;
+        cd.color = p.color?.descripcion ?? 'Sin color';
+        cd.hexa = p.color?.hexa ?? '#000000';
+        return cd;
+    });
+
+
+
+    // this.productosService.ObtenerProducto(seleccionado.id)
+    //   .subscribe(response => {
+    //     this.productoSeleccionado = response;
+
+    //     if(this.ProcesoControl.descripcion !== 'PRESUPUESTO'){
+    //       let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
+    //       if(!linea) return;
+    //       this.tallesProducto = linea.talles!;
+
+
+    //       //Verificamos en que colores esta disponible
+    //       // if(this.productoSeleccionado.relacionados && this.productoSeleccionado.relacionados.length>0){
+    //       //   this.coloresDisponibles = this.productoSeleccionado.relacionados!.map(r => r.color!);
+    //       // }
+    //       // this.coloresDisponibles.push(this.productoSeleccionado.color!); //Agregamos tambien el color del producto actual
+
+    //       //Para nota de empaque buscamos la disponibilidad actual
+    //       if(this.ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
+    //         this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString())
+    //         .subscribe(response => {
+    //           this.productoSeleccionado.talles = response;
+    //         });
+    //       }
+    //     }
+    //   });
+  }
+
+  SeleccionarVariante(event:any){
+    this.productoSeleccionado = this.variantesDisponibles.find(v=>v.id === event.value.idProducto)!;
+    
     if(this.ProcesoControl.descripcion !== 'PRESUPUESTO'){
       let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
       if(!linea) return;
-
       this.tallesProducto = linea.talles!;
 
       //Para nota de empaque buscamos la disponibilidad actual
@@ -462,14 +523,12 @@ export class AddModVentasComponent {
         });
       }
     }
-
   }
 
   ObtenerCantidad(talle: string, proceso:string) {
     if (!this.productoSeleccionado?.talles) return 0;
 
     const encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
-    console.log(encontrado);
     if(proceso=="stock")
       return encontrado ? encontrado.cantidad : 0;
     else if(proceso=="agregar")
@@ -485,6 +544,7 @@ export class AddModVentasComponent {
     
     let encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
     if (encontrado) {
+      if(encontrado && encontrado.cantidad == 0) return;
       if(encontrado && encontrado.cantAgregar! >= encontrado.cantidad!) return; //Si la cantidad a agregar es mayor o igual a lo disponible no agregamos
 
       encontrado.cantAgregar = (encontrado.cantAgregar || 0) + 1;
@@ -496,6 +556,7 @@ export class AddModVentasComponent {
 
   //#region PRODUCTOS VENTA
   AgregarProducto() {
+    console.log(this.productoSeleccionado)
     if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
       if (!this.productoSeleccionado) return;
 
@@ -518,7 +579,7 @@ export class AddModVentasComponent {
       this.productosFactura.push(nuevo);
     }
     else{
-      if (!this.productoSeleccionado || !this.productoSeleccionado.talles || this.colorSeleccionado.id === 0) return;
+      if (!this.productoSeleccionado || !this.productoSeleccionado.talles) return;
 
       let tallesSeleccionados:any[] = [];
 
@@ -567,9 +628,9 @@ export class AddModVentasComponent {
             codProducto: this.productoSeleccionado.codigo,
             nomProducto: this.productoSeleccionado.nombre,
             tallesProducto: this.productoSeleccionado.talles,
-            idColor: this.colorSeleccionado.id,
-            color: this.colorSeleccionado.descripcion,
-            hexa: this.colorSeleccionado.hexa,
+            idColor: this.productoSeleccionado.color!.id,
+            color: this.productoSeleccionado.color!.descripcion,
+            hexa: this.productoSeleccionado.color!.hexa,
             idLineaTalle: talleSel.idLineaTalle,
             cantidad: cantidad,
             unitario: precio,
@@ -588,7 +649,6 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
-    this.colorSeleccionado = new Color();
   }
 
   AsignarTalle(productoFactura: ProductosFactura, talle: string, cantidad: number, idLineaTalle: number) {

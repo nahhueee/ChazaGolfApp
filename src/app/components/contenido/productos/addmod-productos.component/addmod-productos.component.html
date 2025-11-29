@@ -164,11 +164,10 @@
                 <p class="info">Selecciona una linea de talles para administrar talles</p>
             }
 
-            <div formArrayName="tallesProducto">
+            <div formArrayName="tallesProducto" class="tallesProducto">
                 @for(item of tallesProductoControl.controls; track $index) {
                     <div [formGroupName]="$index" class="row-talle">
-                        <h5>Talle {{item.get('talle')?.value}} ▶</h5>
-                        <input type="number" pInputText placeholder="Cantidad" formControlName="cantidad" (focus)="SelectContent($event)" />
+                        <h5>Talle {{item.get('talle')?.value}}</h5>
                         <input type="text" pInputText placeholder="Precio" [imask]="decimal_mask" formControlName="precio" (focus)="SelectContent($event)" />
                     </div>
                 }
@@ -184,4 +183,15 @@
     }
     <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
 </div>
+
+<!-- Modal Nuevo Cliente -->
+<p-dialog [modal]="true" [(visible)]="modalAddClienteVisible" [style]="{ width: '90vw' }">
+    <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-user"></i>
+            <span> Agregar Cliente</span>
+        </div>
+    </ng-template>
+    <app-addmod-clientes (cerrar)="Actualizar($event)"/>
+</p-dialog>
 

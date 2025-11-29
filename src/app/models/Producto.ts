@@ -208,7 +208,8 @@ export class TalleSeleccionable{
 export class Relacionado {
     idProducto?:number;
     color?:Color;
-    
+    talles?:TallesProducto[] = []
+
     constructor(data?: any) {
         if (data) {
           this.idProducto = data.idProducto;
@@ -216,3 +217,15 @@ export class Relacionado {
         }
     }
 }
+
+export class ProductoBusqueda{
+    codigo:string;
+    nombre:string;
+}
+
+export class ColorDisponible{
+    idProducto:number;
+    color:string;
+    hexa:string;
+}
+

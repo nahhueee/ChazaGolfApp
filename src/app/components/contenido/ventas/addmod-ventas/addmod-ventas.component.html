@@ -135,7 +135,6 @@
                                     >
                                         <!-- Template para las sugerencias -->
                                         <ng-template let-producto pTemplate="item">
-                                            <div class="box-color" [ngStyle]="{'background': producto.color?.hexa}"></div>
                                             {{ producto.codigo }} - {{ producto.nombre }}
                                         </ng-template>
 
@@ -148,33 +147,38 @@
                             </div>
                             
                             @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                                <div class="colores">
-                                    @if(productoSeleccionado && productoSeleccionado.id != 0){
-                                        <!-- @for (color of productoSeleccionado.colores; track color) {
-                                            <div class="color" 
-                                                [class.selected]="color === colorSeleccionado"
-                                                (click)="this.colorSeleccionado = color;"
-                                                [pTooltip]="color.descripcion"
-                                                tooltipPosition="bottom"
-                                                [ngStyle]="{'background-color':color.hexa}"
-                                                >
+                                <p-floatlabel variant="in" class="selectorColores">
+                                    <p-select 
+                                        [options]="coloresDisponibles"
+                                        optionLabel="color"
+                                        [showClear]="true"
+                                        (onChange)="SeleccionarVariante($event)"
+                                    >
+                                        <!-- Template de cada opción -->
+                                        <ng-template pTemplate="item" let-item>
+                                            <div class="opcion-color">
+                                                <div class="cuadro-color" [style.background]="item.hexa"></div>
+                                                <span>{{ item.color }}</span>
                                             </div>
-                                        } -->
-                                    }@else{
-                                        <div class="NoColor"></div>
-                                        <div class="NoColor"></div>
-                                        <div class="NoColor"></div>
-                                        <div class="NoColor"></div>
-                                        <div class="NoColor"></div>
-                                        <div class="NoColor"></div>
-                                    }
-                                </div>
+                                        </ng-template>
+
+                                        <!-- Template para la opción seleccionada -->
+                                        <ng-template pTemplate="selectedItem" let-item>
+                                            <div class="opcion-color">
+                                                <div class="cuadro-color" [style.background]="item?.hexa"></div>
+                                                <span>{{ item?.color }}</span>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+
+                                    <label>Color</label>
+                                </p-floatlabel>
                             }
                             
-                            <!-- Si esta realizando una factura o nota de empaque puede seleccionar los talles y cantidadades a agregar -->
+                            <!-- Si esta realizando una factura o nota de empaque puede seleccionar los talles y cantidades a agregar -->
                             @if(tipo == 'factura' || ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
                                 <div class="talles"> 
-                                    @if(productoSeleccionado && productoSeleccionado.id != 0 && colorSeleccionado && colorSeleccionado.id != 0){
+                                    @if(productoSeleccionado && productoSeleccionado.id != 0){
                                         @for (talle of tallesProducto; track talle) {
                                             <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
                                                 @if(ObtenerCantidad(talle, 'agregar') != 0){
