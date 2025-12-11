@@ -455,11 +455,22 @@ export class AddmodProductosComponent {
 
     forkJoin(operaciones$).subscribe(respuestas => {
       const ok = respuestas.filter(r => r === 'OK').length;
+      const existen = respuestas.filter(r => r === 'Ya existe un producto con el mismo código y color.').length;
+      const fallos = respuestas.filter(r => r !== 'OK' && r !== 'Ya existe un producto con el mismo código y color.').length;
 
       if (ok === respuestas.length) {
         this.Notificaciones.Success("Los productos fueron procesados correctamente");
-      } else {
+      } else if(existen === respuestas.length){
+        this.Notificaciones.Warn("Ya existen productos con el mismo código y color seleccionado.");
+        return;
+      }else if(fallos === respuestas.length){
+        this.Notificaciones.Warn("Los productos no pudieron ser procesados.");
+        return;
+      }else {
         this.Notificaciones.Warn(`Solo ${ok} de ${respuestas.length} productos se procesaron correctamente.`);
+        if(existen > 0){
+          this.Notificaciones.Warn(`Hay ${existen} productos con el mismo código y color seleccionado.`);
+        }
       }
 
       if(this.desdeRouting)

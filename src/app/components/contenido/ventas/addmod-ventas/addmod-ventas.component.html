@@ -1,23 +1,20 @@
 <p-confirmpopup />
-
+<p-confirmdialog key="cerrarDialog"/>
 <div class="contenido">
     <div class="datos">
         <div class="izq">
             <i [class]="icono"></i>
             <p>{{titulo}}</p>
-            <!-- @if(venta.id != 0){
-                <p>Venta Nro: <strong>{{venta.id}}</strong></p>
-                <span>|</span>
-                <p>Actualización: <strong>{{venta.hora}}</strong> </p>
-            }@else {
-                <p>Nueva Venta</p>
-            }             -->
         </div>
        
-        @if(venta.factura){
-            <p-tag value="Facturada" severity="success" />
+        @if(venta.usado){
+            @if(venta.idProceso == 5){
+                <p-tag value="finalizado" severity="success" />
+            }@else {
+                <p-tag value="Facturado" severity="success" />
+            }
         }@else{
-            <p-tag value="Pendiente" severity="warn" />
+            <p-tag value="aprobado" severity="warn" />
         }
     </div>
 
@@ -99,7 +96,34 @@
 
                         <p class="link" (click)="modalClienteVisible = true">Ver Más</p>
                     </div>
-
+                    @if(ventasCliente.length>0){
+                        <div class="ventas-cliente">
+                            <p class="titulo">Relacionados</p>
+                            @for (venta of ventasCliente; track venta) {
+                                
+                                @if(
+                                    (venta.idProceso == 6 && this.ProcesoControl.id == 5) ||
+                                    (venta.idProceso == 6 && this.ProcesoControl.id == 7) ||
+                                    (venta.idProceso == 5 && [1, 2, 3].includes(this.ProcesoControl.id))
+                                    ){
+                                    <div class="venta disabled">
+                                        <p><strong>{{venta.proceso}}</strong> {{venta.nroProceso}}</p>
+                                        <span>{{venta.fecha | date:'dd-MM-yy'}} {{venta.hora}}</span>
+                                    </div>
+                                }@else {
+                                    <div class="venta" tooltipPosition="bottom" [pTooltip]="ObtenerToolTip(venta.idProceso!)"  (click)="RelacionarActualizarProceso(venta)">
+                                        <div class="data">
+                                            <p><strong>{{venta.proceso}}</strong> {{venta.nroProceso}}</p>
+                                            <span>{{venta.fecha | date:'dd-MM-yy'}} {{venta.hora}}</span>
+                                        </div>
+                                        @if(venta.proceso == tipoRelacionado && venta.nroProceso == nroRelacionado){
+                                            <i class="pi pi-link"></i>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
                 }@else {
                     <div class="noSeleccionado">
                         <div class="icon">
@@ -279,6 +303,7 @@
                                     [value]="producto[t]"
                                     [disabled]="producto[t] === undefined" 
                                     (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                    (keydown.tab)="ActualizarCantidad(producto, t, $event)"
                                     (focus)="SelectContent($event)"
                                     style="max-width: 70px;" />
                                 </ng-template>
@@ -303,6 +328,7 @@
                                             [value]="producto.cantidad"
                                             style="max-width: 70px;"
                                             (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
+                                            (keydown.tab)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
                                             (keydown.arrowRight)="$event.stopPropagation()"
                                         />
                                     </ng-template>
@@ -335,6 +361,7 @@
                                             [value]="producto.unitario"
                                             style="max-width: 100px;"
                                             (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
+                                            (keydown.tab)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
                                             (keydown.arrowLeft)="$event.stopPropagation()"
                                         />
                                     </ng-template>
@@ -558,8 +585,10 @@
     </div>
 </div>
 
-<div class="botones">
-    <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true; ArmarObjetoVenta()" />
+<div class="botones"> 
+    <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
+
+    <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true; ArmarObjetoVenta()"/>
     <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura"/>
     @if(tipo == 'factura'){
         <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura" />

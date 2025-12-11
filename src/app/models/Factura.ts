@@ -6,9 +6,10 @@ import { TallesProducto } from "./Producto";
     id?:number;
     idProceso?:number;
     proceso?:string;
+    procAnterior?:number;
+    nroProceso?:number;
     idPunto?:number;
     punto?:string;
-    nroNota?:number;
     fecha?:Date;
     hora?:string;
     idCliente?:number;
@@ -29,6 +30,10 @@ import { TallesProducto } from "./Producto";
     servicios?:ServiciosFactura[];
     pagos?:PagosFactura[];
     factura?:FacturaVenta;
+
+    nroRelacionado?:number;
+    tipoRelacionado?:string;
+    usado:number = 0;
   }
 
   export class ProductosFactura{

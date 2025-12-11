@@ -181,6 +181,54 @@ p-accordion-header{
   }
 }
 
+.ventas-cliente{
+  border-radius: 10px;
+  padding: 10px;
+  background-color: var(--surface-ground);
+  width: 250px;
+  max-height: 220px;
+  overflow-y: auto;
+  
+
+  .titulo{
+    text-align: center;
+    font-family: 'Poppins';
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .venta{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--surface-card);
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    cursor: pointer;
+
+    p{
+      font-size: 18px;
+    }
+    strong{
+      color: var(--p-primary-color);
+    }
+    span{
+      color: var(--text-color-secondary);
+      font-size: 14px;
+    }
+  }
+
+  .disabled{
+    cursor: default;
+    p{
+      color: var(--text-color-secondary);
+    }
+    strong{
+      color: var(--text-color-secondary);
+    }
+  }
+}
 /*#endregion */
 
 /*#region PRODUCTOS*/
@@ -366,6 +414,12 @@ p-inputgroup-addon{
     background: var(--surface-ground) !important;
     box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1);
     border-top: 1px solid var(--surface-border);
+}
+
+.btnCerrar{
+  padding-right: 20px;
+  margin-right: 5px;
+  border-right: 1px solid var(--surface-border);
 }
 
 ::ng-deep .botones .p-button-outlined {
