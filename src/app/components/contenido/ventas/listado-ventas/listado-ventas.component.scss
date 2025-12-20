@@ -4,3 +4,27 @@
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+
+.filtros{
+    display: flex;
+    gap: 30px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+
+    .izq{
+        display: flex;
+        gap: 15px;
+        flex: 2;
+    }
+
+    .der{
+        display: flex;
+        gap: 10px;
+    }
+}
+
+.opciones-impresion{
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}

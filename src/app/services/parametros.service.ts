@@ -50,7 +50,7 @@ private apiService = inject(ApiService);
   GetNombreLocal():string{
     let local = localStorage.getItem('local');
     if(local == null)
-      local = "Easy Sales";  
+      local = "CHAZA GOLF";  
 
     return local;
   }

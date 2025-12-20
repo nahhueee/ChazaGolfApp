@@ -145,7 +145,9 @@ export class ServiciosComponent {
     servicio.codigo = this.formulario.value.codigo;
     servicio.descripcion = this.formulario.value.descripcion;
     servicio.sugerido = this.globalesService.EstandarizarDecimal(this.formulario.value.sugerido);
-    servicio.topeDescuento = this.globalesService.EstandarizarDecimal(this.formulario.value.topeDescuento);
+
+    let topeDescuento = this.formulario.value.topeDescuento == "" ? 100 : this.globalesService.EstandarizarDecimal(this.formulario.value.topeDescuento);;
+    servicio.topeDescuento = topeDescuento;
 
     if(this.editando){
       this.Modificar(servicio);

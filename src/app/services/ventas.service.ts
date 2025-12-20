@@ -26,6 +26,9 @@ export class VentasService {
     const body = {idCliente, nroEditando}
     return this.apiService.post(`ventas/obtener-cliente`, body);
   }
+  VerificarNroNota(nroNota:number): Observable<any> {
+    return this.apiService.get(`ventas/verificar-nota/` + nroNota);
+  }
   //#endregion
 
   //#region ABM

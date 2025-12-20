@@ -1,0 +1,186 @@
+<p-dialog header="Vista Previa" [modal]="true" [(visible)]="visible" [style]="{ width: '90vw' }" [maximizable]="true" (onHide)="Cerrar()">
+   <div class="vista-previa">
+        <div class="data-cliente">
+            <div class="enLinea">
+                <div class="recuadro">
+                <p>{{venta.proceso}}</p>
+                <p-divider />
+                <span>Proceso</span>
+                </div>
+
+                <div class="recuadro">
+                <p>{{venta.fecha | date:'dd-MM-yy'}}</p>
+                <p-divider />
+                <span>Fecha</span>
+                </div>
+
+                <div class="recuadro">
+                    <p>{{venta.cliente}}</p>
+                    <p-divider />
+                    <span>Cliente</span>
+                </div>
+
+                <div class="recuadro">
+                    <p>{{venta.condCliente}}</p>
+                    <p-divider />
+                    <span>Cond. Iva Cliente</span>
+                </div>
+
+                <!-- <div class="recuadro">
+                <p>{{venta.listaPrecio}}</p>
+                <p-divider />
+                <span>Lista Precio</span>
+                </div> -->
+            </div>
+        </div>
+
+        <div class="data-productos">
+            <p>Productos</p>
+            <p-table [value]="venta.productos" size="small" showGridlines>
+                <ng-template #header>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Color</th>
+                        <th>XS</th>
+                        <th>S</th>
+                        <th>M</th>
+                        <th>L</th>
+                        <th>XL</th>
+                        <th>XXL</th>
+                        <th>3XL</th>
+                        <th>4XL</th>
+                        <th>5XL</th>
+                        <th>6XL</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-producto>
+                    <tr>
+                        <td>{{ producto.codProducto }}</td>
+                        <td>{{ producto.nomProducto }}</td>
+                        <td>{{ producto.color }}</td>
+                        <td>{{ producto.t1 }}</td>
+                        <td>{{ producto.t2 }}</td>
+                        <td>{{ producto.t3 }}</td>
+                        <td>{{ producto.t4 }}</td>
+                        <td>{{ producto.t5 }}</td>
+                        <td>{{ producto.t6 }}</td>
+                        <td>{{ producto.t7 }}</td>
+                        <td>{{ producto.t8 }}</td>
+                        <td>{{ producto.t9 }}</td>
+                        <td>{{ producto.t10 }}</td>
+                        <td style="width: 150px;">{{ producto.cantidad }}</td>
+                        <td style="width: 150px;">${{ producto.unitario | decimalFormat}}</td>
+                        <td style="width: 150px;">${{ producto.total | decimalFormat }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        @if(venta.servicios && venta.servicios.length > 0){
+        <div class="data-servicios">
+            <p>Servicios</p>
+            <p-table [value]="venta.servicios" size="small" showGridlines>
+                <ng-template #header>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Desc. Aplicado</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-servicio>
+                    <tr>
+                        <td>{{ servicio.codServicio }}</td>
+                        <td>{{ servicio.nomServicio }}</td>
+                        <td style="width: 150px;">{{ servicio.cantidad }}</td>
+                        <td style="width: 150px;">${{ servicio.unitario | decimalFormat}}</td>
+                        <td style="width: 150px;">${{ servicio.total | decimalFormat }}</td>
+                        <td style="width: 150px;">{{ servicio.descuentoAplicado ?? 0 }}%</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        }
+        <div class="contadores">
+            <div class="item">{{cantItems}}</div>
+            <div class="item"></div>
+            <div class="item">${{totalItems | decimalFormat}}</div>
+        </div>
+
+        <div class="data-facturacion">
+
+            <div class="enLinea">
+                <div class="facturacion">
+                    <div class="enLinea">
+                        <div class="recuadro">
+                            <p>{{venta.empresa}}</p>
+                            <p-divider />
+                            <span>Empresa</span>
+                        </div>
+                        <div class="recuadro">
+                            <p>{{venta.tipoComprobante}}</p>
+                            <p-divider />
+                            <span>Tipo Comprobante</span>
+                        </div>
+                    </div>
+                    <div class="enLinea">
+                        <div class="recuadro">
+                            <p>{{venta.tipoDescuento}}</p>
+                            <p-divider />
+                            <span>Tipo Descuento</span>
+                        </div>
+                        <div class="recuadro">
+                            <p>{{venta.descuento}}%</p>
+                            <p-divider />
+                            <span>Descuento</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <p-table [value]="venta.pagos" size="small" showGridlines class="pagos-tabla">
+                    <ng-template #header>
+                        <tr>
+                            <th>Metodo</th>
+                            <th>Monto</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template #body let-pago>
+                        <tr>
+                            <td>{{ pago.metodo }}</td>
+                            <td>{{ pago.monto | decimalFormat}}</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+
+                <div class="resumen">
+                    <div class="fila">
+                        <span>Total Items:</span>
+                        <span class="monto">${{totalItems | decimalFormat}}</span>
+                    </div>
+                    <div class="fila">
+                        <span>Descuento:</span>
+                        <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                    </div>
+                    <br>
+                    <div class="fila">
+                        <span>Total General:</span>
+                        <span class="monto">${{totalGeneral | decimalFormat}}</span>
+                    </div>
+                    <div class="fila">
+                        <span>Redondeo:</span>
+                        <span class="monto">${{venta.redondeo | decimalFormat}}</span>
+                    </div>
+                    <div class="fila total-final">
+                        <span>Total A Pagar:</span>
+                        <span class="monto">${{totalAPagar | decimalFormat}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+   </div>
+</p-dialog>

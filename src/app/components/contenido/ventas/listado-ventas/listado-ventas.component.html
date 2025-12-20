@@ -1,4 +1,51 @@
 <div class="contenido">
+    <form [formGroup]="filtros" autocomplete="off" class="filtros">
+        <div class="izq">
+            <!-- Proceso -->
+            <p-floatlabel variant="on">
+                <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
+                <label>Proceso</label>
+            </p-floatlabel>
+
+            <!-- Nro Proceso -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="nroProceso"  type="text"/>
+                <label>N° Proceso</label>
+            </p-floatlabel>
+
+            <!-- Fecha -->
+            <p-floatlabel variant="on">
+                <p-datepicker formControlName="fechas" selectionMode="range"/>
+                <label>Rango de Fecha</label>
+            </p-floatlabel>
+
+            <!-- Cliente -->
+            <p-floatlabel variant="on">
+                <p-autocomplete
+                    formControlName="cliente"
+                    [suggestions]="clientesFiltrados"
+                    placeholder="Buscar por nombre o DNI"
+                    emptyMessage="No se encontraron resultados"
+                    (completeMethod)="FiltrarClientes($event)"
+                    optionLabel="nombre"
+                >
+                    <!-- Template para las sugerencias -->
+                    <ng-template let-cliente pTemplate="item">
+                        {{ cliente.nombre }} - {{ cliente.documento }}
+                    </ng-template>
+
+                </p-autocomplete>
+                <label>Cliente</label>
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+
+        
+    </form>
+
     <div class="tabla">
         <p-table 
         [value]="ventas"
@@ -15,13 +62,13 @@
                 <tr>
                     <th>Editar</th>
                     <th>Proceso</th>
+                    <th>Nro</th>
                     <th>Fecha</th>
                     <th>Hora</th>
                     <th>Cliente</th>
                     <th>Total</th>
-                    @if(tipo == 'factura'){
-                        <th>Estado</th>
-                    }
+                    <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
             </ng-template>
             <ng-template #body let-venta>
@@ -30,21 +77,41 @@
                         <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom"/>
                     </td>
                     <td>{{ venta.proceso }}</td>
+                    <td>{{ venta.nroProceso }}</td>
                     <td>{{ venta.fecha | date:'dd-MM-yyyy' }}</td>
                     <td>{{ venta.hora }}</td>
                     <td>{{ venta.cliente }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
-                    @if(tipo == 'factura'){
-                        <td>
-                            @if(venta.factura){
-                                <p-tag value="Facturada" severity="success" />
-                            }@else{
-                                <p-tag value="Pendiente" severity="warn" />
-                            }
-                        </td>
-                    }
+                    <td>
+                        <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
+                    </td>
+                    <td>
+                        <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
+                        <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
+                    </td>
                 </tr>
             </ng-template>
         </p-table>
     </div>
 </div>
+
+<app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada"></app-vista-previa>
+
+<p-popover #op>
+    <div class="opciones-impresion">
+        <p-button
+        label="Ver interno"
+        severity="secondary"
+        styleClass="p-button-sm w-full"
+        (click)="VerComprobante('interno'); op.hide()">
+        </p-button>
+
+        <p-button
+        label="Ver Factura"
+        severity="success"
+        styleClass="p-button-sm w-full"
+        [disabled]="ventaSeleccionada && ventaSeleccionada.factura?.cae== null"
+        (click)="VerComprobante('factura'); op.hide()">
+        </p-button>
+  </div>
+</p-popover>

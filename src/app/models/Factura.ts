@@ -14,6 +14,7 @@ import { TallesProducto } from "./Producto";
     hora?:string;
     idCliente?:number;
     cliente?:string;
+    condCliente:string;
     idListaPrecio?:number;
     listaPrecio?:string;
     idEmpresa?:number;
@@ -22,18 +23,18 @@ import { TallesProducto } from "./Producto";
     tipoComprobante?:string;
     idTipoDescuento?:number;
     tipoDescuento?:string;
-    descuento?:number;
+    descuento:number = 0;
     codPromocion?:number;
     redondeo:number = 0;
     total?:number;
-    productos?:ProductosFactura[];
-    servicios?:ServiciosFactura[];
-    pagos?:PagosFactura[];
+    productos:ProductosFactura[];
+    servicios:ServiciosFactura[];
+    pagos:PagosFactura[];
     factura?:FacturaVenta;
 
     nroRelacionado?:number;
     tipoRelacionado?:string;
-    usado:number = 0;
+    estado?:string;
   }
 
   export class ProductosFactura{
@@ -95,6 +96,7 @@ import { TallesProducto } from "./Producto";
     cantidad?: number;
     unitario?: number;
     total?: number;
+    topeDescuento?:number;
   
     constructor(data?: any) {
       if (data) {
@@ -104,6 +106,7 @@ import { TallesProducto } from "./Producto";
         this.unitario = data.unitario;
         this.nomServicio = data.nomServicio;
         this.total = data.total;
+        this.topeDescuento = data.topeDescuento;
       }
     }
   }

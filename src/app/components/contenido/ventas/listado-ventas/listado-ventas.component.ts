@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { Venta } from '../../../../models/Factura';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { VentasService } from '../../../../services/ventas.service';
@@ -10,17 +10,33 @@ import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
+import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
+import { FORMS_IMPORTS } from '../../../../imports/forms.import';
+import { ProcesoVenta } from '../../../../models/ProcesoVenta';
+import { MiscService } from '../../../../services/misc.service';
+import { FormControl, FormGroup } from '@angular/forms';
+import { DatePicker } from 'primeng/datepicker';
+import { Cliente } from '../../../../models/Cliente';
+import { ClientesService } from '../../../../services/clientes.service';
+import { ComprobanteService } from '../../../../services/comprobante.service';
+import { SplitButtonModule } from 'primeng/splitbutton';
+import { Popover, PopoverModule } from 'primeng/popover';
 
 @Component({
   selector: 'app-listado-ventas.component',
   standalone: true,
   imports: [
+    ...FORMS_IMPORTS,
     TableModule,
     Button,
     TooltipModule,
     DecimalFormatPipe,
     DatePipe,
-    TagModule
+    TagModule,
+    DatePicker,
+    VistaPreviaComponent,
+    SplitButtonModule,
+    PopoverModule
   ],
   templateUrl: './listado-ventas.component.html',
   styleUrl: './listado-ventas.component.scss',
@@ -32,19 +48,48 @@ export class ListadoVentasComponent {
   filtroActual!: FiltroGral;
   tipo: 'factura' | 'pre' = 'factura';
   primeraCarga = true;
+  detalleVisible: boolean = false;
+  ventaSeleccionada:Venta = new Venta();
   
+  filtros:FormGroup;
+  clientes:Cliente[]=[];
+  clientesFiltrados:Cliente[]=[];
+  procesos:ProcesoVenta[] = [];
+  @ViewChild('op') op!: Popover;
+
+
   constructor(
     private ventasService:VentasService,
     private router:Router,
-    private rutaActiva: ActivatedRoute
-  ){}
+    private rutaActiva: ActivatedRoute,
+    private miscService: MiscService,
+    private clientesService:ClientesService,
+    private comprobanteService:ComprobanteService
+  ){
+    this.filtros = new FormGroup({
+      proceso: new FormControl(),
+      nroProceso: new FormControl(),
+      fechas: new FormControl(),
+      cliente: new FormControl()
+    })
+  }
 
   ngOnInit() {
     this.rutaActiva.queryParams.subscribe(params => {
       this.tipo = params['tipo'] ?? 'factura';
+      this.LimpiarFiltros();
+      this.ObtenerProcesosVenta();
+      this.ObtenerClientes();
 
       this.Buscar();
     });
+  }
+
+  ObtenerProcesosVenta(){
+    this.miscService.ObtenerProcesosVenta(this.tipo)
+      .subscribe(response => {
+        this.procesos = response;
+      });
   }
 
   Buscar(event?: TableLazyLoadEvent, busqueda?: string, recargaConFiltro: boolean = false) {
@@ -63,7 +108,11 @@ export class ListadoVentasComponent {
         pagina: pageIndex + 1,  
         tamanioPagina: pageSize,
         busqueda: busqueda,
-        tipo: this.tipo
+        tipo: this.tipo,
+        idProceso: this.filtros.value.proceso?.id ?? 0,
+        nroProceso: this.filtros.value.nroProceso,
+        fechas: this.filtros.value.fechas,
+        cliente: this.filtros.value.cliente?.id ?? 0
       });
     }
 
@@ -80,4 +129,60 @@ export class ListadoVentasComponent {
       { queryParams: { tipo: this.tipo} }
     );
   }
+
+  ElegirComprobante(venta:Venta){
+    this.op.toggle(event);
+    this.ventaSeleccionada = venta;
+  }
+
+  VerComprobante(tipo:string){
+    this.comprobanteService.VerComprobante(tipo, this.ventaSeleccionada)
+  }
+
+
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' {
+    if (!estado) return 'info';
+
+    const value = estado.toLowerCase();
+
+    if (value === 'aprobada' || value === 'aprobado') {
+      return 'info';
+    }
+
+    if (
+      value === 'pendiente' ||
+      value === 'asociado' ||
+      value === 'asociada'
+    ) {
+      return 'warn';
+    }
+
+    if (value === 'facturado' || value === 'facturada') {
+      return 'success';
+    }
+
+    return 'info';
+  }
+
+  ObtenerClientes(){
+    this.clientesService.SelectorClientes()
+      .subscribe(response => {
+        this.clientes = response;
+      });
+  }
+  
+  FiltrarClientes(event: any) {
+    const query = event.query.toLowerCase();
+    this.clientesFiltrados = this.clientes.filter(c => {
+      const nombre = c.nombre!.toLowerCase();
+      const dni = c.documento!.toString(); 
+      return nombre.includes(query) || dni.includes(query);
+    });
+  }
+
+  LimpiarFiltros(){
+    this.filtros.reset();
+    this.Buscar();
+  }
+
 }

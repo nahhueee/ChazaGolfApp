@@ -1,0 +1,152 @@
+
+/*#region DATOS FACTURACION*/
+.enLinea{
+    display: flex;
+    gap: 20px;
+    width: 100%;
+
+    .izq{
+      flex: 2;
+      width: 100%;
+    }
+    .centro{
+      flex: 2;
+      width: 100%;
+    }
+}
+.resumen{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 16px;
+  width: fit-content;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 15px;
+  background-color: var(--surface-card);
+}
+.fila {
+  display: flex;
+  justify-content: space-between;
+  width: 260px; /* mismo ancho para todos los totales */
+  margin-bottom: 5px;
+}
+
+.fila input {
+  width: 100px;
+  text-align: right;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--color-font) !important;
+  padding: 2px 5px;
+}
+.fila input:focus {
+  outline: none; 
+}
+
+.fila input::placeholder {
+  font-size: 16px;
+  font-family: 'Roboto', sans-serif;
+  color: var(--placeholders);
+  font-weight: 400;
+}
+
+.monto {
+  font-weight: 600;
+  text-align: right;
+  min-width: 100px;
+}
+
+.total-final {
+  border-top: 2px solid #ccc;
+  padding-top: 6px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+p-inputgroup-addon{
+  height: 53px !important;
+}
+
+.datos-facturacion{
+  flex: 1;
+}
+
+.metodo-pago{
+  flex: 1;
+  width: 100%;
+  padding: 0px 30px;
+}
+/*#endregion */
+
+
+/*#region VISTA PREVIA*/
+.vista-previa{
+  padding: 20px 30px;
+}
+.recuadro {
+  flex: 1 1 180px;
+  width: 180px; 
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border: 1px solid var(--surface-border);
+  margin-bottom: 20px;
+  background-color: var(--surface-card);
+}
+
+.recuadro p {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.recuadro span {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Poppins';
+}
+
+p-divider {
+  margin:4px 0px;
+}
+
+.data-productos, .data-servicios{
+  margin-bottom: 20px;
+
+  p{
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Poppins';
+    margin-bottom: 8px;
+  }
+}
+
+.facturacion,.pagos-tabla{
+  width: 100%;
+}
+
+.contadores{
+  width: 100%;
+  display: flex;
+  justify-content: right;
+  margin-bottom: 20px;
+
+  .item{
+    padding-left: 8px;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    height: 30px;
+    width: 150px;
+    border: 1px solid var(--surface-border);
+  }
+}
+/*#endregion */

@@ -7,14 +7,8 @@
             <p>{{titulo}}</p>
         </div>
        
-        @if(venta.usado){
-            @if(venta.idProceso == 5){
-                <p-tag value="finalizado" severity="success" />
-            }@else {
-                <p-tag value="Facturado" severity="success" />
-            }
-        }@else{
-            <p-tag value="aprobado" severity="warn" />
+        @if(venta.estado !=""){
+           <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado!)" />
         }
     </div>
 
@@ -40,7 +34,7 @@
                     </div>
                     <!-- Puntos -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" />
+                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" (onChange)="CambioDePunto()" />
                         <label>Punto de Venta</label>
                     </p-floatlabel>
                 </div>
@@ -70,11 +64,16 @@
                         </p-inputgroup-addon>                                
                     </p-inputgroup>
 
-                    <!-- Nota Empaque -->
-                    <p-floatlabel variant="in">
-                        <input pInputText formControlName="nroNota"  type="text"/>
-                        <label>N° Nota Empaque</label>
-                    </p-floatlabel>
+                    <p-inputgroup>
+                        <!-- Nota Empaque -->
+                        <p-floatlabel variant="in">
+                            <input pInputText formControlName="nroNota"  type="text"/>
+                            <label>N° Nota Empaque</label>
+                        </p-floatlabel>
+                        <p-inputgroup-addon>
+                                <p-button class="btnAdd" icon="pi pi-check" (onClick)="BuscarNotaEmpaque()" severity="success" />
+                            </p-inputgroup-addon> 
+                    </p-inputgroup>
                 </div>
 
                 @if(clienteSeleccionado && clienteSeleccionado != undefined){
@@ -141,7 +140,7 @@
         <h3>Productos</h3>
 
         @if(ProcesoControl){
-            <form [formGroup]="formProductos" class="formProducto" autocomplete="off">
+            <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (keyup.enter)='AgregarProducto()'>
                 <div class="LineaProducto">
 
                     <div class="completeProductos">
@@ -401,7 +400,7 @@
     <div class="seccion">
         <h3>Servicios</h3>
 
-        <form [formGroup]="formServicios" class="formServicio" autocomplete="off">
+        <form [formGroup]="formServicios" class="formServicio" autocomplete="off" (keyup.enter)='AgregarServicio()'>
             <div class="horizontal">
                 <!-- Codigo - Nombre -->
                 <p-floatlabel variant="in">
@@ -499,7 +498,7 @@
                         <!-- Descuento -->
                         <p-inputgroup>
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="descuento" type="number"/>
+                                <input pInputText formControlName="descuento" type="number" (input)="CalcularTotalGeneral()"/>
                                 <label>Descuento</label>
                             </p-floatlabel>
                             <p-inputgroup-addon>%</p-inputgroup-addon>
@@ -598,7 +597,9 @@
 
 
 <!-- Modal Resumen -->
-<p-dialog header="Vista Previa" [modal]="true" [(visible)]="vistaPreviaVisible" [style]="{ width: '90vw' }" [maximizable]="true">
+<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta"></app-vista-previa>
+
+<!-- <p-dialog header="Vista Previa" [modal]="true" [(visible)]="vistaPreviaVisible" [style]="{ width: '90vw' }" [maximizable]="true">
    <div class="vista-previa">
         <div class="data-cliente">
             <div class="enLinea">
@@ -692,6 +693,7 @@
                         <th>Cant.</th>
                         <th>Precio</th>
                         <th>Total</th>
+                        <th>Desc. Aplicado</th>
                     </tr>
                 </ng-template>
                 <ng-template #body let-servicio>
@@ -701,6 +703,7 @@
                         <td style="width: 150px;">{{ servicio.cantidad }}</td>
                         <td style="width: 150px;">${{ servicio.unitario | decimalFormat}}</td>
                         <td style="width: 150px;">${{ servicio.total | decimalFormat }}</td>
+                        <td style="width: 150px;">{{ servicio.descuentoAplicado ?? 0 }}%</td>
                     </tr>
                 </ng-template>
             </p-table>
@@ -783,7 +786,7 @@
             </div>
         </div>
    </div>
-</p-dialog>
+</p-dialog> -->
 
 <!-- Modal Datos Cliente -->
 <p-dialog header="Datos del Cliente" [modal]="true" [style]="{ width: '500px' }" [(visible)]="modalClienteVisible">

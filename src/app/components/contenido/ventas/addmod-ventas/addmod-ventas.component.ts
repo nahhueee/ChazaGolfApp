@@ -38,6 +38,7 @@ import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { TipoDescuento } from '../../../../models/TipoDescuento';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
+import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -57,7 +58,8 @@ import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
     AddModClientesComponent,
     FacturarVentaComponent,
     TooltipModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    VistaPreviaComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './addmod-ventas.component.html',
@@ -195,6 +197,7 @@ export class AddModVentasComponent {
   get DescuentoControl(){return this.formFacturacion.get('descuento')?.value;}
   get ServicioControl(){return this.formServicios.get('servicio')?.value ?? '';}
   get ProcesoControl(){return this.formGenerales.get('proceso')?.value;}
+  get PuntoControl(){return this.formGenerales.get('punto')?.value;}
   get ProductoControl(){return this.formProductos.get('producto')?.value ?? '';}
   get esPresupuesto(): boolean {
     return this.ProcesoControl?.descripcion === 'PRESUPUESTO';
@@ -242,21 +245,6 @@ export class AddModVentasComponent {
       });
     },10);
 
-    //DEPENDIENDO EL PROCESO HABILITAMOS NOTA DE EMPAQUE
-    this.formGenerales.get('punto')?.valueChanges.subscribe((valor) => {
-    const nroNotaControl = this.formGenerales.get('nroNota');
-      if (valor.id != 5) {
-        nroNotaControl?.disable({ emitEvent: false });
-      } else {
-        nroNotaControl?.enable({ emitEvent: false });
-      }
-    });
-
-    //Calcula el total general cuando se aplica un descuento
-    this.formFacturacion.get('descuento')?.valueChanges.subscribe((value) => {
-      this.CalcularTotalGeneral();
-    });
-
     //Calcula el total general cuando se aplica un redondeo
     this.redondeo.valueChanges.subscribe((value) => {
       this.CalcularTotalGeneral();
@@ -297,6 +285,82 @@ export class AddModVentasComponent {
     });
   }
 
+  CambioDePunto(){
+    const nroNotaControl = this.formGenerales.get('nroNota');
+    if (this.PuntoControl.id != 5) {
+      nroNotaControl?.disable({ emitEvent: false });
+    } else {
+      nroNotaControl?.enable({ emitEvent: false });
+    }
+  }
+
+  BuscarNotaEmpaque(){
+    const nroNota = this.formGenerales.get('nroNota')?.value;
+    if(nroNota == "" || nroNota == 0) return;
+
+    this.ventasService.VerificarNroNota(nroNota)
+      .subscribe(response => {
+        if(response == null){
+          this.Notificaciones.Warn("No se encontraron notas de empaque con este número.")
+        }else{
+          this.confirmationService.confirm({
+            key: 'cerrarDialog',
+            message: 'Se encontró una nota de empaque.<br> ¿Estas seguro de pasar a facturar el proceso nro ' + nroNota + "?",
+            header: 'Confirmación',
+            closable: true,
+            closeOnEscape: true,
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: {
+                label: 'Cancelar',
+                severity: 'secondary',
+                outlined: true,
+            },
+            acceptButtonProps: {
+                label: 'Aceptar',
+            },
+            accept: () => {
+              this.venta = response;
+              this.nroRelacionado = response.nroProceso!;
+              this.tipoRelacionado = "NOTA DE EMPAQUE";
+
+              if(this.venta.productos) this.productosFactura = this.venta.productos;
+              if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
+              this.formFacturacion.get('descuento')?.setValue(0);
+              this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
+              this.CalcularTotalGeneral();
+
+              this.Notificaciones.Success("Nota de empaque cargada correctamente.")
+            },
+            reject: () => {},
+          });
+        }
+      });
+  }
+
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' {
+    if (!estado) return 'info';
+
+    const value = estado.toLowerCase();
+
+    if (value === 'aprobada' || value === 'aprobado') {
+      return 'info';
+    }
+
+    if (
+      value === 'pendiente' ||
+      value === 'asociado' ||
+      value === 'asociada'
+    ) {
+      return 'warn';
+    }
+
+    if (value === 'facturado' || value === 'facturada') {
+      return 'success';
+    }
+
+    return 'info';
+  }
+
   ObtenerVenta(idVenta){
     this.ventasService.ObtenerVenta(idVenta)
       .subscribe(response => {
@@ -329,31 +393,85 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
   }
 
+  // CalcularTotalGeneral() {
+  //   const totalProductos = this.productosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
+  //   const totalServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
+  //   this.totalItems = totalProductos + totalServicios;
+
+  //   const descuento = parseFloat(this.DescuentoControl) || 0;
+
+  //   if (descuento > 0) {
+  //     this.totalDescuento = (this.totalItems * descuento) / 100;
+  //   } else {
+  //     this.totalDescuento = 0;
+  //   }
+
+  //   // Total final luego de aplicar el descuento
+  //   this.totalGeneral = this.totalItems - this.totalDescuento
+
+  //   //Total a pagar calculado con redondeo
+  //   this.totalAPagar = this.totalGeneral + this.globalesService.EstandarizarDecimal(this.redondeo.value);
+
+  //   //sumamos las cantidades
+  //   const cantProductos = this.productosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
+  //   const cantServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
+  //   this.cantItems = cantProductos + cantServicios;  
+  // }
+
   CalcularTotalGeneral() {
-    const totalProductos = this.productosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
-    const totalServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
-    this.totalItems = totalProductos + totalServicios;
+    const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
 
-    const descuento = parseFloat(this.DescuentoControl) || 0;
+    let totalItems = 0;
+    let totalDescuento = 0;
 
-    if (descuento > 0) {
-      this.totalDescuento = (this.totalItems * descuento) / 100;
-    } else {
-      this.totalDescuento = 0;
-    }
+    const procesarItems = (items: any[]) => {
+      return items?.reduce((acc, item) => {
 
-    // Total final luego de aplicar el descuento
-    this.totalGeneral = this.totalItems - this.totalDescuento
+        const totalItem = item.total || 0;
 
-    //Total a pagar calculado con redondeo
-    this.totalAPagar = this.totalGeneral + this.globalesService.EstandarizarDecimal(this.redondeo.value);
+        // Si no tiene tope, se asume 100%
+        const descuentoMax = item.topeDescuento ?? 100;
 
-    //sumamos las cantidades
-    const cantProductos = this.productosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
-    const cantServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
-    this.cantItems = cantProductos + cantServicios;  
+        // Se respeta el menor
+        const descuentoAplicado = Math.min(descuentoUsuario, descuentoMax);
+        item.descuentoAplicado = descuentoAplicado;
+
+        const descuentoItem = (totalItem * descuentoAplicado) / 100;
+
+        acc.total += totalItem;
+        acc.descuento += descuentoItem;
+
+        return acc;
+
+      }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
+    };
+
+    const productos = procesarItems(this.productosFactura);
+    const servicios = procesarItems(this.serviciosFactura);
+
+    totalItems = productos.total + servicios.total;
+    totalDescuento = productos.descuento + servicios.descuento;
+
+    this.totalItems = totalItems;
+    this.totalDescuento = totalDescuento;
+
+    this.totalGeneral = totalItems - totalDescuento;
+
+    this.totalAPagar =
+      this.totalGeneral +
+      this.globalesService.EstandarizarDecimal(this.redondeo.value);
+
+    // cantidades
+    const cantProductos =
+      this.productosFactura?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
+
+    const cantServicios =
+      this.serviciosFactura?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
+
+    this.cantItems = cantProductos + cantServicios;
   }
-  
+
+
   ObtenerProcesosVenta(){
     this.miscService.ObtenerProcesosVenta(this.tipo)
       .subscribe(response => {
@@ -393,6 +511,7 @@ export class AddModVentasComponent {
     this.miscService.ObtenerTiposDescuento()
       .subscribe(response => {
         this.tiposDescuento = response;
+        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
       });
   }
 
@@ -435,7 +554,6 @@ export class AddModVentasComponent {
           let nroVenta = this.modificando ? this.venta.id : 0;
           this.ventasService.ObtenerVentasCliente(this.clienteSeleccionado?.id!, nroVenta!)
           .subscribe(response => {
-            console.log(response)
             this.ventasCliente = response;
           });
           
@@ -465,6 +583,8 @@ export class AddModVentasComponent {
   }
 
   RelacionarActualizarProceso(venta:Venta){
+    if(venta.nroProceso == this.nroRelacionado) return;
+
     this.nroRelacionado = venta.nroProceso!;
 
     if (venta.idProceso === this.ProcesoControl.id) {
@@ -535,6 +655,7 @@ export class AddModVentasComponent {
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formFacturacion.get('descuento')?.setValue(0);
         this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
+        this.CalcularTotalGeneral();
 
         if(venta.idProceso == 6){
           this.Notificaciones.Info("Se facturará el pedido Nro: " + venta.nroProceso);
@@ -668,10 +789,13 @@ export class AddModVentasComponent {
   AgregarProducto() {
     if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
       if (!this.productoSeleccionado) return;
+      if(this.venta.estado == "Asociado"){
+        this.Notificaciones.Warn("No puedes editar un presupuesto en estado asociado.");
+        return;
+      }
 
-      const cantidad = this.formProductos.get('cantidad')?.value;
+      const cantidad = this.formProductos.get('cantidad')?.value != '' ? this.formProductos.get('cantidad')?.value : 1;
       const precio = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value);
-      console.log(this.productoSeleccionado)
       const nuevo = new ProductosFactura({
         idProducto: this.productoSeleccionado.id,
         codProducto: this.productoSeleccionado.codigo,
@@ -690,6 +814,10 @@ export class AddModVentasComponent {
     }
     else{
       if (!this.productoSeleccionado || !this.productoSeleccionado.talles) return;
+      if(this.venta.estado == "Facturado" || this.venta.estado == "Facturada"){
+        this.Notificaciones.Warn("No puedes editar una en estado facturada.");
+        return;
+      }
 
       let tallesSeleccionados:any[] = [];
 
@@ -774,13 +902,11 @@ export class AddModVentasComponent {
     if(producto[field] === undefined) return;
 
     const talleReal = this.ObtenerTalleReal(field, producto);
-        console.log(producto)
     const talleEncontrado = producto.talles.find((t: any) => t.talle === talleReal);
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
 
     if(value <= 0) return;
-    console.log(value)
 
     if(this.ProcesoControl.descripcion !== 'PEDIDO'){
       if(value > talleEncontrado.cantidad){
@@ -866,18 +992,28 @@ export class AddModVentasComponent {
   }
 
   AgregarServicio() {
+    if(this.venta.estado == "Facturado" || this.venta.estado == "Facturada"){
+      this.Notificaciones.Warn("No puedes editar una en estado facturada.");
+      return;
+    }
+    if(this.venta.estado == "Asociado" || this.venta.idProceso == 5){
+      this.Notificaciones.Warn("No puedes editar un presupuesto en estado asocaido.");
+      return;
+    }
+
     const nuevoServicio:ServiciosFactura = new ServiciosFactura();
     const seleccionado = this.formServicios.get('servicio')?.value;
 
     nuevoServicio.idServicio = seleccionado.id;
     nuevoServicio.codServicio = seleccionado.codigo;
     nuevoServicio.nomServicio = seleccionado.descripcion;
-    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value;
+    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value != '' ? this.formServicios.get('cantidad')?.value : 1;
     nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value);
     if(nuevoServicio.unitario === 0){
       nuevoServicio.unitario = seleccionado.sugerido;
     }
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
+    nuevoServicio.topeDescuento = seleccionado.topeDescuento;
 
     this.serviciosFactura.push(nuevoServicio);
     this.CalcularTotalGeneral();
@@ -949,6 +1085,17 @@ export class AddModVentasComponent {
   //#endregion
 
   Guardar(factura?:FacturaVenta, finalizando:boolean = false){
+    if(this.modificando){
+      if(this.venta.estado == "Facturado" || this.venta.estado == "Facturada"){
+        this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
+        return;
+      }
+      if(this.venta.estado == "Asociado" || this.venta.idProceso == 5){
+        this.Notificaciones.Warn("No puedes editar un presupuesto en estado asocaido.");
+        return;
+      }
+    }
+
     this.markFormTouched(this.formGenerales);
     if(this.tipo === 'factura'){
       this.markFormTouched(this.formFacturacion);
@@ -959,6 +1106,10 @@ export class AddModVentasComponent {
 
     this.ArmarObjetoVenta();
     this.venta.factura = factura;
+
+    if(this.venta.factura)
+      this.venta.estado = "Facturada";
+
     if(!this.modificando){
       this.ventasService.Agregar(this.venta)
       .subscribe(response => {
@@ -1054,9 +1205,16 @@ export class AddModVentasComponent {
     this.venta.punto = this.formGenerales.get('punto')?.value.descripcion;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
     this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
-    this.venta.cliente = this.formGenerales.get('cliente')?.value.descripcion;
+    this.venta.cliente = this.clienteSeleccionado?.nombre;
+    this.venta.condCliente = this.clienteSeleccionado?.condicionIva!;
     this.venta.nroRelacionado = this.nroRelacionado;
     this.venta.tipoRelacionado = this.tipoRelacionado;
+    
+    if(this.venta.idProceso == 7)
+      this.venta.estado = "Aprobada";
+    else
+      this.venta.estado = "Aprobado";
+
 
     const idLista = this.formGenerales.get('lista')?.value;
 
@@ -1077,9 +1235,12 @@ export class AddModVentasComponent {
       this.venta.tipoComprobante = this.formFacturacion.get('tComprobante')?.value.descripcion;
       this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
       this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
-      this.venta.descuento = this.formFacturacion.get('descuento')?.value;
+      const descuento = this.formFacturacion.get('descuento')?.value;
+      this.venta.descuento = descuento !== '' ? 0 : descuento;
       this.venta.codPromocion = 0;
       this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
+
+      this.venta.estado = "Pendiente";
     }
     
     this.venta.total = this.totalAPagar;
