@@ -36,8 +36,8 @@ export class MiscService {
   ObtenerCondicionesIva(): Observable<any> {
     return this.apiService.get('misc/condiciones-iva')
   }
-  ObtenerComprobantes(condicionIva:number): Observable<any> {
-    return this.apiService.get('misc/comprobantes/'+ condicionIva)
+  ObtenerComprobantes(empresa:string, condicionIva:number): Observable<any> {
+    return this.apiService.get('misc/comprobantes/'+ empresa + '/' + condicionIva)
   }
   ObtenerServicios(): Observable<any> {
     return this.apiService.get('misc/servicios')
@@ -47,6 +47,9 @@ export class MiscService {
   }
   ObtenerProcesosVenta(tipo:string): Observable<any> {
     return this.apiService.get('misc/procesos-venta/'+ tipo)
+  }
+  ObtenerEmpresas(): Observable<any> {
+    return this.apiService.get('misc/empresas')
   }
   ObtenerPuntosVenta(): Observable<any> {
     return this.apiService.get('misc/puntos-venta')

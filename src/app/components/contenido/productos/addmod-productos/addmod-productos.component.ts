@@ -85,6 +85,7 @@ export class AddmodProductosComponent {
       codigo: new FormControl('', [Validators.required, Validators.maxLength(30)]),
       nombre: new FormControl('', [Validators.required, Validators.maxLength(100)]),
       moldeleria: new FormControl(''),
+      topeDescuento: new FormControl(''),
       tallesProducto: this.fb.array([])
     });
 
@@ -233,6 +234,7 @@ export class AddmodProductosComponent {
       this.formulario.get('material')?.setValue(this.producto.material?.id);
       this.MaterialChange();
       this.formulario.get('moldeleria')?.setValue(this.producto.moldeleria);
+      this.formulario.get('topeDescuento')?.setValue(this.producto.topeDescuento);
       this.formulario.get('cliente')?.setValue(this.clientes.find(c=> c.id == this.producto.cliente) ?? new Cliente());
       
 
@@ -423,6 +425,9 @@ export class AddmodProductosComponent {
     this.producto.nombre = this.formulario.get('nombre')?.value;
     this.producto.moldeleria = this.formulario.get('moldeleria')?.value == '' ? 0 : this.formulario.get('moldeleria')?.value;
     this.producto.talles = this.tallesProductoControl.value;
+    let topeDescuento = this.formulario.get('topeDescuento')?.value == "" ? 100 : this.Globales.EstandarizarDecimal(this.formulario.get('topeDescuento')?.value);
+    this.producto.topeDescuento = topeDescuento;
+
     
     let operaciones$: Observable<any>[] = [];
         

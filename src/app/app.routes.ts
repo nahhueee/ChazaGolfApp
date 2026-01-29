@@ -6,7 +6,7 @@ import { ListadoClientesComponent } from './components/contenido/clientes/listad
 import { AddModClientesComponent } from './components/contenido/clientes/addmod-clientes/addmod-clientes.component';
 import { ListadoVentasComponent } from './components/contenido/ventas/listado-ventas/listado-ventas.component';
 import { ListadoProductosComponent } from './components/contenido/productos/listado-productos/listado-productos.component';
-import { AddmodProductosComponent } from './components/contenido/productos/addmod-productos.component/addmod-productos.component';
+import { AddmodProductosComponent } from './components/contenido/productos/addmod-productos/addmod-productos.component';
 import { PresupuestoProductosComponent } from './components/contenido/productos/presupuesto-productos.component/presupuesto-productos.component';
 import { ServiciosComponent } from './components/contenido/servicios/listado-servicios.component';
 

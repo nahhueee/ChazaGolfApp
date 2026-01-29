@@ -34,7 +34,7 @@
                     </div>
                     <!-- Puntos -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" (onChange)="CambioDePunto()" />
+                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" />
                         <label>Punto de Venta</label>
                     </p-floatlabel>
                 </div>
@@ -53,7 +53,7 @@
                             >
                                 <!-- Template para las sugerencias -->
                                 <ng-template let-cliente pTemplate="item">
-                                    {{ cliente.nombre }} - {{ cliente.documento }}
+                                    {{ cliente.nombre }} - {{ cliente.documento }} - {{cliente.razonSocial}}
                                 </ng-template>
 
                             </p-autocomplete>
@@ -64,16 +64,11 @@
                         </p-inputgroup-addon>                                
                     </p-inputgroup>
 
-                    <p-inputgroup>
-                        <!-- Nota Empaque -->
-                        <p-floatlabel variant="in">
-                            <input pInputText formControlName="nroNota"  type="text"/>
-                            <label>N° Nota Empaque</label>
-                        </p-floatlabel>
-                        <p-inputgroup-addon>
-                                <p-button class="btnAdd" icon="pi pi-check" (onClick)="BuscarNotaEmpaque()" severity="success" />
-                            </p-inputgroup-addon> 
-                    </p-inputgroup>
+                    <!-- Nota Empaque -->
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="nroNota"  type="text"/>
+                        <label>N° Nota Empaque</label>
+                    </p-floatlabel>
                 </div>
 
                 @if(clienteSeleccionado && clienteSeleccionado != undefined){
@@ -89,7 +84,7 @@
                         </div>
                         <div class="datos-seccion">
                             <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
-                            <!-- <p><strong>Condición De Pago:</strong> {{ clienteSeleccionado.condicionPago }}</p> -->
+                            <p><strong>Lista de Precio:</strong> {{ clienteSeleccionado.listaPrecio }}</p>
                             <p><strong>Último Descuento:</strong> {{ clienteSeleccionado.ultimoDescuento?.tipoDescuento }} | {{ clienteSeleccionado.ultimoDescuento?.descuento }}</p>
                         </div>
 
@@ -174,7 +169,8 @@
                                 [options]="coloresDisponibles"
                                 optionLabel="color"
                                 [showClear]="true"
-                                (onChange)="SeleccionarVariante($event)"
+                                formControlName="colorSeleccionado"
+                                (onChange)="SeleccionarVariante($event.value.idProducto)"
                             >
                                 <!-- Template de cada opción -->
                                 <ng-template pTemplate="item" let-item>
@@ -300,7 +296,6 @@
                                     pInputText 
                                     type="number" 
                                     [value]="producto[t]"
-                                    [disabled]="producto[t] === undefined" 
                                     (keydown.enter)="ActualizarCantidad(producto, t, $event)"
                                     (keydown.tab)="ActualizarCantidad(producto, t, $event)"
                                     (focus)="SelectContent($event)"
@@ -477,20 +472,20 @@
                 <div class="horizontal">
                     <!-- Empresa -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="empresas" formControlName="empresa" optionLabel="descripcion" />
+                        <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" (onChange)="CambioEmpresa()" />
                         <label>Empresa</label>
                     </p-floatlabel>
 
                     <!-- Tipo Comprobante -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="comprobantes" formControlName="tComprobante" optionLabel="descripcion" />
+                        <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" (onChange)="CambioTipoComprobante()" />
                         <label>Tipo Comprobante</label>
                     </p-floatlabel>
                 </div>
                 <div class="horizontal">
                     <!-- Tipo Descuento -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionLabel="descripcion" />
+                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" />
                         <label>Tipo Descuento</label>
                     </p-floatlabel>
 
@@ -553,14 +548,19 @@
             <div class="resumen">
                 
                 <div class="fila">
-                    <span>Total Items:</span>
-                    <span class="monto">${{totalItems | decimalFormat}}</span>
+                    <span>Subtotal:</span>
+                    <span class="monto">${{subtotal | decimalFormat}}</span>
                 </div>
 
                 @if(tipo == 'factura'){
                     <div class="fila">
                         <span>Descuento:</span>
                         <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                    </div>
+
+                    <div class="fila" *ngIf="mostrarIva">
+                        <span>IVA 21%:</span>
+                        <span class="monto">${{totalIva | decimalFormat}}</span>
                     </div>
 
                     <br>
@@ -588,9 +588,11 @@
     <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
 
     <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true; ArmarObjetoVenta()"/>
-    <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura"/>
+    @if(ProcesoControl.descripcion !== "COTIZACION"){
+        <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura || (venta.estado == 'Facturado' || venta.estado == 'Facturada')"/>
+    }
     @if(tipo == 'factura'){
-        <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura" />
+        <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada')" />
     }
     <!-- <p-splitbutton label="Finalizar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-check"/> -->
 </div>
@@ -599,194 +601,6 @@
 <!-- Modal Resumen -->
 <app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta"></app-vista-previa>
 
-<!-- <p-dialog header="Vista Previa" [modal]="true" [(visible)]="vistaPreviaVisible" [style]="{ width: '90vw' }" [maximizable]="true">
-   <div class="vista-previa">
-        <div class="data-cliente">
-            <div class="enLinea">
-                <div class="recuadro">
-                <p>{{venta.proceso}}</p>
-                <p-divider />
-                <span>Proceso</span>
-                </div>
-
-                <div class="recuadro">
-                <p>{{venta.fecha | date:'dd-MM-yy'}}</p>
-                <p-divider />
-                <span>Fecha</span>
-                </div>
-
-                @if(clienteSeleccionado){
-                <div class="recuadro">
-                    <p>{{clienteSeleccionado.nombre}}</p>
-                    <p-divider />
-                    <span>Cliente</span>
-                </div>
-
-                <div class="recuadro">
-                    <p>{{clienteSeleccionado.condicionIva}}</p>
-                    <p-divider />
-                    <span>Cond. Iva Cliente</span>
-                </div>
-                }
-
-                <div class="recuadro">
-                <p>{{venta.listaPrecio}}</p>
-                <p-divider />
-                <span>Lista Precio</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="data-productos">
-            <p>Productos</p>
-            <p-table [value]="productosFactura" size="small" showGridlines>
-                <ng-template #header>
-                    <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-                        <th>Color</th>
-                        <th>XS</th>
-                        <th>S</th>
-                        <th>M</th>
-                        <th>L</th>
-                        <th>XL</th>
-                        <th>XXL</th>
-                        <th>3XL</th>
-                        <th>4XL</th>
-                        <th>5XL</th>
-                        <th>6XL</th>
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Total</th>
-                    </tr>
-                </ng-template>
-                <ng-template #body let-producto>
-                    <tr>
-                        <td>{{ producto.codProducto }}</td>
-                        <td>{{ producto.nomProducto }}</td>
-                        <td>{{ producto.color }}</td>
-                        <td>{{ producto.t1 }}</td>
-                        <td>{{ producto.t2 }}</td>
-                        <td>{{ producto.t3 }}</td>
-                        <td>{{ producto.t4 }}</td>
-                        <td>{{ producto.t5 }}</td>
-                        <td>{{ producto.t6 }}</td>
-                        <td>{{ producto.t7 }}</td>
-                        <td>{{ producto.t8 }}</td>
-                        <td>{{ producto.t9 }}</td>
-                        <td>{{ producto.t10 }}</td>
-                        <td style="width: 150px;">{{ producto.cantidad }}</td>
-                        <td style="width: 150px;">${{ producto.unitario | decimalFormat}}</td>
-                        <td style="width: 150px;">${{ producto.total | decimalFormat }}</td>
-                    </tr>
-                </ng-template>
-            </p-table>
-        </div>
-        @if(serviciosFactura.length > 0){
-        <div class="data-servicios">
-            <p>Servicios</p>
-            <p-table [value]="serviciosFactura" size="small" showGridlines>
-                <ng-template #header>
-                    <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Total</th>
-                        <th>Desc. Aplicado</th>
-                    </tr>
-                </ng-template>
-                <ng-template #body let-servicio>
-                    <tr>
-                        <td>{{ servicio.codServicio }}</td>
-                        <td>{{ servicio.nomServicio }}</td>
-                        <td style="width: 150px;">{{ servicio.cantidad }}</td>
-                        <td style="width: 150px;">${{ servicio.unitario | decimalFormat}}</td>
-                        <td style="width: 150px;">${{ servicio.total | decimalFormat }}</td>
-                        <td style="width: 150px;">{{ servicio.descuentoAplicado ?? 0 }}%</td>
-                    </tr>
-                </ng-template>
-            </p-table>
-        </div>
-        }
-        <div class="contadores">
-            <div class="item">{{cantItems}}</div>
-            <div class="item"></div>
-            <div class="item">${{totalItems | decimalFormat}}</div>
-        </div>
-
-        <div class="data-facturacion">
-
-            <div class="enLinea">
-                <div class="facturacion">
-                    <div class="enLinea">
-                        <div class="recuadro">
-                            <p>{{venta.empresa}}</p>
-                            <p-divider />
-                            <span>Empresa</span>
-                        </div>
-                        <div class="recuadro">
-                            <p>{{venta.tipoComprobante}}</p>
-                            <p-divider />
-                            <span>Tipo Comprobante</span>
-                        </div>
-                    </div>
-                    <div class="enLinea">
-                        <div class="recuadro">
-                            <p>{{venta.tipoDescuento}}</p>
-                            <p-divider />
-                            <span>Tipo Descuento</span>
-                        </div>
-                        <div class="recuadro">
-                            <p>{{venta.descuento}}%</p>
-                            <p-divider />
-                            <span>Descuento</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <p-table [value]="pagosFactura" size="small" showGridlines class="pagos-tabla">
-                    <ng-template #header>
-                        <tr>
-                            <th>Metodo</th>
-                            <th>Monto</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template #body let-pago>
-                        <tr>
-                            <td>{{ pago.metodo }}</td>
-                            <td>{{ pago.monto | decimalFormat}}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-
-                <div class="resumen">
-                    <div class="fila">
-                        <span>Total Items:</span>
-                        <span class="monto">${{totalItems | decimalFormat}}</span>
-                    </div>
-                    <div class="fila">
-                        <span>Descuento:</span>
-                        <span class="monto">${{totalDescuento | decimalFormat}}</span>
-                    </div>
-                    <br>
-                    <div class="fila">
-                        <span>Total General:</span>
-                        <span class="monto">${{totalGeneral | decimalFormat}}</span>
-                    </div>
-                    <div class="fila">
-                        <span>Redondeo:</span>
-                        <span class="monto">${{redondeo.value || 0 | decimalFormat}}</span>
-                    </div>
-                    <div class="fila total-final">
-                        <span>Total A Pagar:</span>
-                        <span class="monto">${{totalAPagar | decimalFormat}}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-   </div>
-</p-dialog> -->
 
 <!-- Modal Datos Cliente -->
 <p-dialog header="Datos del Cliente" [modal]="true" [style]="{ width: '500px' }" [(visible)]="modalClienteVisible">

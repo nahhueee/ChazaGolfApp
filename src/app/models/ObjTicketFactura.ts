@@ -18,6 +18,8 @@ export class ObjTicketFactura {
     tipoDNI?:number;
     condReceptor?: number;
     condCliente?: string;
+    razonReceptor?: string;
+  
     
     constructor(data?: any) {
         if (data) {
@@ -39,6 +41,7 @@ export class ObjTicketFactura {
           this.tipoDNI = data.tipoDNI;
           this.condReceptor = data.condReceptor;
           this.condCliente = data.condCliente;
+          this.razonReceptor = data.razonReceptor;
         }
     }
 }

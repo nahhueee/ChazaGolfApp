@@ -12,6 +12,7 @@ export class Producto {
     temporada?: Temporada;
     material?: Material;
     moldeleria?: number;
+    topeDescuento?: number;
     imagen: string = "";
     talles?: TallesProducto[];
     relacionados: Relacionado[] = [];
@@ -30,6 +31,7 @@ export class Producto {
           this.genero = data.genero;
           this.material = data.material;
           this.moldeleria = data.moldeleria;
+          this.topeDescuento = data.topeDescuento;
           this.temporada = data.temporada;
           this.color = data.color;
           this.talles = Array.isArray(data.talles) ? data.talles.map((talleData: any) => new TallesProducto(talleData)) : [];

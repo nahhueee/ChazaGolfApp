@@ -21,12 +21,17 @@ import { ClientesService } from '../../../../services/clientes.service';
 import { ComprobanteService } from '../../../../services/comprobante.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Popover, PopoverModule } from 'primeng/popover';
+import { FacturaService } from '../../../../services/factura.service';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
 
 @Component({
   selector: 'app-listado-ventas.component',
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
+    ConfirmDialogModule,
     TableModule,
     Button,
     TooltipModule,
@@ -40,6 +45,7 @@ import { Popover, PopoverModule } from 'primeng/popover';
   ],
   templateUrl: './listado-ventas.component.html',
   styleUrl: './listado-ventas.component.scss',
+  providers: [ConfirmationService],
 })
 export class ListadoVentasComponent {
   ventas: Venta[] = [];
@@ -64,7 +70,10 @@ export class ListadoVentasComponent {
     private rutaActiva: ActivatedRoute,
     private miscService: MiscService,
     private clientesService:ClientesService,
-    private comprobanteService:ComprobanteService
+    private comprobanteService:ComprobanteService,
+    private facturaService:FacturaService,
+    private confirmationService: ConfirmationService,
+    private Notificaciones: NotificacionesService
   ){
     this.filtros = new FormGroup({
       proceso: new FormControl(),
@@ -135,10 +144,42 @@ export class ListadoVentasComponent {
     this.ventaSeleccionada = venta;
   }
 
-  VerComprobante(tipo:string){
-    this.comprobanteService.VerComprobante(tipo, this.ventaSeleccionada)
+  VerComprobante(){
+    this.comprobanteService.VerComprobante(this.ventaSeleccionada)
   }
 
+  VerFactura(){
+    this.facturaService.VerFactura(this.ventaSeleccionada)
+  }
+
+  Aprobar(venta:Venta){
+    this.confirmationService.confirm({
+        key: 'cerrarDialog',
+        message: '¿Estas seguro de pasar a estado APROBADA la nota de empaque Nro ' + venta.nroProceso + "?",
+        header: 'Confirmación',
+        closable: true,
+        closeOnEscape: true,
+        icon: 'pi pi-exclamation-triangle',
+        rejectButtonProps: {
+            label: 'Cancelar',
+            severity: 'secondary',
+            outlined: true,
+        },
+        acceptButtonProps: {
+            label: 'Aceptar',
+        },
+        accept: () => {
+          this.ventasService.AprobarVenta(venta.id!)
+          .subscribe(response => {
+            if(response=='OK'){
+              this.Notificaciones.Success("Nota de empaque aprobada correctamente.");
+              this.Buscar();
+            }
+          });
+        },
+        reject: () => {},
+      });
+  }
 
   GetSeverity(estado: string): 'info' | 'warn' | 'success' {
     if (!estado) return 'info';
@@ -157,7 +198,7 @@ export class ListadoVentasComponent {
       return 'warn';
     }
 
-    if (value === 'facturado' || value === 'facturada') {
+    if (value === 'facturado' || value === 'facturada' || value === 'finalizada') {
       return 'success';
     }
 

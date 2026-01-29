@@ -1,3 +1,5 @@
+<p-confirmdialog key="cerrarDialog"/>
+
 <div class="contenido">
     <form [formGroup]="filtros" autocomplete="off" class="filtros">
         <div class="izq">
@@ -56,6 +58,8 @@
         (onLazyLoad)="Buscar($event)"
         [loading]="loading"
         [rowsPerPageOptions]="[10,20,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
         [tableStyle]="{ 'min-width': '60rem' }">
         
             <ng-template #header>
@@ -80,14 +84,22 @@
                     <td>{{ venta.nroProceso }}</td>
                     <td>{{ venta.fecha | date:'dd-MM-yyyy' }}</td>
                     <td>{{ venta.hora }}</td>
-                    <td>{{ venta.cliente }}</td>
+                    <td>{{ venta.cliente.nombre }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
                     <td>
                         <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
                     </td>
                     <td>
-                        <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
-                        <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
+                            @if(tipo == "factura"){
+                                <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
+                            }@else {
+                                @if(venta.idProceso == 7 && venta.estado == "Pendiente"){
+                                    <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="Aprobar(venta)" pTooltip="Aprobar" tooltipPosition="bottom"/>
+                                }
+                            }
+                        </div>
                     </td>
                 </tr>
             </ng-template>
@@ -100,18 +112,23 @@
 <p-popover #op>
     <div class="opciones-impresion">
         <p-button
-        label="Ver interno"
+        label="Ver Remito"
         severity="secondary"
         styleClass="p-button-sm w-full"
-        (click)="VerComprobante('interno'); op.hide()">
+        (click)="VerComprobante(); op.hide()">
         </p-button>
 
         <p-button
-        label="Ver Factura"
+         [label]="ventaSeleccionada.proceso === 'COTIZACION' 
+            ? 'Ver Comprobante' 
+            : 'Ver Factura'"
         severity="success"
         styleClass="p-button-sm w-full"
-        [disabled]="ventaSeleccionada && ventaSeleccionada.factura?.cae== null"
-        (click)="VerComprobante('factura'); op.hide()">
+        [disabled]="
+        ventaSeleccionada.proceso !== 'COTIZACION' &&
+        ventaSeleccionada.factura?.cae == null
+        "
+        (click)="VerFactura(); op.hide()">
         </p-button>
   </div>
 </p-popover>

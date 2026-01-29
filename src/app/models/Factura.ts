@@ -1,3 +1,4 @@
+import { Cliente } from "./Cliente";
 import { FacturaVenta } from "./FacturaVenta";
 import { TallesProducto } from "./Producto";
 
@@ -12,9 +13,11 @@ import { TallesProducto } from "./Producto";
     punto?:string;
     fecha?:Date;
     hora?:string;
-    idCliente?:number;
-    cliente?:string;
-    condCliente:string;
+    cliente?:Cliente;
+    // idCliente?:number;
+    // cliente?:string;
+    // condCliente:string;
+    // clienteRazonSocial:string;
     idListaPrecio?:number;
     listaPrecio?:string;
     idEmpresa?:number;
@@ -41,6 +44,7 @@ import { TallesProducto } from "./Producto";
     idProducto? : number;
     codProducto?: string;
     nomProducto?: string;
+    topeDescuento?: number;
     talles?: TallesProducto[];
     idColor?: number;
     color?: string;
@@ -57,8 +61,10 @@ import { TallesProducto } from "./Producto";
     t8?: number;
     t9?: number;
     t10?: number;
+    precio?: number;
     unitario?: number;
     total?: number;
+    descuentoAplicado?:number;
     tallesSeleccionados:string = "";
   
     constructor(data?: any) {
@@ -67,6 +73,7 @@ import { TallesProducto } from "./Producto";
         this.codProducto = data.codProducto;
         this.talles = data.talles;
         this.cantidad = data.cantidad;
+        this.topeDescuento = data.topeDescuento;
         this.idColor = data.idColor;
         this.color = data.color;
         this.hexa = data.hexa;
@@ -81,9 +88,11 @@ import { TallesProducto } from "./Producto";
         this.t8 = data.t8;
         this.t9 = data.t9;
         this.t10 = data.t10;
+        this.precio = data.precio;
         this.unitario = data.unitario;
         this.nomProducto = data.nomProducto;
         this.total = data.total;
+        this.descuentoAplicado = data.descuentoAplicado;
         this.tallesSeleccionados = data.tallesSeleccionados;
       }
     }
@@ -97,6 +106,7 @@ import { TallesProducto } from "./Producto";
     unitario?: number;
     total?: number;
     topeDescuento?:number;
+    descuentoAplicado?:number;
   
     constructor(data?: any) {
       if (data) {
@@ -107,6 +117,7 @@ import { TallesProducto } from "./Producto";
         this.nomServicio = data.nomServicio;
         this.total = data.total;
         this.topeDescuento = data.topeDescuento;
+        this.descuentoAplicado = data.descuentoAplicado;
       }
     }
   }

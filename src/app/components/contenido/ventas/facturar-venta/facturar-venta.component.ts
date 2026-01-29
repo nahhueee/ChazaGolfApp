@@ -36,14 +36,15 @@ export class FacturarVentaComponent {
   Facturar(){
     this.ventasService.Facturar(this.datosFacturar)
       .subscribe(response => {
-        
+
         const factura:FacturaVenta = new FacturaVenta({
+          estado: response.estado,
           cae: response.cae,
           caeVto: response.caeVto,
           ticket: response.ticket,
           tipoFactura: this.datosFacturar.tipoFactura,
-          neto: response.neto,
-          iva: response.iva,
+          neto: this.datosFacturar.neto,
+          iva: this.datosFacturar.iva,
           dni: this.datosFacturar.docNro,
           tipoDni: this.datosFacturar.docTipo,
           ptoVenta: response.ptoVenta,

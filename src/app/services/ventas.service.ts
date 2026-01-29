@@ -51,5 +51,7 @@ export class VentasService {
   ObtenerQR(idventa:number): Observable<any>{
     return this.apiService.get(`ventas/obtenerQR/${idventa}`)
   }
-
+  AprobarVenta(idVenta:number): Observable<any>{
+    return this.apiService.put(`ventas/aprobar`, {idVenta})
+  }
 }

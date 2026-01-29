@@ -1,4 +1,14 @@
 
+.header-custom{
+  display: flex;
+  gap: 20px;
+  align-items: center;
+
+  span{
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
 /*#region DATOS FACTURACION*/
 .enLinea{
     display: flex;

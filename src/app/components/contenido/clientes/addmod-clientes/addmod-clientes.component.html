@@ -51,14 +51,23 @@
                 <label>Razón Social</label>
             </p-floatlabel>
 
-            <!-- Condicion IVA Receptor -->
-            <p-floatlabel variant="in">
-                <p-select [options]="condicionesIVAReceptor" formControlName="condIva" optionLabel="descripcion" />
-                <label>Cond. Iva</label>
-                <ng-template let-condicion pTemplate="item">
-                    {{ condicion.id }} - {{ condicion.descripcion }}
-                </ng-template>
-            </p-floatlabel>
+            <div class="horizontal">
+                <!-- Condicion IVA Receptor -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="condicionesIVAReceptor" formControlName="condIva" optionLabel="descripcion" (onChange)="CambioCondicion()"/>
+                    <label>Cond. Iva</label>
+                    <ng-template let-condicion pTemplate="item">
+                        {{ condicion.id }} - {{ condicion.descripcion }}
+                    </ng-template>
+                </p-floatlabel>
+
+                <!-- Cond. Pago -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="condicionesPago" formControlName="condPago" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <label>Condición Pago</label>
+                </p-floatlabel>
+            </div>
+            
 
             <div class="horizontal">
                 <!-- Tipo Documento -->
@@ -88,16 +97,16 @@
             </div>
 
             <div class="horizontal">
-                <!-- Cond. Pago -->
-                <p-floatlabel variant="in">
-                    <p-select [options]="condicionesPago" formControlName="condPago" optionLabel="descripcion" [appendTo]="'body'"/>
-                    <label>Condición Pago</label>
-                </p-floatlabel>
-
                 <!-- Categoria -->
                 <p-floatlabel variant="in">
-                    <p-select [options]="categorias" formControlName="categoria" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <p-select [options]="categorias" formControlName="categoria" optionLabel="descripcion" [appendTo]="'body'" (onChange)="CambioCategoria()"/>
                     <label>Categoria</label>
+                </p-floatlabel>
+
+                <!-- Lista -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="listasPrecio" formControlName="lista" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <label>Lista De Precio</label>
                 </p-floatlabel>
             </div>
         </div>

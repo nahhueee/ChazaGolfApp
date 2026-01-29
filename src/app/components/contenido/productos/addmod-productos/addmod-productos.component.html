@@ -79,10 +79,17 @@
                         <small class="error">El código no puede tener más de 30 caracteres.</small>
                     }
                 </p-floatlabel>
+
                 <!-- Moldeleria -->
                 <p-floatlabel variant="in">
                     <input pInputText formControlName="moldeleria" type="number" (focus)="SelectContent($event)" />
                     <label>Moldeleria</label>
+                </p-floatlabel>
+
+                <!-- Tope Descuento -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="topeDescuento" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Tope Descuento</label>
                 </p-floatlabel>
             </div>
 

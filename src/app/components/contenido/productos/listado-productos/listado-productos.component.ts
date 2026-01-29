@@ -14,7 +14,7 @@ import { FormControl } from '@angular/forms';
 import { crearFiltros, PropKey } from '../../../../models/filtros/FiltroProducto.config';
 import { Observable, Subscription } from 'rxjs';
 import { FilesService } from '../../../../services/files.service';
-import { AddmodProductosComponent } from '../addmod-productos.component/addmod-productos.component';
+import { AddmodProductosComponent } from '../addmod-productos/addmod-productos.component';
 import { CommonModule } from '@angular/common';
 import { TemaService } from '../../../../services/tema.service';
 import { InputTextModule } from 'primeng/inputtext';
@@ -104,19 +104,19 @@ export class ListadoProductosComponent {
   }
 
   Buscar(event?: TableLazyLoadEvent, recargaConFiltro = false){
-    if (this.primeraCarga) {
-      this.primeraCarga = false;
-      return;
-    }
+    // if (this.primeraCarga) {
+    //   this.primeraCarga = false;
+    //   return;
+    // }
 
     this.loading = true;
     
-    const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
+    const first = event?.first ?? 0;
     const pageSize = event?.rows ?? 10;
+    const page = Math.floor(first / pageSize) + 1;
 
-    if (!recargaConFiltro) {
-      this.filtroActual = new FiltroProducto({
-        pagina: pageIndex + 1,  
+    this.filtroActual = new FiltroProducto({
+        pagina: page,  
         tamanioPagina: pageSize,
         busqueda: this.busquedaControl.value,
         proceso: this.filtros.procesos.seleccionado,
@@ -127,7 +127,6 @@ export class ListadoProductosComponent {
         color: this.filtros.colores.seleccionado,
         temporada: this.filtros.temporadas.seleccionado
       });
-    }
 
     this.productosService.ObtenerProductos(this.filtroActual).subscribe(response => {
       this.productos = response.registros;

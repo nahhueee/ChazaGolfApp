@@ -23,6 +23,7 @@
                     [filter]="true"
                     filterBy="descripcion"
                     [showClear]="true"
+                    (onLazyLoad)="Buscar($event)"
                     (onChange)="onChange(key, $event)"
                 >
                     <!-- Opción seleccionada -->
@@ -75,7 +76,10 @@
         (onLazyLoad)="Buscar($event)"
         [loading]="loading"
         [rowsPerPageOptions]="[10,20,50]"
-        [tableStyle]="{ 'min-width': '60rem' }">
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }"
+        >
         
             <ng-template #header>
                 <tr>

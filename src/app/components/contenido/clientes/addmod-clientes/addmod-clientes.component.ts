@@ -44,8 +44,16 @@ export class AddModClientesComponent {
     {id: 4, descripcion: 'OTRO'},
   ];
   categorias = [
-    {id: 1, descripcion: 'MAYORISTA'},
-    {id: 2, descripcion: 'MINORISTA'},
+    {id: 1, descripcion: 'MINORISTA'},
+    {id: 2, descripcion: 'MAYORISTA'},
+    {id: 3, descripcion: 'EMBAJADOR'},
+    {id: 4, descripcion: 'ACUERDO'},
+  ];
+  listasPrecio = [
+    {id: 1, descripcion: 'CONSUMIDOR FINAL'},
+    {id: 2, descripcion: 'LISTA 3'},
+    {id: 3, descripcion: 'LISTA 4'},
+    {id: 4, descripcion: 'LISTA 5'},
   ];
 
   provincias : any[] = [];
@@ -80,6 +88,7 @@ export class AddModClientesComponent {
 
       condPago: new FormControl([null]),
       categoria: new FormControl([null]),
+      lista: new FormControl([null]),
 
       calle: new FormControl(''),
       numero: new FormControl(''),
@@ -117,6 +126,7 @@ export class AddModClientesComponent {
     this.ObtenerProvincias();
 
     this.formulario.get('categoria')?.setValue(this.categorias[0]);
+    this.formulario.get('lista')?.setValue(this.listasPrecio[0]);
     this.formulario.get('condPago')?.setValue(this.condicionesPago[0]);
   
     //valida DNI o CUIT CUIL respectivamente
@@ -144,6 +154,7 @@ export class AddModClientesComponent {
     this.formulario.get('email')?.setValue(cliente.email);
     this.formulario.get('razonSocial')?.setValue(cliente.razonSocial);
     this.formulario.get('documento')?.setValue(cliente.documento);
+    this.formulario.get('lista')?.setValue(this.listasPrecio.find(l => l.id == cliente.idListaPrecio));
 
     let condicionIva = this.condicionesIVAReceptor.find(c => c.id == cliente.idCondicionIva);
     if(condicionIva) this.formulario.get('condIva')?.setValue(condicionIva);
@@ -174,6 +185,21 @@ export class AddModClientesComponent {
   SelectContent(event: FocusEvent) {
     const input = event.target as HTMLInputElement;
     input.select();
+  }
+
+  CambioCategoria(){
+    if(this.formulario.get('categoria')?.value.id == 2){
+      this.formulario.get('lista')?.setValue(this.listasPrecio[1]);
+    }else{
+      this.formulario.get('lista')?.setValue(this.listasPrecio[0]);
+    }
+  }
+
+  CambioCondicion(){
+    const condicion = this.formulario.get('condIva')?.value.id;
+    if(condicion == 1 || condicion == 6 || condicion == 13){
+      this.formulario.get('tDocumento')?.setValue(this.tiposDocumento[0]);
+    }
   }
 
   ObtenerProvincias(){
@@ -246,14 +272,26 @@ export class AddModClientesComponent {
     this.cliente.idCondicionPago =  this.formulario.get('condPago')?.value.id;
     this.cliente.idCategoria =  this.formulario.get('categoria')?.value.id;
     this.cliente.idCondicionIva = this.formulario.get('condIva')?.value.id;
+    this.cliente.idListaPrecio = this.formulario.get('lista')?.value.id;
     this.cliente.documento = this.formulario.get('documento')?.value;
+
+    const v = (path: string, prop?: string) => {
+      const val = this.formulario.get(path)?.value;
+      return prop ? (val?.[prop] ?? '') : (val ?? '');
+    };
+
+    const calle = v('calle', 'nombre');
+    const numero = v('numero');
+    const ciudad = v('ciudad', 'nombre');
+    const provincia = v('provincia', 'nombre');
+
     this.cliente.direcciones = [{
-      resumen: `${this.formulario.get('calle')?.value.nombre} ${this.formulario.get('numero')?.value}, ${this.formulario.get('ciudad')?.value.nombre}, ${this.formulario.get('provincia')?.value.nombre}`,
-      calle: this.formulario.get('calle')?.value.nombre,
-      numero: this.formulario.get('numero')?.value,
-      codPostal: this.formulario.get('codPostal')?.value,
-      localidad: this.formulario.get('ciudad')?.value.nombre,
-      provincia: this.formulario.get('provincia')?.value.nombre,
+      resumen: [calle, numero, ciudad, provincia].filter(Boolean).join(', '),
+      calle,
+      numero,
+      codPostal: v('codPostal'),
+      localidad: ciudad,
+      provincia,
       observaciones: ''
     }];
     

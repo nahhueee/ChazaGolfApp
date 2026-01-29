@@ -39,6 +39,7 @@ import { TipoDescuento } from '../../../../models/TipoDescuento';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
+import { Empresa } from '../../../../models/Empresa';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -80,6 +81,8 @@ export class AddModVentasComponent {
   venta:Venta = new Venta();
   totalItems:number = 0;
   totalDescuento:number = 0;
+  totalIva:number = 0;
+  subtotal:number = 0;
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   cantItems:number = 0;
@@ -89,6 +92,15 @@ export class AddModVentasComponent {
   modalClienteVisible:boolean = false;
   modalAddClienteVisible:boolean = false;
   modalFacturarVisible:boolean = false;
+
+  DEFAULT_COMPROBANTE_POR_CONDICION: Record<number, number> = {
+    1: 1, // Responsable Inscripto → Factura A
+    5: 6, // Consumidor Final → Factura B
+    6: 1,  // Responsable Monotributo → Factura A
+    13: 1, // Monotributo Social → Factura A
+    15: 6 // Iva no Alcanzado → Factura B
+  };
+
 
   //PANTALLA 1
   formGenerales:FormGroup;
@@ -127,14 +139,11 @@ export class AddModVentasComponent {
   formPagos:FormGroup;
   redondeo:FormControl = new FormControl('');
   pagosFactura:PagosFactura[]=[];
-  empresas=[
-    {id: 1, descripcion: 'SUCEDE SRL'},
-    {id: 2, descripcion: 'GABEL MARIELA'},
-    {id: 3, descripcion: 'OMAR CHAZA'},
-  ];
+  empresas:Empresa[]=[];
   tiposDescuento:TipoDescuento[]=[];
   comprobantes:TipoComprobante[]=[];
   metodosPago:MetodoPago[]=[];
+  mostrarIva:boolean = false;
 
   objFacturar:ObjFacturar = new ObjFacturar();
 
@@ -182,7 +191,7 @@ export class AddModVentasComponent {
     this.formFacturacion = new FormGroup({
       empresa: new FormControl('', [Validators.required]),
       tComprobante: new FormControl('', [Validators.required]),
-      tDescuento: new FormControl([null]),
+      tDescuento: new FormControl(1),
       descuento: new FormControl('', [Validators.min(0), Validators.max(100)]),
       codPromo: new FormControl(''),
     });
@@ -199,6 +208,7 @@ export class AddModVentasComponent {
   get ProcesoControl(){return this.formGenerales.get('proceso')?.value;}
   get PuntoControl(){return this.formGenerales.get('punto')?.value;}
   get ProductoControl(){return this.formProductos.get('producto')?.value ?? '';}
+  get TipoComprobanteControl(){return this.formFacturacion.get('tComprobante')?.value ?? '';}
   get esPresupuesto(): boolean {
     return this.ProcesoControl?.descripcion === 'PRESUPUESTO';
   }
@@ -211,6 +221,7 @@ export class AddModVentasComponent {
       this.ObtenerProcesosVenta();
     });
 
+    this.ObtenerEmpresas();
     this.ObtenerPuntosVenta();
     this.ObtenerClientes();
     this.ObtenerLineasTalle();
@@ -274,7 +285,16 @@ export class AddModVentasComponent {
   }
 
   SetearTitulo(){
-     this.ventasService.ObtenerProximoNroProceso(this.ProcesoControl.id)
+    this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
+    this.PrepararFacturacionCliente(this.clienteSeleccionado?.idCondicionIva ?? 99)
+
+    if(this.ProcesoControl.descripcion == 'COTIZACION'){
+      this.formFacturacion.get('tComprobante')?.setValue(99);
+    }else{
+      this.formFacturacion.get('tComprobante')?.setValue(6);
+    }
+
+    this.ventasService.ObtenerProximoNroProceso(this.ProcesoControl.id)
     .subscribe(response => {
       this.proximoNroVenta = response;
 
@@ -283,15 +303,6 @@ export class AddModVentasComponent {
         this.titulo = antelacion + this.ProcesoControl.descripcion + " Nro: " + this.proximoNroVenta;
       }
     });
-  }
-
-  CambioDePunto(){
-    const nroNotaControl = this.formGenerales.get('nroNota');
-    if (this.PuntoControl.id != 5) {
-      nroNotaControl?.disable({ emitEvent: false });
-    } else {
-      nroNotaControl?.enable({ emitEvent: false });
-    }
   }
 
   BuscarNotaEmpaque(){
@@ -327,6 +338,7 @@ export class AddModVentasComponent {
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
               this.formFacturacion.get('descuento')?.setValue(0);
               this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
+              //this.formGenerales.get('punto')?.setValue();
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -374,7 +386,7 @@ export class AddModVentasComponent {
     this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
     this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
     this.formFacturacion.get('empresa')?.setValue(this.empresas.find(e => e.id == this.venta.idEmpresa));
-    this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == this.venta.idTipoDescuento));
+    this.formFacturacion.get('tDescuento')?.setValue(this.venta.idTipoDescuento);
     this.formFacturacion.get('descuento')?.setValue(this.venta.descuento);
     this.formFacturacion.get('codPromo')?.setValue(this.venta.codPromocion);
     this.redondeo.setValue(this.venta.redondeo?.toLocaleString('es-AR'));
@@ -382,45 +394,23 @@ export class AddModVentasComponent {
     this.nroRelacionado = this.venta.nroRelacionado!;
     this.tipoRelacionado = this.venta.tipoRelacionado!;
 
-    this.formGenerales.get('cliente')?.setValue(this.clientes.find(c => c.id == this.venta.idCliente));
-    this.SeleccionarCliente();
+    if(this.tipoRelacionado == "NOTA DE EMPAQUE")
+      this.formGenerales.get('nroNota')?.setValue(this.nroRelacionado);
+
+    this.formGenerales.get('cliente')?.setValue(this.venta.cliente);
 
     if(this.venta.productos) this.productosFactura = this.venta.productos;
     if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
     if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
 
+    this.SeleccionarCliente(this.venta.idTipoComprobante);
+
     this.titulo = "Editar " + this.ProcesoControl.descripcion + " Nro: " + this.venta.nroProceso;
     this.CalcularTotalGeneral();
   }
 
-  // CalcularTotalGeneral() {
-  //   const totalProductos = this.productosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
-  //   const totalServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.total || 0), 0) || 0;
-  //   this.totalItems = totalProductos + totalServicios;
-
-  //   const descuento = parseFloat(this.DescuentoControl) || 0;
-
-  //   if (descuento > 0) {
-  //     this.totalDescuento = (this.totalItems * descuento) / 100;
-  //   } else {
-  //     this.totalDescuento = 0;
-  //   }
-
-  //   // Total final luego de aplicar el descuento
-  //   this.totalGeneral = this.totalItems - this.totalDescuento
-
-  //   //Total a pagar calculado con redondeo
-  //   this.totalAPagar = this.totalGeneral + this.globalesService.EstandarizarDecimal(this.redondeo.value);
-
-  //   //sumamos las cantidades
-  //   const cantProductos = this.productosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
-  //   const cantServicios = this.serviciosFactura?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
-  //   this.cantItems = cantProductos + cantServicios;  
-  // }
-
   CalcularTotalGeneral() {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
-
     let totalItems = 0;
     let totalDescuento = 0;
 
@@ -449,14 +439,43 @@ export class AddModVentasComponent {
     const productos = procesarItems(this.productosFactura);
     const servicios = procesarItems(this.serviciosFactura);
 
-    totalItems = productos.total + servicios.total;
-    totalDescuento = productos.descuento + servicios.descuento;
+    this.totalItems = productos.total + servicios.total;
+    this.totalDescuento = productos.descuento + servicios.descuento;
 
-    this.totalItems = totalItems;
-    this.totalDescuento = totalDescuento;
+    // Base inicial
+    this.subtotal = this.totalItems - this.totalDescuento;
+    this.totalIva = 0;
+    this.totalGeneral = this.subtotal;
+    this.mostrarIva = false;
 
-    this.totalGeneral = totalItems - totalDescuento;
+    const esFactura =
+      this.ProcesoControl.descripcion !== 'COTIZACION' &&
+      this.tipo === 'factura' &&
+      this.productosFactura.length > 0;
 
+    if (esFactura) {
+
+      // FACTURA A
+      if (this.TipoComprobanteControl === 1) {
+        this.totalIva = this.subtotal * 0.21;
+        this.totalGeneral = this.subtotal + this.totalIva;
+        this.mostrarIva = true;
+      }
+
+      // FACTURA B
+      if (this.TipoComprobanteControl === 6) {
+        const totalConIva = this.subtotal;
+
+        this.totalIva = totalConIva * 21 / 121;
+        this.subtotal = totalConIva - this.totalIva;
+        this.totalGeneral = totalConIva;
+
+        this.mostrarIva = true;
+      }
+
+      // FACTURA C (11) → no IVA
+    }
+    
     this.totalAPagar =
       this.totalGeneral +
       this.globalesService.EstandarizarDecimal(this.redondeo.value);
@@ -471,6 +490,13 @@ export class AddModVentasComponent {
     this.cantItems = cantProductos + cantServicios;
   }
 
+  ObtenerEmpresas(){
+    this.miscService.ObtenerEmpresas()
+      .subscribe(response => {
+        this.empresas = response;
+        this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
+    });
+  }
 
   ObtenerProcesosVenta(){
     this.miscService.ObtenerProcesosVenta(this.tipo)
@@ -511,20 +537,60 @@ export class AddModVentasComponent {
     this.miscService.ObtenerTiposDescuento()
       .subscribe(response => {
         this.tiposDescuento = response;
-        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
-      });
-  }
-
-  ObtenerComprobantes(condicionIva:number){
-    this.miscService.ObtenerComprobantes(condicionIva)
-      .subscribe(response => {
-        this.comprobantes = response;
+        this.formFacturacion.get('tDescuento')?.setValue(1);
       });
   }
 
   SelectContent(event: FocusEvent) {
     const input = event.target as HTMLInputElement;
     input.select();
+  }
+
+  CambioEmpresa(){
+    const seleccionada = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value);
+    if(this.clienteSeleccionado != undefined){
+      this.PrepararFacturacionCliente(this.clienteSeleccionado.idCondicionIva!)
+
+      if(this.ProductoControl.descripcion!= "COTIZACION"){
+
+        if(seleccionada?.abrevCondicion == 'RI'){
+          if(this.clienteSeleccionado.idCondicionIva == 1){
+            this.formFacturacion.get('tComprobante')?.setValue(1);
+          }
+          if(this.clienteSeleccionado.idCondicionIva == 5){
+            this.formFacturacion.get('tComprobante')?.setValue(6);
+          }
+        }
+
+        if(seleccionada?.abrevCondicion == 'MONO'){
+          this.formFacturacion.get('tComprobante')?.setValue(11);
+        }
+
+        this.CalcularTotalGeneral();
+        return;
+      }
+    }
+
+    this.PrepararFacturacionCliente(99)
+    this.formFacturacion.get('tComprobante')?.setValue(99);
+    this.CalcularTotalGeneral();
+  }
+
+  CambioTipoComprobante(){
+    if(this.clienteSeleccionado!.idCategoria == 2 && this.productosFactura.length > 0){
+      this.productosFactura.forEach(element => {
+        element.unitario = this.CalcularPrecioCliente(element.precio!);
+        element.total = element.unitario! * element.cantidad!;
+      });
+
+      this.CalcularTotalGeneral();
+    }
+
+    if(this.TipoComprobanteControl == 99){
+      this.formGenerales.get('proceso')?.setValue(this.procesos[0]);
+    }else{
+      this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
+    }
   }
   
   //#region CLIENTES
@@ -540,16 +606,29 @@ export class AddModVentasComponent {
     this.clientesFiltrados = this.clientes.filter(c => {
       const nombre = c.nombre!.toLowerCase();
       const dni = c.documento!.toString(); 
-      return nombre.includes(query) || dni.includes(query);
+      const razon = c.razonSocial!.toLowerCase();
+      return nombre.includes(query) || dni.includes(query) || razon.includes(query);
     });
   }
 
-  SeleccionarCliente(){
+  SeleccionarCliente(comprobante?:number){
     const seleccionado = this.formGenerales.get('cliente')?.value;
     this.clientesService.ObtenerCliente(seleccionado.id)
         .subscribe(response => {
           this.clienteSeleccionado = response;
+          this.PrepararFacturacionCliente(this.clienteSeleccionado?.idCondicionIva!, comprobante);
+          // if(this.clienteSeleccionado?.idCondicionIva == 1){ //Responsable inscripto
+          //   this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
+          //   this.ObtenerComprobantes(this.empresas[0].abrevCondicion!, this.clienteSeleccionado.idCondicionIva);
+          //   this.formFacturacion.get('tComprobante')?.setValue(1);
+          // }
 
+          // if(this.clienteSeleccionado?.idCondicionIva == 5){ //Consumidor Final
+          //   this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
+          //   this.ObtenerComprobantes(this.empresas[0].abrevCondicion!, this.clienteSeleccionado.idCondicionIva);
+          //   this.formFacturacion.get('tComprobante')?.setValue(6);
+          // }
+          
           //Obtenemos sus ventas relacionadas
           let nroVenta = this.modificando ? this.venta.id : 0;
           this.ventasService.ObtenerVentasCliente(this.clienteSeleccionado?.id!, nroVenta!)
@@ -557,15 +636,60 @@ export class AddModVentasComponent {
             this.ventasCliente = response;
           });
           
-          //Obtnemos los comprobantes disponibles para el cliente
-          this.miscService.ObtenerComprobantes(this.clienteSeleccionado!.idCondicionIva!)
-          .subscribe(response => {
-            this.comprobantes = response;
-            if(this.venta.idTipoComprobante)
-              this.formFacturacion.get('tComprobante')?.setValue(this.comprobantes.find(c => c.id == this.venta.idTipoComprobante));
-          });
+          if(!this.modificando){
+            if(this.clienteSeleccionado!.idCategoria == 2 && this.productosFactura.length > 0){
+              this.productosFactura.forEach(element => {
+                element.unitario = this.CalcularPrecioCliente(element.precio!);
+                element.total = element.unitario! * element.cantidad!;
+              });
+            }
+            this.CalcularTotalGeneral();
+          }
+
         });
   }
+
+  PrepararFacturacionCliente(condIvaCliente: number, comprobanteExistente?: number) {
+    let seleccionada = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value);
+
+    if(!seleccionada){
+      seleccionada = this.empresas[0];
+      this.formFacturacion.get('empresa')?.setValue(seleccionada.id);
+    } 
+
+    this.miscService.ObtenerComprobantes(seleccionada.abrevCondicion!, condIvaCliente)
+      .subscribe(response => {
+        this.comprobantes = response;
+
+        if(this.ProcesoControl.descripcion != "COTIZACION"){
+          const comprobanteFinal =
+          comprobanteExistente ??
+          this.DEFAULT_COMPROBANTE_POR_CONDICION[condIvaCliente];
+
+          this.formFacturacion.get('tComprobante')?.setValue(comprobanteFinal);
+          
+          if(this.clienteSeleccionado && this.clienteSeleccionado!.idCategoria == 2 && this.productosFactura.length > 0){
+            this.productosFactura.forEach(element => {
+              element.unitario = this.CalcularPrecioCliente(element.precio!);
+              element.total = element.unitario! * element.cantidad!;
+            });
+
+            this.CalcularTotalGeneral();
+          }
+        }
+        else{
+          this.formFacturacion.get('tComprobante')?.setValue(99);
+        }
+      });
+  }
+
+
+  // ObtenerComprobantes(empresa:string,idCondCliente:number){
+  //   this.miscService.ObtenerComprobantes(empresa,idCondCliente)
+  //     .subscribe(response => {
+  //       this.comprobantes = response;
+  //     });
+  // }
 
   ObtenerToolTip(idProceso: number): string {
       if ((idProceso === 5 && this.ProcesoControl.id === 6) || (idProceso === 5 && this.ProcesoControl.id === 7)) {
@@ -654,13 +778,14 @@ export class AddModVentasComponent {
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formFacturacion.get('descuento')?.setValue(0);
-        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento.find(t => t.id == 1));
+        this.formFacturacion.get('tDescuento')?.setValue(1);
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == 6){
           this.Notificaciones.Info("Se facturará el pedido Nro: " + venta.nroProceso);
         }
         if(venta.idProceso == 7){
+          this.formGenerales.get('nroNota')?.setValue(venta.nroProceso);
           this.Notificaciones.Info("Se relacionará con la nota de empaque Nro: " + venta.nroProceso);
         }
 
@@ -722,14 +847,12 @@ export class AddModVentasComponent {
 
   SeleccionarProducto(){
     const seleccionado = this.formProductos.get('producto')?.value;
-    
     if(this.ProcesoControl.descripcion === "PRESUPUESTO"){
       this.productoSeleccionado = seleccionado;
       return;
     }
 
     this.variantesDisponibles = this.resultadoBusqueda.filter(p=> p.codigo == seleccionado.codigo)
-
     this.coloresDisponibles = this.variantesDisponibles.map(p => {
         const cd = new ColorDisponible();
         cd.idProducto = p.id;
@@ -738,11 +861,16 @@ export class AddModVentasComponent {
         return cd;
     })
     .sort((a, b) => a.color.localeCompare(b.color));
+
+    if(this.coloresDisponibles.length == 1){
+      this.productoSeleccionado = this.variantesDisponibles.find(v=>v.id === this.coloresDisponibles[0].idProducto)!;
+      this.formProductos.get('colorSeleccionado')?.setValue(this.coloresDisponibles[0]);
+      this.SeleccionarVariante(this.productoSeleccionado.id!)
+    }
   }
 
-  SeleccionarVariante(event:any){
-    this.productoSeleccionado = this.variantesDisponibles.find(v=>v.id === event.value.idProducto)!;
-    
+  SeleccionarVariante(idProducto){
+    this.productoSeleccionado = this.variantesDisponibles.find(v=>v.id === idProducto)!;
     let linea = this.lineasTalles.find(l => l.id === this.productoSeleccionado.talles![0].idLineaTalle);
     if(!linea) return;
     this.tallesProducto = linea.talles!;
@@ -835,8 +963,12 @@ export class AddModVentasComponent {
 
       tallesSeleccionados.forEach((talleSel: any) => {
         const cantidad = talleSel.cantAgregar ?? 0;
-        const precio = talleSel.precio;
+        let precio = talleSel.precio;
 
+        if(this.clienteSeleccionado && this.clienteSeleccionado.idCategoria == 2){
+          precio = this.CalcularPrecioCliente(precio);
+        }
+        
         // Ver si ya existe ese producto con ese precio en el detalle
         let existente = this.productosFactura.find(
           (p: ProductosFactura) =>
@@ -863,12 +995,14 @@ export class AddModVentasComponent {
             idProducto: this.productoSeleccionado.id,
             codProducto: this.productoSeleccionado.codigo,
             nomProducto: this.productoSeleccionado.nombre,
+            topeDescuento: this.productoSeleccionado.topeDescuento,
             talles: this.productoSeleccionado.talles,
             idColor: this.productoSeleccionado.color!.id,
             color: this.productoSeleccionado.color!.descripcion,
             hexa: this.productoSeleccionado.color!.hexa,
             idLineaTalle: talleSel.idLineaTalle,
             cantidad: cantidad,
+            precio: talleSel.precio,
             unitario: precio,
             total: precio * cantidad,
             tallesSeleccionados: talleSel.talle
@@ -876,8 +1010,8 @@ export class AddModVentasComponent {
 
           // Asignar cantidad a tX
           this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
-
           this.productosFactura.push(nuevo);
+
         }
       });
     }
@@ -885,6 +1019,27 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
+  }
+
+  CalcularPrecioCliente(precio:number){
+    switch (this.clienteSeleccionado!.idListaPrecio) {
+      case 2: //Lista 3 40% descuento
+        precio = precio * 0.60 
+        break;
+      case 3: // Lista 4 45% descuento
+        precio = precio * 0.55
+        break;
+      case 4: // Lista 5 50% descuento
+        precio = precio * 0.50
+        break;
+      default: // Lista Consumidor Final
+        break;
+    }
+
+    if(this.TipoComprobanteControl == 6){
+      precio = precio * 1.21;
+    }
+    return precio;
   }
 
   AsignarTalle(productoFactura: ProductosFactura, talle: string, cantidad: number, idLineaTalle: number) {
@@ -898,41 +1053,77 @@ export class AddModVentasComponent {
     (productoFactura as any)[campo] = ((productoFactura as any)[campo] ?? 0) + cantidad;
   }
 
+  //#region Actualizar Cantidad input tabla
   ActualizarCantidad(producto: any, field: string, event: any) {
-    if(producto[field] === undefined) return;
-
-    const talleReal = this.ObtenerTalleReal(field, producto);
-    const talleEncontrado = producto.talles.find((t: any) => t.talle === talleReal);
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
 
-    if(value <= 0) return;
+    const talleReal = this.ObtenerTalleDesdeField(producto, field);
+    if (!talleReal) return;
 
-    if(this.ProcesoControl.descripcion !== 'PEDIDO'){
-      if(value > talleEncontrado.cantidad){
-        this.Notificaciones.Warn(`La cantidad ingresada supera el stock disponible (${talleEncontrado.cantidad}) para el talle ${talleReal}.`);
-        input.value = producto[field];
-        return;
-      }
+    const talleEncontrado = producto.talles.find((t: any) => t.talle === talleReal);
+    if (!talleEncontrado) {
+      this.Notificaciones.Warn(
+        `No está habilitado el talle ${talleReal} para el producto ${producto.nomProducto}.`
+      );
+      return;
+    }
+
+    if (talleEncontrado.precio !== producto.precio) {
+      this.Notificaciones.Warn(
+        'No coincide el precio del talle con el unitario del producto.'
+      );
+      return;
+    }
+
+    if (
+      this.ProcesoControl.descripcion !== 'PEDIDO' &&
+      value > talleEncontrado.cantidad
+    ) {
+      this.Notificaciones.Warn(
+        `La cantidad ingresada supera el stock disponible (${talleEncontrado.cantidad}) para el talle ${talleReal}.`
+      );
+      input.value = producto[field];
+      return;
     }
 
     producto[field] = value;
-   
-    producto.cantidad =
-      (producto.t1 || 0) +
-      (producto.t2 || 0) +
-      (producto.t3 || 0) +
-      (producto.t4 || 0) +
-      (producto.t5 || 0) +
-      (producto.t6 || 0) +
-      (producto.t7 || 0) +
-      (producto.t8 || 0) +
-      (producto.t9 || 0) +
-      (producto.t10 || 0);
+
+    this.AgregarTalleSeleccionado(producto, talleReal);
+    this.RecalcularProducto(producto);
+  }
+
+  private ObtenerTalleDesdeField(producto: any, field: string): string | null {
+    if (producto[field] !== undefined) {
+      return this.ObtenerTalleReal(field, producto);
+    }
+
+    const linea = this.lineasTalles.find(l => l.id === producto.idLineaTalle);
+    if (!linea) return null;
+
+    const index = parseInt(field.replace('t', '')) - 1;
+    return linea.talles?.[index] ?? null;
+  }
+
+  private AgregarTalleSeleccionado(producto: any, talle: string) {
+    const talles = producto.tallesSeleccionados
+      ? producto.tallesSeleccionados.split(',').map((t: string) => t.trim())
+      : [];
+
+    if (!talles.includes(talle)) {
+      talles.push(talle);
+      producto.tallesSeleccionados = talles.join(', ');
+    }
+  }
+
+  private RecalcularProducto(producto: any) {
+    producto.cantidad = Array.from({ length: 10 }, (_, i) => producto[`t${i + 1}`] || 0)
+      .reduce((a, b) => a + b, 0);
 
     producto.total = producto.cantidad * producto.unitario;
     this.CalcularTotalGeneral();
   }
+
 
   ActualizarValoresPresupuesto(producto: any, event: any, tipo: 'cantidad' | 'precio') {
     const input = event.target as HTMLInputElement;
@@ -958,6 +1149,7 @@ export class AddModVentasComponent {
     return talles[index] ?? null;
   }
 
+  //#endregion
   
   EliminarProducto(event: Event, idProducto:number){
     this.confirmationService.confirm({
@@ -1110,6 +1302,9 @@ export class AddModVentasComponent {
     if(this.venta.factura)
       this.venta.estado = "Facturada";
 
+    if(this.ProcesoControl.descripcion == "COTIZACION")
+      this.venta.estado = "Finalizada"
+
     if(!this.modificando){
       this.ventasService.Agregar(this.venta)
       .subscribe(response => {
@@ -1174,25 +1369,62 @@ export class AddModVentasComponent {
     }
   }
 
+
   ConfirmarFacturacion(){
-    this.objFacturar.total = this.totalAPagar;
-    this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value.id;
-    this.objFacturar.tipoFacturaDesc = this.formFacturacion.get('tComprobante')?.value.descripcion;
-    this.objFacturar.docNro = this.clienteSeleccionado!.documento;
-    this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
-    this.objFacturar.docTipoDesc = this.clienteSeleccionado!.tipoDocumento;
-    this.objFacturar.condReceptor = this.clienteSeleccionado!.idCondicionIva;
-    this.objFacturar.condicion = this.clienteSeleccionado!.condicionIva;
-    this.objFacturar.cliente = this.clienteSeleccionado!.nombre;
-    this.objFacturar.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
-    this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
-    
-    this.modalFacturarVisible = true;
+    this.markFormTouched(this.formGenerales);
+    this.markFormTouched(this.formFacturacion);
+
+    if(this.formGenerales.invalid) return;
+    if(this.formFacturacion.invalid) return;
+
+    if(this.ProcesoControl.descripcion == "COTIZACION"){
+        this.confirmationService.confirm({
+          key: 'cerrarDialog',
+          message: 'Al confirmar, la cotización quedará cerrada y no se permitirán más ediciones. ¿Desea continuar?',
+          header: 'Confirmación',
+          closable: true,
+          closeOnEscape: true,
+          icon: 'pi pi-exclamation-triangle',
+          rejectButtonProps: {
+              label: 'Cancelar',
+              severity: 'secondary',
+              outlined: true,
+          },
+          acceptButtonProps: {
+              label: 'Aceptar',
+          },
+          accept: () => {
+            this.Guardar();
+          },
+          reject: () => {},
+        });
+    }else{
+      this.objFacturar.total = Number(this.totalGeneral.toFixed(2));
+      this.objFacturar.neto = Number(this.subtotal.toFixed(2));
+      this.objFacturar.iva = Number(this.totalIva.toFixed(2));
+      this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value;
+      this.objFacturar.tipoFacturaDesc = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
+      this.objFacturar.docNro = this.clienteSeleccionado!.documento;
+      this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
+      this.objFacturar.docTipoDesc = this.clienteSeleccionado!.tipoDocumento;
+      this.objFacturar.condReceptor = this.clienteSeleccionado!.idCondicionIva;
+      this.objFacturar.condicion = this.clienteSeleccionado!.condicionIva;
+      this.objFacturar.cliente = this.clienteSeleccionado!.nombre;
+      this.objFacturar.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
+      this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value;
+      this.modalFacturarVisible = true;
+    }
   }
 
   GuardarFacturar(factura?:FacturaVenta){
     if(factura && factura!=undefined){
-      this.Guardar(factura, true);
+
+      if(factura.estado == "Aprobado"){
+        this.Guardar(factura, true);
+      }else{
+        this.Notificaciones.Error("No se pudo realizar la facturación electrónica, consulte los registros.")
+      }
+
     }
 
     this.modalFacturarVisible = false;
@@ -1204,14 +1436,16 @@ export class AddModVentasComponent {
     this.venta.idPunto = this.formGenerales.get('punto')?.value.id;
     this.venta.punto = this.formGenerales.get('punto')?.value.descripcion;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
-    this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
-    this.venta.cliente = this.clienteSeleccionado?.nombre;
-    this.venta.condCliente = this.clienteSeleccionado?.condicionIva!;
+
+    this.venta.cliente = this.clienteSeleccionado;
+    // this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
+    // this.venta.cliente = this.clienteSeleccionado?.nombre;
+    // this.venta.condCliente = this.clienteSeleccionado?.condicionIva!;
     this.venta.nroRelacionado = this.nroRelacionado;
     this.venta.tipoRelacionado = this.tipoRelacionado;
-    
+
     if(this.venta.idProceso == 7)
-      this.venta.estado = "Aprobada";
+      this.venta.estado = "Pendiente";
     else
       this.venta.estado = "Aprobado";
 
@@ -1229,20 +1463,21 @@ export class AddModVentasComponent {
     }
       
     if(this.tipo === 'factura'){
-      this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value.id;
-      this.venta.empresa = this.formFacturacion.get('empresa')?.value.descripcion;
-      this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value.id;
-      this.venta.tipoComprobante = this.formFacturacion.get('tComprobante')?.value.descripcion;
-      this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value.id;
-      this.venta.tipoDescuento = this.formFacturacion.get('tDescuento')?.value.descripcion;
+      this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value;
+      this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value;
+      this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value;
       const descuento = this.formFacturacion.get('descuento')?.value;
-      this.venta.descuento = descuento !== '' ? 0 : descuento;
+      this.venta.descuento = descuento == '' ? 0 : descuento;
       this.venta.codPromocion = 0;
       this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
 
+      this.venta.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
+      this.venta.tipoComprobante = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
+      this.venta.tipoDescuento = this.tiposDescuento.find(t => t.id == this.formFacturacion.get('tDescuento')?.value)?.descripcion;
+
       this.venta.estado = "Pendiente";
     }
-    
+
     this.venta.total = this.totalAPagar;
     this.venta.productos = this.productosFactura;
     this.venta.servicios = this.serviciosFactura;
