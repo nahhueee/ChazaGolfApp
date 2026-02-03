@@ -1,0 +1,92 @@
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '600px' }" (onHide)="Cerrar()">
+    <ng-template pTemplate="header">
+        <div class="header-custom">
+            <span>Registro de pagos</span>
+        </div>
+    </ng-template>
+
+    <form class="metodo-pago" [formGroup]="formPagos" (keyup.enter)='AgregarPago()'>
+        @if(desdeVenta){
+            <p>Total venta: <strong>${{venta.total}}</strong></p>
+            <p>Total a completar: <strong>${{montoRestante}}</strong></p>
+        }@else {
+            <p>Deuda total: <strong>${{deudaTotal}}</strong></p>
+        }
+        <br><br>
+
+        <div class="horizontal">
+            <!-- Metodo pago -->
+            <p-floatlabel variant="in">
+                <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
+                <label>Metodo Pago</label>
+            </p-floatlabel>  
+
+            <!-- Monto -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="monto" [imask]="decimal_mask" [placeholder]="montoRestante > 0 ? (montoRestante | decimalFormat) : ''" />
+                <label>Monto</label>
+            </p-floatlabel>
+
+            <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
+
+        </div>
+        @if(desdeVenta){
+            <p-table [value]="venta.pagos">
+                <ng-template #header>
+                    <tr>
+                        <th>Metodo</th>
+                        <th>Monto</th>
+                        <th>Quitar</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-pago let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ pago.metodo }}</td>
+                        <td>${{ pago.monto | decimalFormat}}</td>
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" [disabled]="pago.id != 0" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago(rowIndex)" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="3">
+                            <div class="noPagos">
+                                <i class="pi pi-wallet text-3xl text-500"></i>
+
+                                <span class="text-600">
+                                    No se registraron métodos de pago.
+                                </span>
+
+                                <p-button
+                                    label="Agregar pago al contado"
+                                    icon="pi pi-check"
+                                    severity="warn"
+                                    variant="outlined"
+                                    styleClass="p-button-sm"
+                                    (onClick)="AgregarPagoContado()"
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        }@else{
+            @if(alerta != ""){
+                <div class="alerta alerta-warn">
+                    <span class="alerta-icon">⚠️</span>
+                    <div class="alerta-texto">
+                       {{alerta}}
+                    </div>
+                </div>
+            }
+        }
+        
+
+    </form>
+
+    <div class="botones">
+        <p-button label="Guardar Cambios" [disabled]="(alerta == '' && desdeVenta == false) || (desdeVenta == true && pagosNuevos.length == 0)" (onClick)="Guardar()" icon="pi pi-save" />
+    </div>
+</p-dialog>

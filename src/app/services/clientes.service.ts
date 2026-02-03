@@ -19,8 +19,8 @@ export class ClientesService {
   ObtenerCliente(id:number): Observable<any> {
     return this.apiService.get(`clientes/obtener-cliente/${id}`)
   }
-  SelectorClientes(): Observable<any> {
-    return this.apiService.get('clientes/selector')
+  SelectorClientes(cuentasCorriente:boolean = false): Observable<any> {
+    return this.apiService.get('clientes/selector/' + cuentasCorriente)
   }
   //#endregion
 

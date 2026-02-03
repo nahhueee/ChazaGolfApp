@@ -10,6 +10,8 @@ export class FiltroVenta{
   nroProceso = 0;
   fechas = "";
   cliente = 0;
+  impagas = 0;
+  desdeCuenta = false;
 
   constructor(data?: any) {
     if (data) {
@@ -24,6 +26,8 @@ export class FiltroVenta{
       this.nroProceso = data.nroProceso;
       this.fechas = data.fechas;
       this.cliente = data.cliente;
+      this.impagas = data.impagas;
+      this.desdeCuenta = data.desdeCuenta
     }
   }
 }

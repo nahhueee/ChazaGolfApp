@@ -137,8 +137,8 @@ export class AddModVentasComponent {
   //PANTALLA 4
   formFacturacion:FormGroup;
   formPagos:FormGroup;
-  redondeo:FormControl = new FormControl('');
   pagosFactura:PagosFactura[]=[];
+  redondeo:FormControl = new FormControl('');
   empresas:Empresa[]=[];
   tiposDescuento:TipoDescuento[]=[];
   comprobantes:TipoComprobante[]=[];
@@ -453,7 +453,10 @@ export class AddModVentasComponent {
       this.tipo === 'factura' &&
       this.productosFactura.length > 0;
 
+      console.log(esFactura)
     if (esFactura) {
+
+      console.log(this.TipoComprobanteControl)
 
       // FACTURA A
       if (this.TipoComprobanteControl === 1) {
@@ -530,6 +533,7 @@ export class AddModVentasComponent {
     this.miscService.ObtenerMetodosPago()
       .subscribe(response => {
         this.metodosPago = response;
+        this.formPagos.get('metodo')?.setValue(this.metodosPago[0]);
       });
   }
 
@@ -667,15 +671,13 @@ export class AddModVentasComponent {
           this.DEFAULT_COMPROBANTE_POR_CONDICION[condIvaCliente];
 
           this.formFacturacion.get('tComprobante')?.setValue(comprobanteFinal);
-          
           if(this.clienteSeleccionado && this.clienteSeleccionado!.idCategoria == 2 && this.productosFactura.length > 0){
             this.productosFactura.forEach(element => {
               element.unitario = this.CalcularPrecioCliente(element.precio!);
               element.total = element.unitario! * element.cantidad!;
             });
-
-            this.CalcularTotalGeneral();
           }
+          this.CalcularTotalGeneral();
         }
         else{
           this.formFacturacion.get('tComprobante')?.setValue(99);
@@ -1235,26 +1237,54 @@ export class AddModVentasComponent {
   //#endregion
 
   //#region PAGOS VENTA
-  AgregarPago(){
-    if(this.formPagos.invalid) return;
+  AgregarPagoContado(){
+    if(this.totalAPagar == 0) return;
 
-    const entregaAnterior = this.pagosFactura?.reduce((acc, item) => acc + (item.monto || 0), 0) || 0;
-    const totalEntregado = entregaAnterior + this.globalesService.EstandarizarDecimal(this.formPagos.get('monto')?.value);
+    const nuevoPago = new PagosFactura();
+    const seleccionado = this.metodosPago[0];
+    nuevoPago.idMetodo = seleccionado.id;
+    nuevoPago.metodo = seleccionado.descripcion;
+    nuevoPago.monto = this.totalAPagar;
+    this.pagosFactura.push(nuevoPago);
+  }
 
-    if(totalEntregado > this.totalAPagar){
-      this.Notificaciones.Warn("La entrega por pago no puede superar el total a pagar.")
+  get montoRestante(): number {
+    const entregado = this.pagosFactura?.reduce(
+      (acc, item) => acc + (item.monto || 0),
+      0
+    ) || 0;
+
+    return Math.max(this.totalAPagar - entregado, 0);
+  }
+
+  AgregarPago() {
+    if (this.formPagos.invalid) return;
+
+    const montoIngresado = this.formPagos.get('monto')?.value;
+    const montoFinal = montoIngresado
+      ? this.globalesService.EstandarizarDecimal(montoIngresado)
+      : this.montoRestante;
+
+    if (montoFinal <= 0) return;
+
+    if (montoFinal > this.montoRestante) {
+      this.Notificaciones.Warn(
+        "La entrega por pago no puede superar el total a pagar."
+      );
       return;
     }
 
-    const nuevoPago = new PagosFactura();
     const seleccionado = this.formPagos.get('metodo')?.value;
+
+    const nuevoPago = new PagosFactura();
     nuevoPago.idMetodo = seleccionado.id;
     nuevoPago.metodo = seleccionado.descripcion;
-    nuevoPago.monto = this.globalesService.EstandarizarDecimal(this.formPagos.get('monto')?.value);
+    nuevoPago.monto = montoFinal;
 
     this.pagosFactura.push(nuevoPago);
     this.formPagos.reset();
   }
+
   EliminarPago(event: Event, idMetodo:number){
     this.confirmationService.confirm({
       target: event.target as EventTarget, 
@@ -1289,16 +1319,15 @@ export class AddModVentasComponent {
     }
 
     this.markFormTouched(this.formGenerales);
-    if(this.tipo === 'factura'){
-      this.markFormTouched(this.formFacturacion);
-      if(this.formFacturacion.invalid) return;
-    }
-
-    if(this.formGenerales.invalid) return;
+    if(this.formGenerales.invalid){
+      this.Notificaciones.Warn("Falta completar datos obligatorios.")
+      return;
+    } 
 
     this.ArmarObjetoVenta();
-    this.venta.factura = factura;
-
+    if(factura && factura.estado == "Aprobado")
+      this.venta.factura = factura;
+      
     if(this.venta.factura)
       this.venta.estado = "Facturada";
 
@@ -1369,57 +1398,66 @@ export class AddModVentasComponent {
     }
   }
 
+  get pagoCompleto(): boolean {
+    if(this.pagosFactura.length > 0){
+      const totalPagos = this.pagosFactura.reduce(
+        (acc, p) => acc + (p.monto || 0),
+        0
+      );
+      return totalPagos >= this.totalAPagar;
+    }
+
+    return false;
+  }
 
   ConfirmarFacturacion(){
     this.markFormTouched(this.formGenerales);
+    if(this.formGenerales.invalid){
+      this.Notificaciones.Warn("Falta completar datos obligatorios.")
+      return;
+    } 
+
     this.markFormTouched(this.formFacturacion);
+      if(this.formFacturacion.invalid) {
+        this.Notificaciones.Warn("Falta completar datos obigatorios de facturación.")
+        return;
+      };
+
+    if(this.clienteSeleccionado!.idCondicionPago != 2){
+      if(this.pagosFactura.length == 0){
+        this.Notificaciones.Warn("No se registraron métodos de pago.");
+        return;
+      }
+      if(!this.pagoCompleto){
+        this.Notificaciones.Warn("Este cliente no admite cuenta corriente. Para continuar, debés registrar el pago total de la venta.");
+        return;
+      }
+    }
 
     if(this.formGenerales.invalid) return;
     if(this.formFacturacion.invalid) return;
 
-    if(this.ProcesoControl.descripcion == "COTIZACION"){
-        this.confirmationService.confirm({
-          key: 'cerrarDialog',
-          message: 'Al confirmar, la cotización quedará cerrada y no se permitirán más ediciones. ¿Desea continuar?',
-          header: 'Confirmación',
-          closable: true,
-          closeOnEscape: true,
-          icon: 'pi pi-exclamation-triangle',
-          rejectButtonProps: {
-              label: 'Cancelar',
-              severity: 'secondary',
-              outlined: true,
-          },
-          acceptButtonProps: {
-              label: 'Aceptar',
-          },
-          accept: () => {
-            this.Guardar();
-          },
-          reject: () => {},
-        });
-    }else{
-      this.objFacturar.total = Number(this.totalGeneral.toFixed(2));
-      this.objFacturar.neto = Number(this.subtotal.toFixed(2));
-      this.objFacturar.iva = Number(this.totalIva.toFixed(2));
-      this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value;
-      this.objFacturar.tipoFacturaDesc = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
-      this.objFacturar.docNro = this.clienteSeleccionado!.documento;
-      this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
-      this.objFacturar.docTipoDesc = this.clienteSeleccionado!.tipoDocumento;
-      this.objFacturar.condReceptor = this.clienteSeleccionado!.idCondicionIva;
-      this.objFacturar.condicion = this.clienteSeleccionado!.condicionIva;
-      this.objFacturar.cliente = this.clienteSeleccionado!.nombre;
-      this.objFacturar.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
-      this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value;
-      this.modalFacturarVisible = true;
-    }
+    this.objFacturar.total = Number(this.totalGeneral.toFixed(2));
+    this.objFacturar.neto = Number(this.subtotal.toFixed(2));
+    this.objFacturar.iva = Number(this.totalIva.toFixed(2));
+    this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value;
+    this.objFacturar.tipoFacturaDesc = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
+    this.objFacturar.docNro = this.clienteSeleccionado!.documento;
+    this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
+    this.objFacturar.docTipoDesc = this.clienteSeleccionado!.tipoDocumento;
+    this.objFacturar.condReceptor = this.clienteSeleccionado!.idCondicionIva;
+    this.objFacturar.condicion = this.clienteSeleccionado!.condicionIva;
+    this.objFacturar.cliente = this.clienteSeleccionado!.nombre;
+    this.objFacturar.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
+    this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value;
+    this.objFacturar.pagos = this.pagosFactura;
+    this.modalFacturarVisible = true;
   }
 
   GuardarFacturar(factura?:FacturaVenta){
     if(factura && factura!=undefined){
-
-      if(factura.estado == "Aprobado"){
+      console.log(factura)
+      if(factura.estado == "Aprobado" || factura.estado == "Cotizacion"){
         this.Guardar(factura, true);
       }else{
         this.Notificaciones.Error("No se pudo realizar la facturación electrónica, consulte los registros.")
@@ -1476,6 +1514,9 @@ export class AddModVentasComponent {
       this.venta.tipoDescuento = this.tiposDescuento.find(t => t.id == this.formFacturacion.get('tDescuento')?.value)?.descripcion;
 
       this.venta.estado = "Pendiente";
+      if(this.pagoCompleto == false){
+        this.venta.impaga = 1;
+      }
     }
 
     this.venta.total = this.totalAPagar;

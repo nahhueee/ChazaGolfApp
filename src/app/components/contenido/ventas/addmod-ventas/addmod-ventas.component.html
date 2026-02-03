@@ -508,7 +508,7 @@
                 </div>
             </form>
 
-            <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'">
+            <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'" (keyup.enter)='AgregarPago()'>
                 <div class="horizontal">
                     <!-- Metodo pago -->
                     <p-floatlabel variant="in">
@@ -518,7 +518,7 @@
 
                     <!-- Monto -->
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="monto" type="text" [imask]="decimal_mask"/>
+                        <input pInputText formControlName="monto" [imask]="decimal_mask" [placeholder]="montoRestante > 0 ? (montoRestante | decimalFormat) : ''" />
                         <label>Precio</label>
                     </p-floatlabel>
 
@@ -539,6 +539,28 @@
                             <td>{{ pago.monto | decimalFormat}}</td>
                             <td class="acciones-tabla">
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago($event, pago.idMetodo)" />
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="3">
+                                <div class="noPagos">
+                                    <i class="pi pi-wallet text-3xl text-500"></i>
+
+                                    <span class="text-600">
+                                        No se registraron métodos de pago.
+                                    </span>
+
+                                    <p-button
+                                        label="Agregar pago al contado"
+                                        icon="pi pi-check"
+                                        severity="warn"
+                                        variant="outlined"
+                                        styleClass="p-button-sm"
+                                        (onClick)="AgregarPagoContado()"
+                                    />
+                                </div>
                             </td>
                         </tr>
                     </ng-template>
@@ -650,7 +672,7 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<p-dialog [modal]="true" [(visible)]="modalFacturarVisible" [style]="{ width: '600px' }">
+<p-dialog [modal]="true" [(visible)]="modalFacturarVisible" [style]="{ width: '900px' }">
    <ng-template #header>
         <div class="modal-header">
             <i class="pi pi-dollar"></i>

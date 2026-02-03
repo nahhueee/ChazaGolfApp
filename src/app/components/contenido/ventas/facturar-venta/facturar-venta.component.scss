@@ -1,5 +1,24 @@
 .contenedor{
     padding: 0px 15px;
+    display: flex;
+    gap: 30px;
+
+    .izq{
+        flex: 1.5;
+        padding-right: 30px;
+        border-right: 1px solid var(--surface-border)
+    }
+    .der{
+        flex: 1;
+
+        p{
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-family: 'Poppins';
+            color: var(--text-color-secondary);
+        }
+    }
 }
 .horizontal{
     display: flex;
@@ -63,4 +82,8 @@ p-divider{
     justify-content: center;
     gap: 10px;
     margin-top: 30px;
+}
+
+.alerta-info{
+    margin-top: 20px;
 }

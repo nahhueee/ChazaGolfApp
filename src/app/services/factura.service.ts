@@ -515,86 +515,83 @@ export class FacturaService {
           },
 
           //Pie de página
-          {
-            columns: [
-              (comprobante.proceso != "COTIZACION") ? [ //Ocultamos para cotizacion
+          (comprobante.proceso != "COTIZACION") ? [ 
+            {
+              columns: [
 
-                //Columna QR
-                {
-                  image: datosFactura.qr,
-                  width: 100,
-                  alignment: 'left',
-                  margin: [0, 0, 30, 0] 
-                },
+                  //Columna QR
+                  {
+                    image: datosFactura.qr,
+                    width: 100,
+                    alignment: 'left',
+                    margin: [0, 0, 30, 0] 
+                  },
 
-                // Columna central título ARCA y comprobante valido - CAE y CAEVTO
-                {
-                  stack: [
-                    { text: 'ARCA', style:"arca", alignment: 'left' },
-                    { text: 'Comprobante Autorizado', fontSize: 10, italic:true, bold:true, margin: [8, 0, 0, 15], alignment: 'left' },
-                    {
-                      text: [
-                        { text: 'CAE: ', bold: true },
-                        { text: datosFactura.cae }
-                      ],
-                      style: 'simple'
-                    },
-                    {
-                      text: [
-                        { text: 'Vencimiento CAE: ', bold: true },
-                        { text: datosFactura.caeVto }
-                      ],
-                      style: 'simple'
-                    },
-                  ],
-                  width: 'auto' 
-                },
-
-                // Columna derecha descripcion del IVA
-                (datosFactura.nroTipoFactura != 11) ? [ //Ocultamos para facturas C
+                  // Columna central título ARCA y comprobante valido - CAE y CAEVTO
                   {
                     stack: [
-                      (datosFactura.nroTipoFactura == 6) ? [
-                        { text: 'IVA 21% Incluido', fontSize: 10, margin: [0, 12, 0, 5] },
-                      ] : [
-                        { text: 'IVA 21% Discriminado', fontSize: 10, margin: [0, 12, 0, 5] },
-                      ],
-                      
+                      { text: 'ARCA', style:"arca", alignment: 'left' },
+                      { text: 'Comprobante Autorizado', fontSize: 10, italic:true, bold:true, margin: [8, 0, 0, 15], alignment: 'left' },
                       {
                         text: [
-                          { text: 'Neto Total: ', bold: true },
-                          { text: '$' + datosFactura.neto?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                          { text: 'CAE: ', bold: true },
+                          { text: datosFactura.cae }
                         ],
                         style: 'simple'
                       },
                       {
                         text: [
-                          { text: 'IVA Total: ', bold: true },
-                          { text: '$' + datosFactura.iva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                          { text: 'Vencimiento CAE: ', bold: true },
+                          { text: datosFactura.caeVto }
                         ],
                         style: 'simple'
                       },
-                      {
-                        text: [
-                          { text: 'Moneda: ', bold: true },
-                          { text: 'PES' }
-                        ],
-                        style: 'simple'
-                      }
                     ],
-                    alignment: 'right',
-                    width: '*'
-                  }
-                ] : [],
+                    width: 'auto' 
+                  },
+
+                  // Columna derecha descripcion del IVA
+                  (datosFactura.nroTipoFactura != 11) ? [ //Ocultamos para facturas C
+                    {
+                      stack: [
+                        (datosFactura.nroTipoFactura == 6) ? [
+                          { text: 'IVA 21% Incluido', fontSize: 10, margin: [0, 12, 0, 5] },
+                        ] : [
+                          { text: 'IVA 21% Discriminado', fontSize: 10, margin: [0, 12, 0, 5] },
+                        ],
+                        
+                        {
+                          text: [
+                            { text: 'Neto Total: ', bold: true },
+                            { text: '$' + datosFactura.neto?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                          ],
+                          style: 'simple'
+                        },
+                        {
+                          text: [
+                            { text: 'IVA Total: ', bold: true },
+                            { text: '$' + datosFactura.iva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                          ],
+                          style: 'simple'
+                        },
+                        {
+                          text: [
+                            { text: 'Moneda: ', bold: true },
+                            { text: 'PES' }
+                          ],
+                          style: 'simple'
+                        }
+                      ],
+                      alignment: 'right',
+                      width: '*'
+                    }
+                  ] : [],
 
 
-              ] : [],
-             
-              
-            ],
-            margin: [0, 15, 0, 0] 
-          }
-
+              ],
+              margin: [0, 15, 0, 0] 
+            }
+          ] : [],
           
         ],
         styles: {

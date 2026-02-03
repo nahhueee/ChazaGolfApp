@@ -1,0 +1,61 @@
+<div class="contenido">
+    <p-floatlabel variant="on" class="busqueda">
+        <p-autocomplete
+            [formControl]="cliente"
+            [suggestions]="clientesFiltrado"
+            placeholder="Buscar cliente por Nombre, DNI o Razón Social"
+            emptyMessage="No se encontraron resultados"
+            (completeMethod)="FiltrarClientes($event)"
+            optionLabel="nombre"
+        >
+            <!-- Template para las sugerencias -->
+            <ng-template let-cliente pTemplate="item">
+                {{ cliente.nombre }} - {{ cliente.documento }} - {{ cliente.razonSocial }}
+            </ng-template>
+
+        </p-autocomplete>
+        <label>Filtrar Cliente</label>
+    </p-floatlabel>
+
+    <div class="tabla">
+        <p-table 
+        [value]="cuentas"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Cod.Cliente</th>
+                    <th>Cliente</th>
+                    <th>Cant. Ventas Deuda</th>
+                    <th>Ultima Deuda</th>
+                    <th>Total Deuda</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-cuenta>
+                <tr>
+                    <td>{{ cuenta.idCliente }}</td>
+                    <td>{{ cuenta.cliente }}</td>
+                    <td>{{ cuenta.cantVentas }}</td>
+                    <td>{{ cuenta.ultimaDeuda | date:'dd-MM-yyyy' }}</td>
+                    <td>${{ cuenta.totalDeuda | decimalFormat }}</td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-list" (onClick)="VerCuenta(cuenta.idCliente, cuenta.cliente, cuenta.totalDeuda)" pTooltip="Gestionar Cuenta" tooltipPosition="bottom"/>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+

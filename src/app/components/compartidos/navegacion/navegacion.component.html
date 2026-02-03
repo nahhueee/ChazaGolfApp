@@ -16,6 +16,8 @@
 
             <button pButton label="Clientes" [ngClass]="{ 'activo': activo === 'clientes' }" icon="pi pi-users" class="p-button-text" (click)="activo = 'clientes'; menuClientes.toggle($event)"></button>
             <p-menu #menuClientes [model]="itemsCliente" [popup]="true" />
+
+            <button pButton label="Cuentas Corriente" [ngClass]="{ 'activo': activo === 'cuentas' }" icon="pi pi-wallet" class="p-button-text" (click)="activo = 'cuentas'; Navegar('cuentas')" ></button>
         </div>
         
         <div class="opciones">

@@ -38,6 +38,9 @@ import { TallesProducto } from "./Producto";
     nroRelacionado?:number;
     tipoRelacionado?:string;
     estado?:string;
+    impaga:number = 0;
+    entregado:number = 0;
+    deuda:number = 0;
   }
 
   export class ProductosFactura{
@@ -123,6 +126,7 @@ import { TallesProducto } from "./Producto";
   }
 
   export class PagosFactura{
+    id:number = 0;
     idMetodo? : number;
     metodo?: string;
     monto?: number;

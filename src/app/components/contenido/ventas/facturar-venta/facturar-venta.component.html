@@ -1,43 +1,82 @@
 <div class="contenedor">
-    <div class="horizontal">
-        <div class="recuadro">
-            <p class="especial"><strong>{{datosFacturar.tipoFacturaDesc?.replace('FACTURA ', '')}}</strong></p>
-            <p-divider />
-            <span>Tipo de Comprobante</span>
+    <div class="izq">
+        <div class="horizontal">
+            <div class="recuadro">
+                <p class="especial"><strong>{{datosFacturar.tipoFacturaDesc?.replace('FACTURA ', '')}}</strong></p>
+                <p-divider />
+                <span>Tipo de Comprobante</span>
+            </div>
+            <div class="recuadro">
+                <p class="especial"><strong>${{datosFacturar.total! | decimalFormat}}</strong></p>
+                <p-divider />
+                <span>Monto a Facturar</span>
+            </div>
         </div>
-        <div class="recuadro">
-            <p class="especial"><strong>${{datosFacturar.total! | decimalFormat}}</strong></p>
-            <p-divider />
-            <span>Monto a Facturar</span>
-        </div>
-    </div>
 
 
-    <div class="factura-datos">
-    <div class="dato">
-        <span class="label">Cliente:</span>
-        <span class="valor">{{ datosFacturar.cliente }}</span>
-    </div>
-    <div class="dato">
-        <span class="label">Documento:</span>
-        <span class="valor">{{ datosFacturar.docNro }}</span>
-    </div>
-    <div class="dato">
-        <span class="label">Condición IVA:</span>
-        <span class="valor">{{ datosFacturar.condicion }}</span>
-    </div>
-    <div class="dato">
-        <span class="label">Facturante:</span>
-        <span class="valor">{{ datosFacturar.empresa }}</span>
-    </div>
-    </div>
-
-    <div class="alerta alerta-warn">
-        <span class="alerta-icon">⚠️</span>
-        <div class="alerta-texto">
-            Vas a realizar una factura frente a la entidad <b>ARCA</b>.  
-            Revisá que todos los datos sean correctos.
+        <div class="factura-datos">
+            <div class="dato">
+                <span class="label">Cliente:</span>
+                <span class="valor">{{ datosFacturar.cliente }}</span>
+            </div>
+            <div class="dato">
+                <span class="label">Documento:</span>
+                <span class="valor">{{ datosFacturar.docNro }}</span>
+            </div>
+            <div class="dato">
+                <span class="label">Condición IVA:</span>
+                <span class="valor">{{ datosFacturar.condicion }}</span>
+            </div>
+            @if(datosFacturar.tipoFactura != 99){
+                <div class="dato">
+                    <span class="label">Facturante:</span>
+                    <span class="valor">{{ datosFacturar.empresa }}</span>
+                </div>
+            }
         </div>
+
+        @if(datosFacturar.tipoFactura != 99){
+            <div class="alerta alerta-warn">
+                <span class="alerta-icon">⚠️</span>
+                <div class="alerta-texto">
+                    Vas a realizar una factura frente a la entidad <b>ARCA</b>.  
+                    Revisá que todos los datos sean correctos.
+                </div>
+            </div>
+        }
+        
+    </div>
+    <div class="der">
+        <p>Resumen de pagos</p>
+        <p-table
+            [value]="datosFacturar.pagos">
+            <ng-template pTemplate="header">
+                <tr>
+                <th>Método</th>
+                <th class="text-right">Monto</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-pago>
+                <tr>
+                <td>{{ pago.metodo }}</td>
+                <td class="text-right">
+                    {{ pago.monto | decimalFormat }}
+                </td>
+                </tr>
+            </ng-template>
+        </p-table>
+
+        @if(!pagoCompleto){
+            <div class="alerta alerta-info">
+                <span class="alerta-icon">ℹ️</span>
+                <div class="alerta-texto">
+                    El saldo restante de
+                    <strong>{{ saldoPendiente | decimalFormat }}</strong>
+                    se registrará en la cuenta corriente del cliente.
+                </div>
+            </div>
+        }
     </div>
 </div>
 

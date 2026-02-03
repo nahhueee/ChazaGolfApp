@@ -1,3 +1,5 @@
+import { PagosFactura } from "./Factura";
+
 export class ObjFacturar {
     total?:number;
     neto?:number;
@@ -12,4 +14,5 @@ export class ObjFacturar {
     cliente?:string;
     empresa?:string;
     idEmpresa?:number;
+    pagos:PagosFactura[] = [];
 }

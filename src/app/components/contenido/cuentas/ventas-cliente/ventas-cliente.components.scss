@@ -1,0 +1,85 @@
+.contenido{
+    background-color: var(--p-datatable-header-cell-background);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.deuda{
+    color: var(--text-warn);
+}
+
+.info{
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    margin-bottom: 25px;
+    margin-left: 15px;
+
+    .btns{
+        display: flex;
+        gap: 15px;
+    }
+}
+
+.filtros{
+    display: flex;
+    gap: 30px;
+    margin-top: 5px;
+    margin-bottom: 30px;
+    margin-left: 15px;
+    width: 70%;
+    align-items: center;
+    flex-wrap: wrap;
+
+    p-floatlabel{
+        margin-bottom: 0px;
+        flex: 1;
+    }
+
+    .seleccionable{
+        display: flex;
+        gap: 20px;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+       
+        .item-seleccionable{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+    }
+
+    .izq{
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex: 1;
+    }
+
+    .der{
+        display: flex;
+        gap: 10px;
+    }
+}
+
+.acciones{
+    display: flex;
+    gap: 5px;
+}
+
+.botones{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 15px;
+    z-index: 1;
+    position: fixed;
+    bottom: 0;
+    padding: 10px 0px;
+    background: var(--surface-ground) !important;
+    box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--surface-border);
+}

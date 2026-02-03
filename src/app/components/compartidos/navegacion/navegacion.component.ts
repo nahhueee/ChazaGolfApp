@@ -78,6 +78,8 @@ export class NavegacionComponent {
       this.activo = 'productos';
     } else if (url.startsWith('/clientes')) {
       this.activo = 'clientes';
+    } else if (url.startsWith('/cuentas')) {
+      this.activo = 'cuentas';
     } else {
       this.activo = '';
     }

@@ -497,6 +497,13 @@ p-divider {
     border: 1px solid var(--surface-border);
   }
 }
+
+.noPagos{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
 /*#endregion */
 
 /*#region CLIENTE MODAL*/
