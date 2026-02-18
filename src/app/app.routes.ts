@@ -11,6 +11,7 @@ import { PresupuestoProductosComponent } from './components/contenido/productos/
 import { ServiciosComponent } from './components/contenido/servicios/listado-servicios.component';
 import { ListadoCuentasComponent } from './components/contenido/cuentas/listado-cuentas/listado-cuentas.component';
 import { VentasClienteComponent } from './components/contenido/cuentas/ventas-cliente/ventas-cliente.components';
+import { EstadisticaClientes } from './components/contenido/clientes/estadistica-clientes/estadistica-clientes.component';
 
 export const routes: Routes = [
     {
@@ -37,6 +38,10 @@ export const routes: Routes = [
     {
         path: 'clientes',
         component:ListadoClientesComponent
+    },
+    {
+        path: 'clientes/estadisticas/:idCliente/:cliente',
+        component:EstadisticaClientes
     },
     {
         path: 'clientes/add',

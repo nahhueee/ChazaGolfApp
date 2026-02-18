@@ -1,0 +1,171 @@
+<div class="contenido">
+    <h3 class="titulo">{{cliente}}</h3>
+    <form [formGroup]="filtros" class="filtros"> 
+        <div class="izq">
+            <!-- <p-floatlabel variant="on">
+                <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
+                <label>Proceso</label>
+            </p-floatlabel> -->
+
+            <p-floatlabel variant="on">
+                <p-datepicker formControlName="fechas" selectionMode="range"/>
+                <label>Rango de Fecha</label>
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Filtrar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+        
+    </form> 
+
+    <div class="dashboard">
+        <div class="dashboard-cabecera">
+            <div class="card">
+                <div class="title">Ventas Totales</div>
+                <div class="value">{{cantidad_total_ventas}}</div>
+            </div>
+
+            <div class="card">
+                <div class="title">Pagas</div>
+                <div class="value success">{{cantidad_pagas}}</div>
+            </div>
+
+            <div class="card">
+                <div class="title">Impagas</div>
+                <div class="value warn">{{cantidad_impagas}}</div>
+            </div>
+
+            <div class="card">
+                <div class="title">Total Facturado</div>
+                <div class="value">${{total_facturado | decimalFormat}}</div>
+            </div>
+
+            <div class="card">
+                <div class="title">Total Cobrado</div>
+                <div class="value success">${{total_cobrado | decimalFormat}}</div>
+            </div>
+
+            <div class="card">
+                <div class="title">Deuda</div>
+                <div class="value danger">${{deuda_total | decimalFormat}}</div>
+            </div>
+        </div>
+
+        <div class="graficos">
+            <!-- Grafico de procesos -->
+            <div class="gProcesos" *ngIf="grafProcesosReady">
+                <apx-chart #chartProcesos
+                    [series]="chartProcesosOptions?.series!"
+                    [chart]="chartProcesosOptions?.chart!"
+                    [labels]="chartProcesosOptions?.labels!"
+                    [title]="chartProcesosOptions?.title!"
+                    [theme]="chartProcesosOptions?.theme!"
+                    [colors]="chartProcesosOptions?.colors!"
+                    [stroke]="chartProcesosOptions?.stroke!"
+                    [plotOptions]="chartProcesosOptions?.plotOptions!"
+                    [dataLabels]="chartProcesosOptions?.dataLabels!"
+                    [tooltip]="chartProcesosOptions?.tooltip!"
+                ></apx-chart>
+            </div>
+
+            <!-- Grafico de tipo comprobante -->
+            <div class="gComprobantes" *ngIf="grafComprobantesReady">
+                <apx-chart #chartComprobantes
+                    [series]="chartComprobantesOptions?.series!"
+                    [chart]="chartComprobantesOptions?.chart!"
+                    [labels]="chartComprobantesOptions?.labels!"
+                    [title]="chartComprobantesOptions?.title!"
+                    [theme]="chartComprobantesOptions?.theme!"
+                    [colors]="chartComprobantesOptions?.colors!"
+                    [legend]="chartComprobantesOptions?.legend!"
+                    [stroke]="chartComprobantesOptions?.stroke!"
+                    [plotOptions]="chartComprobantesOptions?.plotOptions!"
+                    [dataLabels]="chartComprobantesOptions?.dataLabels!"
+                ></apx-chart>
+            </div>
+            <!-- Grafico de tipos de pago -->
+            <div class="gTiposPago" *ngIf="grafTipoPagoReady">
+                <apx-chart #chartTiposPago 
+                    [series]="chartTiposPagoOptions?.series!"
+                    [chart]="chartTiposPagoOptions?.chart!"
+                    [xaxis]="chartTiposPagoOptions?.xaxis!"
+                    [yaxis]="chartTiposPagoOptions?.yaxis!"
+                    [labels]="chartTiposPagoOptions?.labels!"
+                    [stroke]="chartTiposPagoOptions?.stroke!"
+                    [dataLabels]="chartTiposPagoOptions?.dataLabels!"
+                    [grid]="chartTiposPagoOptions?.grid!"
+                    [title]="chartTiposPagoOptions?.title!"
+                    [theme]="chartTiposPagoOptions?.theme!"
+                    [colors]="chartTiposPagoOptions?.colors!"
+                    [tooltip]="chartTiposPagoOptions?.tooltip!"
+                ></apx-chart>
+            </div>
+        </div>
+
+        
+        
+
+    </div>
+
+    <div class="tabla">
+        <p-table 
+        [value]="ventas"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Proceso</th>
+                    <th>Nro</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Total</th>
+                    <th>Entregado</th>
+                    <th>Deuda</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-venta>
+                <tr>
+                    <td>{{ venta.proceso }}</td>
+                    <td>{{ venta.nroProceso }}</td>
+                    <td>{{ venta.fecha | date:'dd-MM-yyyy' }}</td>
+                    <td>{{ venta.hora }}</td>
+                    <td>${{ venta.total | decimalFormat }}</td>
+                    <td>${{ venta.entregado | decimalFormat}}</td>
+                    <td>${{ venta.deuda | decimalFormat}}</td>
+                    <td>
+                        @if(venta.deuda > 0){
+                            <p-tag value="En Deuda" severity="danger" />
+                        }@else {
+                            <p-tag value="Pagada" severity="success" />
+                        }
+                    </td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+
+<div class="botones">
+    <p-button label="Volver" severity="secondary" (click)="Cerrar()" icon="pi pi-angle-left"/>
+</div>
+
+
+<app-vista-previa [(visible)]="detalleVisible" [venta]="ventaSeleccionada"></app-vista-previa>

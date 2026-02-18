@@ -89,7 +89,16 @@ export class EntregaDineroComponent {
     nuevoPago.idMetodo = seleccionado.id;
     nuevoPago.metodo = seleccionado.descripcion;
     nuevoPago.monto = this.venta.deuda;
+
+    const pago:pagoDTO = {
+        idMetodo: seleccionado.id!,
+        monto: this.venta.deuda
+      };
+      this.pagosNuevos.push(pago);
+
     this.venta.pagos.push(nuevoPago);
+    this.formPagos.reset();
+    this.formPagos.get('metodo')?.setValue(this.metodosPago[0])
   }
 
   get montoRestante(): number {

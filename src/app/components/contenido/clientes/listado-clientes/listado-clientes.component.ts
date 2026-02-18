@@ -7,6 +7,7 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Cliente } from '../../../../models/Cliente';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ClientesService } from '../../../../services/clientes.service';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-listado-clientes',
   standalone: true,
@@ -30,7 +31,8 @@ export class ListadoClientesComponent {
   mostrarmodalAddMod: boolean = false;
 
   constructor(
-    private clientesService:ClientesService
+    private clientesService:ClientesService,
+    private router:Router
   ){}
 
   Buscar(event?: TableLazyLoadEvent, busqueda?: string, recargaConFiltro: boolean = false) {
@@ -64,5 +66,9 @@ export class ListadoClientesComponent {
       this.Buscar(undefined, undefined, true);
 
     this.mostrarmodalAddMod = false;
+  }
+
+  VerEstadistica(id:number, cliente:string){
+    this.router.navigate(['/clientes/estadisticas', id, cliente]);
   }
 }
