@@ -2,7 +2,7 @@ export class Producto {
     id : number = 0;
     codigo? : string;
     nombre? : string;
-    empresa?: string;
+    empresa?: number;
     cliente?: number;
     proceso?: number;
     tipo?: TipoProducto;
@@ -175,10 +175,12 @@ export class Color {
 export class TallesProducto {
     id:number = 0;
     ubicacion?:number;
+    idTalle:number = 0;
     talle?:string;
     idLineaTalle?:number;
     cantidad?:number;
     precio?:number;
+    codigoBarra?: string;
     cantAgregar?:number = 0; //Propiedad para generar una venta
     disponible?:number = 0; //Propiedad para nota de empaque
     vendido?:number = 0; //Propiedad para nota de empaque
@@ -188,9 +190,11 @@ export class TallesProducto {
           this.id = data.id;
           this.ubicacion = data.ubicacion;
           this.talle = data.talle;
+          this.idTalle = data.idTalle;
           this.cantidad = data.cantidad;
           this.precio = data.precio;
           this.idLineaTalle = data.idLineaTalle;
+          this.codigoBarra = data.codigoBarra;
         }
     }
 }

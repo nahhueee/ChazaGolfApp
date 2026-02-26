@@ -59,27 +59,48 @@ export class FacturaService {
     }
   
     private async ArmarComprobante(venta: Venta) {
-      console.log(venta)
       const procesarItems = (items: any[]) => {
+        const esFacturaA = venta.idTipoComprobante === 1;
+        const descuentoGeneral = Number(venta.descuento) || 0;
+
         return items?.reduce((acc, item) => {
+          const unitario = Number(item.unitario) || 0;
+          const cantidad = Number(item.cantidad) || 0;
 
-          const totalItem = item.total || 0;
+          // Total bruto
+          let totalBruto = unitario * cantidad;
 
-          // Si no tiene tope, se asume 100%
+          // Quitar IVA si corresponde
+          if (esFacturaA) {
+            totalBruto = this.QuitarIva(totalBruto, 21);
+          }
+
+          // Calcular descuento respetando tope
           const descuentoMax = item.topeDescuento ?? 100;
-
-          // Se respeta el menor
-          const descuentoAplicado = Math.min(venta.descuento, descuentoMax);
+          const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
           item.descuentoAplicado = descuentoAplicado;
 
-          const descuentoItem = (totalItem * descuentoAplicado) / 100;
+          const importeDescuento = totalBruto * (descuentoAplicado / 100);
 
-          acc.total += totalItem;
-          acc.descuento += descuentoItem;
+          // Total final del item
+          const totalFinalItem = totalBruto - importeDescuento;
+
+          // Acumuladores
+          acc.subtotal += totalBruto;
+          acc.descuento += importeDescuento;
+          acc.total += totalFinalItem;
 
           return acc;
 
-        }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
+        }, {
+          subtotal: 0,
+          descuento: 0,
+          total: 0
+        }) || {
+          subtotal: 0,
+          descuento: 0,
+          total: 0
+        };
       };
 
       const productos = procesarItems(venta.productos);
@@ -157,35 +178,44 @@ export class FacturaService {
           break;
       }
 
-      //Definimos totales finales 
-      comprobante.totalProductos = productos.total;
-      comprobante.totalServicios = servicios.total;
-      comprobante.totalItem = productos.total + servicios.total;
-      comprobante.descuento = productos.descuento + servicios.descuento;
+      //Importes base
+      const subtotalBruto = productos.subtotal + servicios.subtotal;
+      const totalDescuento = productos.descuento + servicios.descuento;
 
-      // Base inicial
-      comprobante.subTotal = comprobante.totalItem! - comprobante.descuento!;
-      comprobante.totalIva = 0;
-      comprobante.totalFinal = comprobante.subTotal;
-      
-      // FACTURA A
-      if (datosFactura.nroTipoFactura === 1) {
-        comprobante.totalIva = comprobante.subTotal * 0.21;
-        comprobante.totalFinal = comprobante.subTotal + comprobante.totalIva;
+      //Neto sin IVA
+      const subtotalNeto = subtotalBruto - totalDescuento;
+
+
+      let totalIva = 0;
+      let totalGeneral = 0;
+
+      const forzarLogicaB =
+        venta.cliente?.idCategoria === 1 &&
+        venta.cliente?.idCondicionIva === 1;
+
+      const esFacturaB = venta.idTipoComprobante === 6 || forzarLogicaB;
+
+      // 3Calcular IVA correctamente
+      if (!esFacturaB) {
+        // FACTURA A → precios sin IVA
+        totalIva = subtotalNeto * 0.21;
+        totalGeneral = subtotalNeto + totalIva;
+
+      } else {
+        // FACTURA B → precios con IVA incluido
+        totalIva = subtotalNeto * 21 / 121;
+        totalGeneral = subtotalNeto; // ya incluye IVA
       }
 
-      // FACTURA B
-      if (datosFactura.nroTipoFactura === 6) {
-        const totalConIva = comprobante.subTotal;
-
-        comprobante.totalIva  = totalConIva * 21 / 121;
-        comprobante.subTotal = totalConIva - comprobante.totalIva;
-        comprobante.totalFinal = totalConIva;
-      }
-
+      //Definimos totales
+      comprobante.subTotal = subtotalBruto;
+      comprobante.descuento = totalDescuento;
+      comprobante.totalIva = totalIva;
+      comprobante.totalFinal = totalGeneral;
       comprobante.redondeo = venta.redondeo;
-      comprobante.totalAPagar = comprobante.totalFinal + comprobante.redondeo
-  
+      comprobante.totalAPagar = totalGeneral + comprobante.redondeo;
+      
+      
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
       comprobante.cantServicios = venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
   
@@ -218,9 +248,18 @@ export class FacturaService {
         return cantNumero % 1 === 0 ? cantNumero.toFixed(0) : cantNumero.toFixed(1);
       };
   
-      const FormatearPrecio = (precio) => {
-        const pNumero = parseFloat(precio);
-        return pNumero.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const FormatearPrecioTotal = (unitario, cantidad, descuento) => {
+        const nCantidad = Number(cantidad) || 0;
+        const nDescuento = parseFloat(descuento) || 0;
+
+        const totalBruto = unitario * nCantidad;
+
+        const totalConDescuento = totalBruto * (1 - (nDescuento / 100));
+
+        return totalConDescuento.toLocaleString('es-AR', {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1
+        });
       };
   
       const CortarNombreProducto = (nombreProd) => {
@@ -241,12 +280,18 @@ export class FacturaService {
       ];
 
       venta.productos.forEach(item => {
+        let unitario = Number(item.unitario) || 0;
+
+        if (venta.idTipoComprobante == 1) {
+          unitario = this.QuitarIva(unitario, 21);
+        }
+
         comprobante.filasProducto?.push([
           CortarNombreProducto(item.nomProducto),
           FormatearCantidad(item.cantidad),
-          { text: FormatearPrecio(item.unitario), alignment: 'right' },
+          { text: unitario.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecio(item.total), alignment: 'right' },
+          { text: FormatearPrecioTotal(unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   
@@ -262,17 +307,28 @@ export class FacturaService {
       ];
  
       venta.servicios.forEach(item => {
+        let unitario = Number(item.unitario) || 0;
+
+        if (venta.idTipoComprobante == 1) {
+          unitario = this.QuitarIva(unitario, 21);
+        }
+
         comprobante.filasServicio?.push([
           CortarNombreProducto(item.nomServicio),
           FormatearCantidad(item.cantidad),
-          { text: FormatearPrecio(item.unitario), alignment: 'right' },
+          { text: unitario.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecio(item.total), alignment: 'right' },
+          { text: FormatearPrecioTotal(unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   
       return comprobante;
     }
+
+    QuitarIva = (precio: number, tasa: number = 21) => {
+      const factor = 1 + (tasa / 100);
+      return precio / factor;
+    };
       
     private ArmarFacturaA4(comprobante:ObjComprobante, datosFactura:ObjTicketFactura){
       return {
@@ -441,7 +497,7 @@ export class FacturaService {
             style: 'tableStyle' // Aplicar el estilo a la tabla
           },
           { text: `Cantidad: ${comprobante.cantProductos}`, style: 'totalProducto', alignment: 'right' },
-          { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
+          // { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
 
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios
@@ -472,7 +528,7 @@ export class FacturaService {
             },
 
             { text: `Cantidad: ${comprobante.cantServicios}`, style: 'totalProducto', alignment: 'right' },
-            { text: `Total: $${comprobante.totalServicios?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
+            // { text: `Total: $${comprobante.totalServicios?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
 
           ] : [],
           
@@ -493,7 +549,7 @@ export class FacturaService {
                     stack: [
                       { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
-                      (datosFactura.nroTipoFactura != 11 && comprobante.proceso != "COTIZACION") ? [
+                      (datosFactura.nroTipoFactura === 1) ? [
                          { text: `IVA: $${comprobante.totalIva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
                       ] : [],                     
 

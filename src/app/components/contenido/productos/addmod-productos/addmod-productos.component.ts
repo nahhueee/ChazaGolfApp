@@ -11,22 +11,27 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { ActivatedRoute, Router } from '@angular/router';
 import { Tooltip } from "primeng/tooltip";
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { forkJoin, Observable } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { Dialog } from 'primeng/dialog';
 import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-clientes.component';
+import { ListboxModule } from 'primeng/listbox';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { Talle } from '../../../../models/Talle';
 
 @Component({
   selector: 'app-addmod-productos',
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
-    Tooltip,
+    //Tooltip,
     SelectButtonModule,
     ConfirmPopupModule,
+    ConfirmDialogModule,
     Dialog,
-    AddModClientesComponent
+    AddModClientesComponent,
+    ListboxModule    
 ],
   providers: [ConfirmationService],
   templateUrl: './addmod-productos.component.html',
@@ -48,7 +53,7 @@ export class AddmodProductosComponent {
   formulario: FormGroup;
   modalAddClienteVisible: boolean = false;
 
-  empresas:string[] = ['SUCEDE', 'SERVICIOS'];
+  empresas:any[] = [{id:70, descripcion:'SUCEDE'}];
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
   temporadas: Temporada[] = [];
@@ -57,10 +62,15 @@ export class AddmodProductosComponent {
   generos: Genero[] = [];
   materiales: Material[] = [];
   coloresMaterial: Color[] = [];
-  coloresSeleccionadosDescriptions: string = '';
+  previousValue: any[] = [];
+
+  //coloresSeleccionadosDescriptions: string = '';
   coloresExistentes: number[] = [];
   lineasTalles: LineasTalle[] = [];
   tallesSeleccionables: TalleSeleccionable[] = [];
+  coloresSeleccionados: FormControl = new FormControl();
+
+  talles:Talle[]=[];
 
   constructor(
     private rutaActiva: ActivatedRoute,
@@ -74,7 +84,7 @@ export class AddmodProductosComponent {
     private confirmationService: ConfirmationService,
   ){
      this.formulario = new FormGroup({
-      empresa: new FormControl(''),
+      empresa: new FormControl(70),
       cliente: new FormControl(''),
       temporada: new FormControl(''),
       producto: new FormControl(''),
@@ -82,7 +92,7 @@ export class AddmodProductosComponent {
       genero: new FormControl(''),
       material: new FormControl(''),
       lineaTalle: new FormControl(''),
-      codigo: new FormControl('', [Validators.required, Validators.maxLength(30)]),
+      codigo: new FormControl('', [Validators.required, Validators.maxLength(4)]),
       nombre: new FormControl('', [Validators.required, Validators.maxLength(100)]),
       moldeleria: new FormControl(''),
       topeDescuento: new FormControl(''),
@@ -100,7 +110,7 @@ export class AddmodProductosComponent {
           const subtipoAbrev:string = this.subtipoControl ? this.subtipoControl.abreviatura?.toString() ?? "" : "";
 
           // Actualiza efectivo sin disparar su valueChanges
-          this.formulario.get('codigo')?.setValue(clienteId + "-" + this.clienteControl.id?.toString(), { emitEvent: false });
+          //this.formulario.get('codigo')?.setValue(clienteId + "-" + this.clienteControl.id?.toString(), { emitEvent: false });
           this.formulario.get('nombre')?.setValue(cliente + "-" + tipoAbrev + "-" + subtipoAbrev , { emitEvent: false });
         }
         
@@ -117,7 +127,7 @@ export class AddmodProductosComponent {
           const subtipoAbrev:string = this.subtipoControl ? this.subtipoControl.abreviatura?.toString() ?? "" : "";
 
           // Actualiza efectivo sin disparar su valueChanges
-          this.formulario.get('codigo')?.setValue(clienteId + "-" + value.id, { emitEvent: false });
+          //this.formulario.get('codigo')?.setValue(clienteId + "-" + value.id, { emitEvent: false });
           this.formulario.get('nombre')?.setValue(cliente + "-" + tipoAbrev + "-" + subtipoAbrev , { emitEvent: false });
         }       
       }, 10);
@@ -158,6 +168,8 @@ export class AddmodProductosComponent {
     this.miscService.ObtenerMateriales()
     .subscribe(response => {
       this.materiales = response;
+      this.formulario.get('material')?.setValue(this.materiales[0].id);
+      this.MaterialChange();
     });
 
     this.miscService.ObtenerTiposProducto()
@@ -178,6 +190,16 @@ export class AddmodProductosComponent {
     this.clientesService.SelectorClientes()
     .subscribe(response => {
       this.clientes = response;
+    });
+
+    this.miscService.ObtenerColores()
+    .subscribe(response => {
+      this.coloresMaterial = response;
+    });
+
+    this.miscService.ObtenerTalles()
+    .subscribe(response => {
+      this.talles = response;
     });
   }
 
@@ -234,8 +256,11 @@ export class AddmodProductosComponent {
       this.formulario.get('material')?.setValue(this.producto.material?.id);
       this.MaterialChange();
       this.formulario.get('moldeleria')?.setValue(this.producto.moldeleria);
-      this.formulario.get('topeDescuento')?.setValue(this.producto.topeDescuento);
-      this.formulario.get('cliente')?.setValue(this.clientes.find(c=> c.id == this.producto.cliente) ?? new Cliente());
+      this.formulario.get('topeDescuento')?.setValue(this.producto.topeDescuento?.toString().replace('.', ','));
+      
+      const clienteSeleccionado = this.clientes.find(c=> c.id == this.producto.cliente);
+      if(clienteSeleccionado)
+        this.formulario.get('cliente')?.setValue(clienteSeleccionado);
       
 
       const idLineaTalle = this.producto.talles && this.producto.talles.length > 0 ? this.producto.talles[0].idLineaTalle : null
@@ -252,15 +277,22 @@ export class AddmodProductosComponent {
       this.coloresExistentes = this.producto.relacionados!.map(r => r.color?.id!);
       this.coloresExistentes.push(this.producto.color?.id!); //Agregamos tambien el color del producto actual
 
-      this.coloresMaterial.forEach(c => {
-        c.seleccionado = this.coloresExistentes.includes(c.id!);
-      });
+      const seleccionados = this.coloresMaterial.filter(color =>
+        this.coloresExistentes.includes(color.id!)
+      );
+
+      this.coloresSeleccionados.setValue(seleccionados);
+      this.previousValue = [...(this.coloresSeleccionados.value || [])];
+
+      // this.coloresMaterial.forEach(c => {
+      //   c.seleccionado = this.coloresExistentes.includes(c.id!);
+      // });
 
       //Armamos la descripcion de seleccionados
-      this.coloresSeleccionadosDescriptions = this.coloresMaterial
-      .filter(c => c.seleccionado)
-      .map(c => c.descripcion)
-      .join(', ');
+      // this.coloresSeleccionadosDescriptions = this.coloresMaterial
+      // .filter(c => c.seleccionado)
+      // .map(c => c.descripcion)
+      // .join(', ');
       
       this.producto.talles?.forEach(pTalle => {
         const talleSeleccionado = this.tallesSeleccionables.find(t=> t.talle == pTalle.talle);
@@ -302,8 +334,8 @@ export class AddmodProductosComponent {
 
   //#region EVENTOS DE SELECCION
   MaterialChange(){
-    const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
-    this.coloresMaterial = materialSeleccionado?.colores!;
+    //const materialSeleccionado = this.materiales.find(m=> m.id == this.materialControl);
+    //this.coloresMaterial = materialSeleccionado?.colores!;
   }
 
   LineaTalleChange(){
@@ -325,51 +357,107 @@ export class AddmodProductosComponent {
     });
   }
 
-  SeleccionarColor(event: Event, idColor: number) {
-    const color = this.coloresMaterial.find(c => c.id === idColor) ?? new Color();
+  SeleccionarColor(event: any) {
+    const current = event.value || [];
+    const removed = this.previousValue.filter(
+      prev => !current.some(c => c.id === prev.id)
+    );
+
+    // Si no se removió nada → solo actualizar previous
+    if (removed.length === 0) {
+      this.previousValue = [...current];
+      return;
+    }
+
+    const colorRemovido = removed[0];
+    //const color = this.coloresMaterial.find(c => c.id === ) ?? new Color();
 
     if(this.coloresExistentes.length > 0){
-      if(this.producto.color?.id == idColor){
-        this.Notificaciones.Warn("No puedes quitar el color del producto actual.")
+      if(this.producto.color?.id == colorRemovido.id){
+        this.Notificaciones.Warn("No puedes quitar el color del producto actual.");
+        this.coloresSeleccionados.setValue(this.previousValue);
         return;
       }
 
-      if(color.seleccionado){
+      const fuePersistido = this.coloresExistentes.includes(colorRemovido.id);
+      if(fuePersistido){
         this.confirmationService.confirm({
-          target: event.target as EventTarget, 
-          message: '¿Seguro que deseas desmarcar este color? \nSe eliminará el producto relacionado a dicho color',
-          icon: 'pi pi-exclamation-triangle',
-          acceptLabel: 'Sí',
-          rejectLabel: 'No',
-          rejectButtonProps: {
-              severity: 'secondary',
-              outlined: true
-          },
-          accept: () => {
-            const productoEliminar = this.producto.relacionados.find(p=> p.color!.id === idColor);
-            this.productosService.Eliminar(productoEliminar?.idProducto!)
-            .subscribe(response => {
-              if(response == 'OK'){
-                color.seleccionado = false;
-                this.Notificaciones.Success("Color quitado correctamente");
-              }else{
-                this.Notificaciones.Warn("Ocurrió un error al intentar quitar el color.")
-              }
-            });
-
-          }
-        });
-      }else{
-        color.seleccionado = true;
-      }
+            key: 'borrarColor',
+            message: '¿Seguro que deseas desmarcar este color? \nSe eliminará el producto relacionado a dicho color',
+            header: 'Confirmación',
+            closable: true,
+            closeOnEscape: true,
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: {
+                label: 'No',
+                severity: 'secondary',
+                outlined: true,
+            },
+            acceptButtonProps: {
+                label: 'Si',
+            },
+            accept: () => {
+              const productoEliminar = this.producto.relacionados.find(p=> p.color!.id === colorRemovido.id);
+              this.productosService.Eliminar(productoEliminar?.idProducto!)
+              .subscribe(response => {
+                if(response == 'OK'){
+                  this.previousValue = [...current];
+                  this.Notificaciones.Success("Color quitado correctamente");
+                  return;
+                }else{
+                  this.Notificaciones.Warn("Ocurrió un error al intentar quitar el color.");
+                  this.coloresSeleccionados.setValue(this.previousValue);
+                  return;
+                }
+              });
+            },
+            reject: () => {
+              this.coloresSeleccionados.setValue(this.previousValue);
+              return;
+            },
+          });
+        }
     }else{
-      color.seleccionado = !color?.seleccionado;
+      this.previousValue = [...current];
     }
 
-    this.coloresSeleccionadosDescriptions = this.coloresMaterial
-      .filter(c => c.seleccionado)
-      .map(c => c.descripcion)
-      .join(', ');
+
+      //if(colorRemovido.seleccionado){
+        // this.confirmationService.confirm({
+        //   target: event.target as EventTarget, 
+        //   message: '¿Seguro que deseas desmarcar este color? \nSe eliminará el producto relacionado a dicho color',
+        //   icon: 'pi pi-exclamation-triangle',
+        //   acceptLabel: 'Sí',
+        //   rejectLabel: 'No',
+        //   rejectButtonProps: {
+        //       severity: 'secondary',
+        //       outlined: true
+        //   },
+        //   accept: () => {
+        //     const productoEliminar = this.producto.relacionados.find(p=> p.color!.id === idColor);
+        //     this.productosService.Eliminar(productoEliminar?.idProducto!)
+        //     .subscribe(response => {
+        //       if(response == 'OK'){
+        //         color.seleccionado = false;
+        //         this.Notificaciones.Success("Color quitado correctamente");
+        //       }else{
+        //         this.Notificaciones.Warn("Ocurrió un error al intentar quitar el color.")
+        //       }
+        //     });
+
+        //   }
+        // });
+      // }else{
+      //   color.seleccionado = true;
+      // }
+    //}else{
+      //color.seleccionado = !color?.seleccionado;
+    
+
+    // this.coloresSeleccionadosDescriptions = this.coloresMaterial
+    //   .filter(c => c.seleccionado)
+    //   .map(c => c.descripcion)
+    //   .join(', ');
   }
 
   SeleccionarTalle(indice:number) {
@@ -397,14 +485,36 @@ export class AddmodProductosComponent {
       ubicacion: indice,
       talle: [item.talle],
       precio: [''],
+      cantidad: [''],
       idLineaTalle: [this.lineaTalleControl.id]
     });
   }
+
+  CopiarPrecioPrimerTalle() {
+    const formArray = this.tallesProductoControl;
+    if (!formArray.length) return;
+
+    const precioBase = formArray.at(0).get('precio')?.value;
+    if (!precioBase) return;
+
+    formArray.controls.forEach((group, index) => {
+      if (index !== 0) {
+        group.get('precio')?.setValue(precioBase);
+      }
+    });
+
+  }
   //#endregion
 
-  Guardar(){
+  async Guardar(){
     this.markFormTouched(this.formulario);
     if(this.formulario.invalid) return;
+
+    // const codigoExiste = await firstValueFrom(this.productosService.ValidarCodigo(this.formulario.get('codigo')?.value))
+    // if(codigoExiste){
+    //   this.Notificaciones.Warn("Ya existe un producto con este código.");
+
+    // }
 
     if(!this.producto){
       this.producto = new Producto();
@@ -414,30 +524,31 @@ export class AddmodProductosComponent {
       element.precio = this.Globales.EstandarizarDecimal(element.precio.toString());
     });
 
+    if(this.clienteControl) this.producto.cliente = this.clienteControl.id;
+    if(this.temporadaControl) this.producto.temporada = this.temporadaControl.id;
+    if(this.tipoControl) this.producto.tipo = this.tipoControl.id;
+    if(this.subtipoControl) this.producto.subtipo = this.subtipoControl.id;
+    if(this.generoControl) this.producto.genero = this.generoControl.id;
+    if(this.materialControl) this.producto.material = this.materialControl;
+
+    this.producto.codigo = this.formulario.get('codigo')?.value.padStart(4, '0');
     this.producto.empresa = this.formulario.get('empresa')?.value;
-    this.producto.cliente = this.clienteControl.id;
-    this.producto.temporada = this.temporadaControl.id;
-    this.producto.tipo = this.tipoControl.id;
-    this.producto.subtipo = this.subtipoControl.id;
-    this.producto.genero = this.generoControl.id;
-    this.producto.material = this.materialControl;
-    this.producto.codigo = this.formulario.get('codigo')?.value;
     this.producto.nombre = this.formulario.get('nombre')?.value;
     this.producto.moldeleria = this.formulario.get('moldeleria')?.value == '' ? 0 : this.formulario.get('moldeleria')?.value;
     this.producto.talles = this.tallesProductoControl.value;
     let topeDescuento = this.formulario.get('topeDescuento')?.value == "" ? 100 : this.Globales.EstandarizarDecimal(this.formulario.get('topeDescuento')?.value);
     this.producto.topeDescuento = topeDescuento;
-
-    
     let operaciones$: Observable<any>[] = [];
         
     //Agregando
     if(this.producto.id == 0){
-       //Obtenemos los relacionados
-      const coloresSeleccionados = this.coloresMaterial.filter(c => c.seleccionado);
-
-      operaciones$ = coloresSeleccionados.map(color => {
+      operaciones$ = this.coloresSeleccionados.value.map(color => {
         const productoAInsertar = { ...this.producto };
+
+        this.producto.talles!.forEach(elemento => {
+          const idTalle = this.talles.find(x => x.descripcion === elemento.talle)?.id;
+          elemento.codigoBarra = this.GenerarCodigo(this.producto.empresa!, this.producto.codigo!, idTalle!, color.id);
+        });
 
         productoAInsertar.color = color;
         productoAInsertar.proceso = 1;
@@ -446,17 +557,32 @@ export class AddmodProductosComponent {
     }
     //Modificando
     else{
-      const idsModificar = this.producto.relacionados!.map(r => r.idProducto);
-      idsModificar.push(this.producto.id);
+      if (this.producto.id && this.producto.color?.id) {
+        const productoPrincipal = this.prepararProductoModificar(
+          this.producto.id,
+          this.producto.color.id
+        );
 
-      idsModificar.forEach(idProd => {
-        let productoAModificar = { ...this.producto };
-        productoAModificar.id = idProd!;
+        //Modificamos el producto
+        operaciones$.push(
+          this.productosService.Modificar(productoPrincipal)
+        );
 
-        operaciones$.push(this.productosService.Modificar(productoAModificar))
-      });
+        //Modificamos los relacionados
+        this.producto.relacionados?.forEach(rel => {
+          if (!rel.idProducto || !rel.color?.id) return;
+
+          const productoRelacionado = this.prepararProductoModificar(
+            rel.idProducto,
+            rel.color.id
+          );
+
+          operaciones$.push(
+            this.productosService.Modificar(productoRelacionado)
+          );
+        });
+      }
     }
-   
 
     forkJoin(operaciones$).subscribe(respuestas => {
       const ok = respuestas.filter(r => r === 'OK').length;
@@ -483,6 +609,44 @@ export class AddmodProductosComponent {
       else
         this.CerrarModal(true);    
     });
+  }
+
+  private prepararProductoModificar(idProducto: number, colorId: number): Producto {
+
+    const producto: Producto = {
+      ...this.producto,
+      id: idProducto,
+      color: { id: colorId },
+      talles: this.producto.talles?.map(t => ({ ...t })) ?? []
+    };
+
+    const mapaTalles = new Map(
+      this.talles.map(t => [t.descripcion, t.id])
+    );
+
+    producto.talles!.forEach(elemento => {
+
+      const idTalle = mapaTalles.get(elemento.talle);
+      if (!idTalle) return;
+
+      elemento.codigoBarra = this.GenerarCodigo(
+        producto.empresa!,
+        producto.codigo!,
+        idTalle,
+        colorId
+      );
+    });
+
+    return producto;
+  }
+
+  GenerarCodigo(empresa:number, codigo:string, talle:number, color:number){
+    const emp = empresa.toString().padStart(2, '0');
+    const cod = codigo.toString().padStart(4, '0');
+    const tal = talle.toString().padStart(3, '0');
+    const col = color.toString().padStart(4, '0');
+
+    return `${emp}${cod}${tal}${col}`;
   }
 
   CerrarModal(actualizar:boolean) {

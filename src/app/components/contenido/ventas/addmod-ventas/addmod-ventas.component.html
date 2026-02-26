@@ -135,10 +135,14 @@
         <h3>Productos</h3>
 
         @if(ProcesoControl){
-            <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (keyup.enter)='AgregarProducto()'>
-                <div class="LineaProducto">
+            <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
+                <div class="izq">
+                    <div class="campos">
+                        <p-floatlabel variant="in">
+                            <input #inputCodigo pInputText formControlName="codigoBarras"/>
+                            <label>Codigo de Barras</label>
+                        </p-floatlabel>
 
-                    <div class="completeProductos">
                         <!-- Codigo - Nombre -->
                         <p-floatlabel variant="in">
                             <p-autocomplete
@@ -157,42 +161,42 @@
 
                             </p-autocomplete>
                             <label>Producto</label>
-                        </p-floatlabel>  
-                        <div class="acciones">
-                            <p-button label="Confirmar Producto" [raised]="true" icon="pi pi-check" (onClick)="AgregarProducto()"/>
-                        </div>
-                    </div>
-                    
-                    @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                        <p-floatlabel variant="in" class="selectorColores">
-                            <p-select 
-                                [options]="coloresDisponibles"
-                                optionLabel="color"
-                                [showClear]="true"
-                                formControlName="colorSeleccionado"
-                                (onChange)="SeleccionarVariante($event.value.idProducto)"
-                            >
-                                <!-- Template de cada opción -->
-                                <ng-template pTemplate="item" let-item>
-                                    <div class="opcion-color">
-                                        <div class="cuadro-color" [style.background]="item.hexa"></div>
-                                        <span>{{ item.color }}</span>
-                                    </div>
-                                </ng-template>
-
-                                <!-- Template para la opción seleccionada -->
-                                <ng-template pTemplate="selectedItem" let-item>
-                                    <div class="opcion-color">
-                                        <div class="cuadro-color" [style.background]="item?.hexa"></div>
-                                        <span>{{ item?.color }}</span>
-                                    </div>
-                                </ng-template>
-                            </p-select>
-
-                            <label>Color</label>
                         </p-floatlabel>
-                    }
-                    
+
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <p-floatlabel variant="in" class="selectorColores">
+                                <p-select 
+                                    [options]="coloresDisponibles"
+                                    optionLabel="color"
+                                    [showClear]="true"
+                                    formControlName="colorSeleccionado"
+                                    (onChange)="SeleccionarVariante($event.value.idProducto)"
+                                >
+                                    <!-- Template de cada opción -->
+                                    <ng-template pTemplate="item" let-item>
+                                        <div class="opcion-color">
+                                            <div class="cuadro-color" [style.background]="item.hexa"></div>
+                                            <span>{{ item.color }}</span>
+                                        </div>
+                                    </ng-template>
+
+                                    <!-- Template para la opción seleccionada -->
+                                    <ng-template pTemplate="selectedItem" let-item>
+                                        <div class="opcion-color">
+                                            <div class="cuadro-color" [style.background]="item?.hexa"></div>
+                                            <span>{{ item?.color }}</span>
+                                        </div>
+                                    </ng-template>
+                                </p-select>
+
+                                <label>Color</label>
+                            </p-floatlabel>
+                        }
+                    </div>
+                    <p-button label="Confirmar Producto" type="submit" [raised]="true" icon="pi pi-check"/>
+
+                </div>
+                <div class="der">
                     <!-- Si esta realizando una factura o nota de empaque puede seleccionar los talles y cantidades a agregar -->
                     @if(tipo == 'factura' || ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
                         <div class="talles"> 
@@ -247,10 +251,11 @@
                         </div>
                     }
                 </div>
+               
                 
             </form>
 
-            <p-table [value]="productosFactura" editable="true" dataKey="codProducto">
+            <p-table [value]="productosFactura" dataKey="codProducto" #tablaProductos>
                 <ng-template #header>
                     <tr>
                         <th>Código</th>
@@ -361,7 +366,7 @@
                                     </ng-template>
 
                                     <ng-template pTemplate="output">
-                                        {{ producto.unitario | decimalFormat }}
+                                        {{ getPrecioMostrado(producto.unitario) | decimalFormat }}
                                     </ng-template>
 
                                 </p-cellEditor>

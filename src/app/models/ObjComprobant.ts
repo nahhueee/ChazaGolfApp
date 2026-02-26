@@ -9,11 +9,8 @@ export class ObjComprobante {
     redondeo?:number;
     filasProducto?:any[];
     filasServicio?:any[];
-    totalProductos?:number;
-    totalServicios?:number;
     cantProductos?:number;
     cantServicios?:number;
-    totalItem?:number;
     subTotal?:number;
     totalIva?:number;
     totalFinal?:number;
@@ -29,11 +26,8 @@ export class ObjComprobante {
           this.redondeo = data.redondeo;
           this.filasProducto = data.filasProducto;
           this.filasServicio = data.filasServicio;
-          this.totalProductos = data.totalProductos;
-          this.totalServicios = data.totalServicios;
           this.cantProductos = data.cantProductos;
           this.cantServicios = data.cantServicios;
-          this.totalItem = data.totalItem;
           this.subTotal = data.subtotal;
           this.totalIva = data.totalIva;
           this.totalFinal = data.totalFinal;

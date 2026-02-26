@@ -10,6 +10,7 @@
 }
 .modal.contenido{
     margin: 0%;
+    padding-bottom: 50px;
 }
 
 .form{
@@ -50,6 +51,9 @@
     display: flex;
     justify-content: center;
 }
+:host ::ng-deep .p-togglebutton-checked span{
+    color: var(--p-primary-color) !important;
+}
 .info{
     text-align: center;
     font-size: 14px;
@@ -70,33 +74,62 @@ p-inputgroup-addon{
     margin-top: 30px;
 }
 
-.color-grid {
+.botones-float{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 97%;
+    gap: 15px;
+    z-index: 1;
+    position: fixed;
+    bottom: 0;
+    padding: 10px 0px;
+    background: var(--p-dialog-background) !important;
+    box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--surface-border);
+}
+
+// .color-grid {
+//   display: flex;
+//   flex-wrap: wrap;
+//   justify-content: center;
+//   gap: 10px;
+//   border: 1px solid var(--border-color);
+//   border-radius: 4px;
+//   padding: 10px;
+//   margin-bottom: 50px;
+//   width: 100%;
+// }
+
+// .color-box {
+//   width: 40px;
+//   height: 40px;
+//   cursor: pointer;
+//   border-radius: 4px;
+//   transition: 0.2s ease;
+//   border: 1px solid var(--surface-border);
+
+//   &:hover {
+//     transform: scale(1.08);
+//   }
+
+//   &.selected {
+//     border: 5px solid var(--p-primary-color)
+//   }
+// }
+
+.color-item {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 10px;
-  margin-bottom: 50px;
-  width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-left: 15px;
 }
 
 .color-box {
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: 0.2s ease;
-  border: 1px solid var(--surface-border);
-
-  &:hover {
-    transform: scale(1.08);
-  }
-
-  &.selected {
-    border: 5px solid var(--p-primary-color)
-  }
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
 }
 
 
@@ -144,9 +177,38 @@ p-inputgroup-addon{
         margin-left: 10px;
     }
 
+    .inputs{
+        display: flex;
+        gap: 10px;
+    }
     input{
         width: 100%;
     }
+}
+.price-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.price-wrapper input {
+  padding-right: 30px;
+}
+
+.copy-btn {
+  position: absolute;
+  right: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: 0.2s;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 

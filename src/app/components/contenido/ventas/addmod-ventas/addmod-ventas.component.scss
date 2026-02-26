@@ -234,10 +234,23 @@ p-accordion-header{
 /*#region PRODUCTOS*/
 .formProducto{
   display: flex;
-  flex-wrap: wrap;
-  flex-direction: column;
+  gap: 30px;
   justify-content: center;
-  //align-items: center;
+  margin-bottom: 30px;
+
+  .izq{
+    width: 100%;
+    flex: 1;
+
+    .campos{
+      display: flex;
+      gap: 20px;
+    }
+  }
+  .der{
+    width: 100%;
+    flex: 1;
+  }
 }
 
 .LineaProducto{

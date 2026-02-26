@@ -1,9 +1,9 @@
 
-import { Component, HostListener } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { NavegacionComponent } from '../../../compartidos/navegacion/navegacion.component';
 import { AccordionModule } from 'primeng/accordion';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
@@ -40,6 +40,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
 import { Empresa } from '../../../../models/Empresa';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -98,7 +99,8 @@ export class AddModVentasComponent {
     5: 6, // Consumidor Final → Factura B
     6: 1,  // Responsable Monotributo → Factura A
     13: 1, // Monotributo Social → Factura A
-    15: 6 // Iva no Alcanzado → Factura B
+    15: 6, // Iva no Alcanzado → Factura B
+    99: 6  // No selecciono cliente 
   };
 
 
@@ -147,6 +149,9 @@ export class AddModVentasComponent {
 
   objFacturar:ObjFacturar = new ObjFacturar();
 
+  @ViewChild('inputCodigo') inputCodigo: ElementRef<HTMLInputElement>; //Para usar el input de codigo
+  @ViewChild('tablaProductos') tablaProductos: Table | undefined;
+
   constructor(
     private router:Router,
     private clientesService:ClientesService,
@@ -173,6 +178,7 @@ export class AddModVentasComponent {
     });
 
     this.formProductos = new FormGroup({
+      codigoBarras: new FormControl(''),
       producto: new FormControl([null]),
       descuento: new FormControl(''),
       colorSeleccionado: new FormControl([null]),
@@ -218,9 +224,14 @@ export class AddModVentasComponent {
       this.tipo = params['tipo'] ?? 'factura';
 
       this.ReiniciarTodo();
-      this.ObtenerProcesosVenta();
+      setTimeout(() => {
+        this.ObtenerProcesosVenta();
+      },10);
     });
+  
+  }
 
+  ngAfterViewInit(){
     this.ObtenerEmpresas();
     this.ObtenerPuntosVenta();
     this.ObtenerClientes();
@@ -228,9 +239,7 @@ export class AddModVentasComponent {
     this.ObtenerServicios();
     this.ObtenerMetodosPago();
     this.ObtenerTiposDescuento();
-  }
 
-  ngAfterViewInit(){
     setTimeout(() => {
       //Configuracion para la mascara decimal Imask
       this.decimal_mask = {
@@ -443,9 +452,10 @@ export class AddModVentasComponent {
     this.totalDescuento = productos.descuento + servicios.descuento;
 
     // Base inicial
+    const subtotalBase = this.totalItems - this.totalDescuento;
     this.subtotal = this.totalItems - this.totalDescuento;
     this.totalIva = 0;
-    this.totalGeneral = this.subtotal;
+    this.totalGeneral = subtotalBase;
     this.mostrarIva = false;
 
     const esFactura =
@@ -453,26 +463,29 @@ export class AddModVentasComponent {
       this.tipo === 'factura' &&
       this.productosFactura.length > 0;
 
-      console.log(esFactura)
     if (esFactura) {
 
-      console.log(this.TipoComprobanteControl)
+      const forzarLogicaB =
+      this.clienteSeleccionado?.idCategoria === 1 &&
+      this.clienteSeleccionado?.idCondicionIva === 1;
 
-      // FACTURA A
-      if (this.TipoComprobanteControl === 1) {
-        this.totalIva = this.subtotal * 0.21;
-        this.totalGeneral = this.subtotal + this.totalIva;
+      const usarLogicaB =
+      this.TipoComprobanteControl === 6 || forzarLogicaB;
+
+      if (!usarLogicaB) {
+        // FACTURA A
+        this.subtotal = subtotalBase;
+        this.totalIva = subtotalBase * 0.21;
+        this.totalGeneral = subtotalBase + this.totalIva;
         this.mostrarIva = true;
-      }
 
-      // FACTURA B
-      if (this.TipoComprobanteControl === 6) {
-        const totalConIva = this.subtotal;
+      } else {
+        // FACTURA B (o forzada)
+        const totalConIva = subtotalBase;
 
         this.totalIva = totalConIva * 21 / 121;
         this.subtotal = totalConIva - this.totalIva;
         this.totalGeneral = totalConIva;
-
         this.mostrarIva = true;
       }
 
@@ -498,6 +511,7 @@ export class AddModVentasComponent {
       .subscribe(response => {
         this.empresas = response;
         this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
+        this.SetearTitulo();
     });
   }
 
@@ -505,6 +519,7 @@ export class AddModVentasComponent {
     this.miscService.ObtenerProcesosVenta(this.tipo)
       .subscribe(response => {
         this.procesos = response;
+        this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
       });
   }
 
@@ -512,6 +527,7 @@ export class AddModVentasComponent {
     this.miscService.ObtenerPuntosVenta()
       .subscribe(response => {
         this.puntos = response;
+        this.formGenerales.get('punto')?.setValue(this.puntos[3]);
       });
   }
 
@@ -581,13 +597,11 @@ export class AddModVentasComponent {
   }
 
   CambioTipoComprobante(){
-    if(this.clienteSeleccionado!.idCategoria == 2 && this.productosFactura.length > 0){
+    if(this.clienteSeleccionado && this.clienteSeleccionado.idCondicionIva == 1 && this.productosFactura.length > 0){
       this.productosFactura.forEach(element => {
         element.unitario = this.CalcularPrecioCliente(element.precio!);
         element.total = element.unitario! * element.cantidad!;
       });
-
-      this.CalcularTotalGeneral();
     }
 
     if(this.TipoComprobanteControl == 99){
@@ -595,6 +609,8 @@ export class AddModVentasComponent {
     }else{
       this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
     }
+
+    this.CalcularTotalGeneral();
   }
   
   //#region CLIENTES
@@ -621,17 +637,6 @@ export class AddModVentasComponent {
         .subscribe(response => {
           this.clienteSeleccionado = response;
           this.PrepararFacturacionCliente(this.clienteSeleccionado?.idCondicionIva!, comprobante);
-          // if(this.clienteSeleccionado?.idCondicionIva == 1){ //Responsable inscripto
-          //   this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
-          //   this.ObtenerComprobantes(this.empresas[0].abrevCondicion!, this.clienteSeleccionado.idCondicionIva);
-          //   this.formFacturacion.get('tComprobante')?.setValue(1);
-          // }
-
-          // if(this.clienteSeleccionado?.idCondicionIva == 5){ //Consumidor Final
-          //   this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
-          //   this.ObtenerComprobantes(this.empresas[0].abrevCondicion!, this.clienteSeleccionado.idCondicionIva);
-          //   this.formFacturacion.get('tComprobante')?.setValue(6);
-          // }
           
           //Obtenemos sus ventas relacionadas
           let nroVenta = this.modificando ? this.venta.id : 0;
@@ -916,7 +921,9 @@ export class AddModVentasComponent {
   //#endregion
 
   //#region PRODUCTOS VENTA
-  AgregarProducto() {
+  async AgregarProducto() {
+    if (this.tablaProductos) this.tablaProductos.editingCell = null;
+
     if(this.ProcesoControl.descripcion === 'PRESUPUESTO'){
       if (!this.productoSeleccionado) return;
       if(this.venta.estado == "Asociado"){
@@ -943,23 +950,44 @@ export class AddModVentasComponent {
       this.productosFactura.push(nuevo);
     }
     else{
-      if (!this.productoSeleccionado || !this.productoSeleccionado.talles) return;
       if(this.venta.estado == "Facturado" || this.venta.estado == "Facturada"){
         this.Notificaciones.Warn("No puedes editar una en estado facturada.");
         return;
       }
+      
+      const codigo = this.formProductos.get('codigoBarras')?.value ?? "";
+      if (!codigo.trim() && !this.productoSeleccionado?.talles) return;
+
+      let idTalle = 0;
+      if(codigo != ""){
+        const response = await firstValueFrom(this.productosService.ValidarCodigo(codigo));
+        if(response){
+          idTalle = parseInt(codigo.slice(6, 9));
+          this.productoSeleccionado = response;
+        }else{
+          this.Notificaciones.Warn("No se encontraron productos con este código");
+          this.inputCodigo.nativeElement.select();
+          return
+        }
+      }
+     
 
       let tallesSeleccionados:any[] = [];
-
       if(this.ProcesoControl.descripcion == 'PEDIDO'){
         // Tomar todos los talles disponibles
-        tallesSeleccionados = this.productoSeleccionado.talles;
+        tallesSeleccionados = this.productoSeleccionado.talles!;
       }else{
-        // Tomar solo los talles que el usuario seleccionó
-        tallesSeleccionados = this.productoSeleccionado.talles.filter((t: any) => t.cantAgregar > 0);
-        if(tallesSeleccionados.length === 0) {
-          this.Notificaciones.Warn("Asegurate de seleccionar al menos un talle.");
-          return;
+        if(idTalle === 0){
+          // Tomar solo los talles que el usuario seleccionó
+          tallesSeleccionados = this.productoSeleccionado.talles!.filter((t: any) => t.cantAgregar > 0);
+          if(tallesSeleccionados.length === 0) {
+            this.Notificaciones.Warn("Asegurate de seleccionar al menos un talle.");
+            return;
+          }
+        }else{
+          // Tomar solo el talle seleccionado
+          tallesSeleccionados.push(this.productoSeleccionado.talles!.find((t: any) => t.idTalle === idTalle));
+          tallesSeleccionados[0].cantAgregar = 1;
         }
       }
 
@@ -1021,6 +1049,16 @@ export class AddModVentasComponent {
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
+    setTimeout(() => {
+        if (this.tablaProductos) this.tablaProductos.editingCell = null;
+        this.inputCodigo.nativeElement.focus();
+    }, 0);
+  }
+
+  getPrecioMostrado(precioBase: number): number {
+    return this.TipoComprobanteControl === 6
+      ? precioBase * 1.21
+      : precioBase;
   }
 
   CalcularPrecioCliente(precio:number){
@@ -1036,10 +1074,6 @@ export class AddModVentasComponent {
         break;
       default: // Lista Consumidor Final
         break;
-    }
-
-    if(this.TipoComprobanteControl == 6){
-      precio = precio * 1.21;
     }
     return precio;
   }

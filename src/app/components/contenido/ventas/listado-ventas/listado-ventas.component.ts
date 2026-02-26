@@ -89,8 +89,6 @@ export class ListadoVentasComponent {
       this.LimpiarFiltros();
       this.ObtenerProcesosVenta();
       this.ObtenerClientes();
-
-      this.Buscar();
     });
   }
 

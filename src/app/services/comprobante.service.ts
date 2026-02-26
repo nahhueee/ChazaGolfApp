@@ -93,6 +93,21 @@ export class ComprobanteService {
           : nombreProd;
       };
 
+      const FormatearPrecioTotal = (unitario, cantidad, descuento) => {
+        const nCantidad = Number(cantidad) || 0;
+        const nDescuento = parseFloat(descuento) || 0;
+        const nUnitario = parseFloat(unitario) || 0;
+
+        const totalBruto = nUnitario * nCantidad;
+
+        const totalConDescuento = totalBruto * (1 - (nDescuento / 100));
+
+        return totalConDescuento.toLocaleString('es-AR', {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1
+        });
+      };
+
       //Productos
       comprobante.filasProducto = [
         [
@@ -117,25 +132,41 @@ export class ComprobanteService {
       ];
 
       const procesarItems = (items: any[]) => {
+        const esFacturaA = venta.idTipoComprobante === 1;
+        const descuentoGeneral = Number(venta.descuento) || 0;
+
         return items?.reduce((acc, item) => {
+          const unitario = Number(item.unitario) || 0;
+          const cantidad = Number(item.cantidad) || 0;
 
-          const totalItem = item.total || 0;
-
-          // Si no tiene tope, se asume 100%
+          // Total bruto
+          let totalBruto = unitario * cantidad;
+          
+          // Calcular descuento respetando tope
           const descuentoMax = item.topeDescuento ?? 100;
-
-          // Se respeta el menor
-          const descuentoAplicado = Math.min(venta.descuento, descuentoMax);
+          const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
           item.descuentoAplicado = descuentoAplicado;
 
-          const descuentoItem = (totalItem * descuentoAplicado) / 100;
+          const importeDescuento = totalBruto * (descuentoAplicado / 100);
+          // Total final del item
+          const totalFinalItem = totalBruto - importeDescuento;
 
-          acc.total += totalItem;
-          acc.descuento += descuentoItem;
+          // Acumuladores
+          acc.subtotal += totalBruto;
+          acc.descuento += importeDescuento;
+          acc.total += totalFinalItem;
 
           return acc;
 
-        }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
+        }, {
+          subtotal: 0,
+          descuento: 0,
+          total: 0
+        }) || {
+          subtotal: 0,
+          descuento: 0,
+          total: 0
+        };
       };
 
       const productos = procesarItems(venta.productos);
@@ -161,7 +192,7 @@ export class ComprobanteService {
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecio(item.total), alignment: 'right' },
+          { text: FormatearPrecioTotal(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   
@@ -184,22 +215,25 @@ export class ComprobanteService {
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecio(item.total), alignment: 'right' },
+          { text: FormatearPrecioTotal(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   
-      let totalDescuento = 0;
+      //Importes base
+      const subtotalBruto = productos.subtotal + servicios.subtotal;
+      const totalDescuento = productos.descuento + servicios.descuento;
 
-      comprobante.totalProductos = productos.total;
-      comprobante.totalServicios = servicios.total;
-      comprobante.totalItem = productos.total + servicios.total;
-      totalDescuento = productos.descuento + servicios.descuento;
+      comprobante.subTotal = productos.total + servicios.total;
+      comprobante.descuento = productos.descuento + servicios.descuento;
+      comprobante.totalIva = 0;
+      comprobante.totalFinal = comprobante.subTotal! - comprobante.descuento!;
 
+      //Definimos totales
+      comprobante.subTotal = subtotalBruto;
       comprobante.descuento = totalDescuento;
-      comprobante.totalFinal = comprobante.totalItem! - totalDescuento;
+      comprobante.totalFinal = subtotalBruto - totalDescuento;
       comprobante.redondeo = venta.redondeo;
-      comprobante.totalAPagar = comprobante.totalFinal + comprobante.redondeo
-  
+      comprobante.totalAPagar = comprobante.totalFinal + comprobante.redondeo;
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
       comprobante.cantServicios = venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
 
@@ -259,7 +293,7 @@ export class ComprobanteService {
             style: 'tableStyle' // Aplicar el estilo a la tabla
           },
           { text: `Cantidad: ${comprobante.cantProductos}`, style: 'totalProducto', alignment: 'right' },
-          { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
+          // { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
 
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios
@@ -289,7 +323,7 @@ export class ComprobanteService {
               style: 'tableStyle' // Aplicar el estilo a la tabla
             },
             { text: `Cantidad: ${comprobante.cantServicios}`, style: 'totalProducto', alignment: 'right' },
-            { text: `Total: $${comprobante.totalServicios?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
+            // { text: `Total: $${comprobante.totalServicios?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
 
           ]: [],
 
@@ -305,7 +339,7 @@ export class ComprobanteService {
                   },
                   {
                     stack: [
-                      { text: `Subtotal: $${comprobante.totalItem?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
+                      { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
 
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },

@@ -52,76 +52,98 @@ export class VistaPreviaComponent {
     }
   }
 
+  QuitarIva = (precio: number, tasa: number = 21) => {
+    const factor = 1 + (tasa / 100);
+    return precio / factor;
+  };
+
   CalcularTotalGeneral() {
-    const descuentoUsuario = this.venta.descuento;
-
-    let totalItems = 0;
-    let totalDescuento = 0;
-
     const procesarItems = (items: any[]) => {
+      const esFacturaA = this.venta.idTipoComprobante === 1;
+      const descuentoGeneral = Number(this.venta.descuento) || 0;
+
       return items?.reduce((acc, item) => {
+        const unitario = Number(item.unitario) || 0;
+        const cantidad = Number(item.cantidad) || 0;
 
-        const totalItem = item.total || 0;
+        // Total bruto
+        let totalBruto = unitario * cantidad;
 
-        // Si no tiene tope, se asume 100%
+        // Quitar IVA si corresponde
+        if (esFacturaA) {
+          totalBruto = this.QuitarIva(totalBruto, 21);
+        }
+
+        // Calcular descuento respetando tope
         const descuentoMax = item.topeDescuento ?? 100;
-
-        // Se respeta el menor
-        const descuentoAplicado = Math.min(descuentoUsuario, descuentoMax);
+        const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
         item.descuentoAplicado = descuentoAplicado;
 
-        const descuentoItem = (totalItem * descuentoAplicado) / 100;
+        const importeDescuento = totalBruto * (descuentoAplicado / 100);
 
-        acc.total += totalItem;
-        acc.descuento += descuentoItem;
+        // Total final del item
+        const totalFinalItem = totalBruto - importeDescuento;
+
+        // Acumuladores
+        acc.subtotal += totalBruto;
+        acc.descuento += importeDescuento;
+        acc.total += totalFinalItem;
 
         return acc;
 
-      }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
+      }, {
+        subtotal: 0,
+        descuento: 0,
+        total: 0
+      }) || {
+        subtotal: 0,
+        descuento: 0,
+        total: 0
+      };
     };
 
     const productos = procesarItems(this.venta.productos);
     const servicios = procesarItems(this.venta.servicios);
 
-    this.totalItems = productos.total + servicios.total;
-    this.totalDescuento = productos.descuento + servicios.descuento;
+    this.totalProductos = productos.total;
+    this.totalServicios = servicios.total;
+    
+    //Importes base
+    const subtotalBruto = productos.subtotal + servicios.subtotal;
+    const totalDescuento = productos.descuento + servicios.descuento;
 
-    // Base inicial
-    this.subTotal = this.totalItems - this.totalDescuento;
-    this.totalIva = 0;
-    this.totalGeneral = this.subTotal;
+    //Neto sin IVA
+    const subtotalNeto = subtotalBruto - totalDescuento;
+
+    let totalIva = 0;
+    let totalGeneral = 0;
     this.mostrarIva = false;
 
-    const esFactura =
-      this.venta.proceso !== 'COTIZACION' &&
-      this.venta.productos.length > 0;
+    const forzarLogicaB =
+      this.venta.cliente?.idCategoria === 1 &&
+      this.venta.cliente?.idCondicionIva === 1;
 
-    if (esFactura) {
+    const esFacturaB = this.venta.idTipoComprobante === 6 || forzarLogicaB;
 
-      // FACTURA A
-      if (this.venta.idTipoComprobante === 1) {
-        this.totalIva = this.subTotal * 0.21;
-        this.totalGeneral = this.subTotal + this.totalIva;
-        this.mostrarIva = true;
-      }
+    if (!esFacturaB) {
+      // FACTURA A → precios sin IVA
+      totalIva = subtotalNeto * 0.21;
+      totalGeneral = subtotalNeto + totalIva;
+      this.mostrarIva = true;
 
-      // FACTURA B
-      if (this.venta.idTipoComprobante === 6) {
-        const totalConIva = this.subTotal;
-
-        this.totalIva = totalConIva * 21 / 121;
-        this.subTotal = totalConIva - this.totalIva;
-        this.totalGeneral = totalConIva;
-
-        this.mostrarIva = true;
-      }
-
-      // FACTURA C (11) → no IVA
+    } else {
+      // FACTURA B → precios con IVA incluido
+      totalIva = subtotalNeto * 21 / 121;
+      totalGeneral = subtotalNeto; // ya incluye IVA
+      this.mostrarIva = true;
     }
 
-    this.totalAPagar =
-      this.totalGeneral +
-      this.venta.redondeo;
+    //Definimos totales
+    this.subTotal = subtotalBruto;
+    this.totalDescuento = totalDescuento;
+    this.totalIva = totalIva;
+    this.totalGeneral = totalGeneral;
+    this.totalAPagar = totalGeneral + this.venta.redondeo;
 
     // cantidades
     this.cantProductos = this.venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;

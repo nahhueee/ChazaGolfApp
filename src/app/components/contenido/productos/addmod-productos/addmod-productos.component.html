@@ -1,4 +1,5 @@
 <p-confirmpopup />
+<p-confirmdialog key="borrarColor"/>
 
 <div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
@@ -10,7 +11,7 @@
                 <div class="horizontal">
                     <!-- Empresa -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="empresas" formControlName="empresa" />
+                        <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="descripcion"/>
                         <label>Empresa</label>
                     </p-floatlabel>
 
@@ -56,7 +57,7 @@
                 <!-- Subtipo -->
                 <p-floatlabel variant="in">
                     <p-select [options]="subtiposProducto" formControlName="tipo" optionLabel="descripcion"/>
-                    <label>Subtipo</label>
+                    <label>Tipo</label>
                 </p-floatlabel>
 
                 <!-- Genero -->
@@ -70,13 +71,13 @@
             <div class="horizontal">
                 <!-- Codigo -->
                 <p-floatlabel variant="in">
-                    <input pInputText formControlName="codigo" type="text" (focus)="SelectContent($event)"/>
+                    <input pInputText formControlName="codigo" type="text" (focus)="SelectContent($event)" maxlength="4"/>
                     <label>Código</label>
                     @if(codigoControl?.hasError('required') && codigoControl?.touched){
                         <small class="error">Completa con un código.</small>
                     }
                     @if(codigoControl?.hasError('maxlength') && codigoControl?.touched){
-                        <small class="error">El código no puede tener más de 30 caracteres.</small>
+                        <small class="error">El código no puede tener más de 4 caracteres.</small>
                     }
                 </p-floatlabel>
 
@@ -87,37 +88,48 @@
                 </p-floatlabel>
 
                 <!-- Tope Descuento -->
-                <p-floatlabel variant="in">
-                    <input pInputText formControlName="topeDescuento" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
-                    <label>Tope Descuento</label>
-                </p-floatlabel>
+                <p-inputgroup>
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="topeDescuento" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                        <label>Tope Descuento</label>
+                    </p-floatlabel>
+                    <p-inputgroup-addon>%</p-inputgroup-addon>
+                </p-inputgroup>
+               
             </div>
 
-            <!-- Nombre -->
-            <p-floatlabel variant="in">
-                <input pInputText formControlName="nombre" type="text" class="uppercase" (focus)="SelectContent($event)" />
-                <label>Nombre</label>
-                @if(nombreControl?.hasError('required') && nombreControl?.touched){
-                    <small class="error">Completa con un nombre.</small>
-                }
-                @if(nombreControl?.hasError('maxlength') && nombreControl?.touched){
-                    <small class="error">El nombre no puede tener más de 100 caracteres.</small>
-                }
-            </p-floatlabel>
+            <div class="horizontal">
+                <!-- Nombre -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="nombre" type="text" class="uppercase" (focus)="SelectContent($event)" />
+                    <label>Nombre</label>
+                    @if(nombreControl?.hasError('required') && nombreControl?.touched){
+                        <small class="error">Completa con un nombre.</small>
+                    }
+                    @if(nombreControl?.hasError('maxlength') && nombreControl?.touched){
+                        <small class="error">El nombre no puede tener más de 100 caracteres.</small>
+                    }
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <p-select [options]="materiales" formControlName="material" optionLabel="descripcion" optionValue="id"/>
+                    <label>Material</label>
+                </p-floatlabel>
+            </div>
+            
 
             <!-- Material -->
-            <div class="materiales">
+            <!-- <div class="materiales">
                 <p-selectbutton 
-                [disabled]="producto && producto.id != 0"
                 [options]="materiales" 
                 formControlName="material" 
                 optionLabel="descripcion" 
                 optionValue="id"
                 (onChange)="MaterialChange()" />
-            </div>
+            </div> -->
+            
             
 
-            @if(materialControl != ''){
+            <!-- @if(materialControl != ''){
                 @if(coloresSeleccionadosDescriptions.length > 0){
                     <p class="info">Colores seleccionados:
                         <span>{{coloresSeleccionadosDescriptions}}</span>
@@ -138,9 +150,36 @@
                         ></div>
                     }
                 </div>
+
             }@else {
                 <p class="info">Selecciona un material para ver colores disponibles</p>
-            }
+            } -->
+
+            <p-listbox
+                [formControl]="coloresSeleccionados"
+                [options]="coloresMaterial"
+                [multiple]="true"
+                [checkbox]="true"
+                [filter]="true"
+                filterBy="descripcion"
+                filterPlaceholder="Buscar color..."
+                (onChange)="SeleccionarColor($event)">
+
+                <ng-template let-color pTemplate="item">
+                    <div class="color-item">
+                    <span 
+                        class="color-box"
+                        [style.background]="color.hexa">
+                    </span>
+
+                    <span class="color-text">
+                        {{ color.descripcion }}
+                    </span>
+                    </div>
+                </ng-template>
+
+                </p-listbox>
+
         </div>
         <div class="der">
             <p class="subtitulo"><i class="pi pi-tags"></i>Talles</p>
@@ -169,10 +208,32 @@
 
             <div formArrayName="tallesProducto" class="tallesProducto">
                 @for(item of tallesProductoControl.controls; track $index) {
+
                     <div [formGroupName]="$index" class="row-talle">
-                        <h5>Talle {{item.get('talle')?.value}}</h5>
-                        <input type="text" pInputText placeholder="Precio" [imask]="decimal_mask" formControlName="precio" (focus)="SelectContent($event)" />
+                    <h5>Talle {{item.get('talle')?.value}}</h5>
+
+                    <div class="inputs price-wrapper">
+
+                        <input 
+                        type="text"
+                        pInputText
+                        placeholder="Precio"
+                        [imask]="decimal_mask"
+                        formControlName="precio"
+                        (focus)="SelectContent($event)" />
+
+                        @if ($index === 0) {
+                        <button 
+                            type="button"
+                            class="copy-btn"
+                            (click)="CopiarPrecioPrimerTalle()">
+                            Aplicar a todos
+                        </button>
+                        }
+
                     </div>
+                    </div>
+
                 }
             </div>
 
@@ -180,12 +241,16 @@
     </form>
 </div>
 
-<div class="botones">
-    @if(!desdeRouting){
+@if(!desdeRouting){
+    <div class="botones-float">
         <p-button label="Volver" severity="secondary" (click)="CerrarModal(false)" icon="pi pi-angle-left"/>
-    }
-    <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
-</div>
+        <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
+    </div>
+}@else {
+    <div class="botones">
+        <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
+    </div>
+}
 
 <!-- Modal Nuevo Cliente -->
 <p-dialog [modal]="true" [(visible)]="modalAddClienteVisible" [style]="{ width: '90vw' }">

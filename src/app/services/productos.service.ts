@@ -35,6 +35,10 @@ export class ProductosService {
   ObtenerStockDisponiblePorProducto(idProducto:string): Observable<any>{
     return this.apiService.get(`productos/obtener-stock-disponible/${idProducto}`)
   }
+  
+  ValidarCodigo(codigo:string): Observable<any>{
+    return this.apiService.get(`productos/validar/${codigo}`)
+  }
   //#endregion
 
 
