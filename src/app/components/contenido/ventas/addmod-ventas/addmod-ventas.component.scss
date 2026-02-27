@@ -590,3 +590,36 @@ p-divider {
     }
   }
 }
+
+::ng-deep .p-datatable .fila-talles th {
+  padding: 2px 7px !important;
+  font-size: 16px;
+  line-height: 1.1;
+  height: 24px;
+}
+
+::ng-deep .p-datatable .fila-talles {
+  height: 24px;
+}
+
+::ng-deep .p-datatable .bloque-talles {
+  border-bottom: none !important;
+  padding: 5px !important;
+}
+
+::ng-deep .p-datatable .fila-talles th {
+  border-bottom: none;
+}
+
+::ng-deep .p-datatable .fila-talles:last-child th {
+  border-bottom: 1px solid var(--p-datatable-header-cell-border-color);
+  padding-bottom: 5px;
+}
+
+::ng-deep .p-datatable .ultima-fila-talles th {
+  padding-bottom: 10px !important; 
+}
+
+::ng-deep input[type="number"]#editable::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}

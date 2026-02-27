@@ -74,6 +74,7 @@ export class AddModVentasComponent {
   proximoNroVenta:number = 0;
   nroRelacionado:number = 0;
   tipoRelacionado:string = "";
+  columnasFijas = Array(10).fill(0);
 
   decimal_mask: any;
   modificando:boolean;

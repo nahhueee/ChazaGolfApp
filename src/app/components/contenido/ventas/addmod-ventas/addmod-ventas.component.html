@@ -255,9 +255,11 @@
                 
             </form>
 
-            <p-table [value]="productosFactura" dataKey="codProducto" #tablaProductos>
+            <p-table [value]="productosFactura" 
+                     dataKey="codProducto" 
+                     #tablaProductos>
                 <ng-template #header>
-                    <tr>
+                    <!-- <tr>
                         <th>Código</th>
                         <th>Nombre</th>
 
@@ -279,7 +281,35 @@
                         <th>Precio</th>
                         <th>Total</th>
                         <th>Quitar</th>
+                    </tr> -->
+
+
+                    <tr>
+                        <th rowspan="5">Código</th>
+                        <th rowspan="5">Nombre</th>
+
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <th rowspan="5">Color</th>
+
+                            <th colspan="10" class="text-center bloque-talles"></th>
+                        }
+
+                        <th rowspan="5">Cant.</th>
+                        <th rowspan="5">Precio</th>
+                        <th rowspan="5">Total</th>
+                        <th rowspan="5">Quitar</th>
+                        </tr>
+
+                        <!-- 4 filas visuales -->
+                        <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
+
+                        <th *ngFor="let col of columnasFijas; let i = index">
+                            {{ linea.talles![i] || '' }}
+                        </th>
+
                     </tr>
+                    
+
                 </ng-template>
                 <ng-template #body let-producto let-editing="editing">
                     <tr>
@@ -299,18 +329,20 @@
                                 <ng-template pTemplate="input">
                                     <input 
                                     pInputText 
+                                    id="editable"
                                     type="number" 
                                     [value]="producto[t]"
                                     (keydown.enter)="ActualizarCantidad(producto, t, $event)"
                                     (keydown.tab)="ActualizarCantidad(producto, t, $event)"
                                     (focus)="SelectContent($event)"
-                                    style="max-width: 70px;" />
+                                    style="max-width: 50px;" />
                                 </ng-template>
                                 <ng-template pTemplate="output">
                                     {{ producto[t] }}
                                 </ng-template>
                                 </p-cellEditor>
                             </td>
+
                         }
                         
                         <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"

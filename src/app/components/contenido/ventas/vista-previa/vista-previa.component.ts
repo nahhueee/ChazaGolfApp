@@ -119,23 +119,33 @@ export class VistaPreviaComponent {
     let totalGeneral = 0;
     this.mostrarIva = false;
 
-    const forzarLogicaB =
+    const forzarFacturaB =
       this.venta.cliente?.idCategoria === 1 &&
       this.venta.cliente?.idCondicionIva === 1;
 
-    const esFacturaB = this.venta.idTipoComprobante === 6 || forzarLogicaB;
+    const esTipoA = this.venta.idTipoComprobante === 1;
+    const esTipoB = this.venta.idTipoComprobante === 6;
 
-    if (!esFacturaB) {
-      // FACTURA A → precios sin IVA
+    // FACTURA B (tipo 6 o forzada)
+    if (esTipoB || forzarFacturaB) {
+
+      totalIva = subtotalNeto * 21 / 121;
+      totalGeneral = subtotalNeto; // ya incluye IVA
+      this.mostrarIva = true;
+
+    // FACTURA A (tipo 1)
+    } else if (esTipoA) {
+
       totalIva = subtotalNeto * 0.21;
       totalGeneral = subtotalNeto + totalIva;
       this.mostrarIva = true;
 
+    // Otros comprobantes → sin IVA
     } else {
-      // FACTURA B → precios con IVA incluido
-      totalIva = subtotalNeto * 21 / 121;
-      totalGeneral = subtotalNeto; // ya incluye IVA
-      this.mostrarIva = true;
+
+      totalIva = 0;
+      totalGeneral = subtotalNeto;
+      this.mostrarIva = false;
     }
 
     //Definimos totales

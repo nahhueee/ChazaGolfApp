@@ -3,13 +3,17 @@ export class ObjTicketFactura {
     tipoFactura?:string;
     CUIL?:number;
     condicion?:string;
-    puntoVta?:number;
-    ticket?:number;
+    puntoVta?:string;
+    ticket?:string;
     neto?:number;
     iva?:number;
     cae?:string;
     caeVto?:string;
     direccion?:string;
+    telefono?:string;
+    email?:string;
+    inicioActividad?:string;
+    IIBB?:string;
     razon?:string;
     qr?:string;
 
@@ -42,6 +46,10 @@ export class ObjTicketFactura {
           this.condReceptor = data.condReceptor;
           this.condCliente = data.condCliente;
           this.razonReceptor = data.razonReceptor;
+          this.telefono = data.telefono;
+          this.email = data.email;
+          this.inicioActividad = data.inicioActividad;
+          this.IIBB = data.IIBB;
         }
     }
 }

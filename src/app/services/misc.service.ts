@@ -54,6 +54,9 @@ export class MiscService {
   ObtenerEmpresas(): Observable<any> {
     return this.apiService.get('misc/empresas')
   }
+  ObtenerEmpresa(idEmpresa): Observable<any> {
+    return this.apiService.get('misc/obtener-empresa/'+ idEmpresa)
+  }
   ObtenerPuntosVenta(): Observable<any> {
     return this.apiService.get('misc/puntos-venta')
   }

@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 import { Venta } from '../models/Factura';
 import { ObjTicketFactura } from '../models/ObjTicketFactura';
 import { ObjComprobante } from '../models/ObjComprobant';
+import { MiscService } from './misc.service';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,8 @@ export class FacturaService {
     private filesService:FilesService,
     private parametrosService:ParametrosService,
     private ventasService:VentasService,
-    private Notificaciones:NotificacionesService
+    private Notificaciones:NotificacionesService,
+    private miscService:MiscService
   ) { }
 
   // Método para inicializar pdfMake
@@ -117,8 +119,8 @@ export class FacturaService {
       
 
       if(comprobante.proceso != "COTIZACION"){
-        datosFactura.puntoVta = venta.factura?.ptoVenta;
-        datosFactura.ticket = venta.factura?.ticket;
+        datosFactura.puntoVta = venta.factura?.ptoVenta?.toString().padStart(5, '0');
+        datosFactura.ticket = venta.factura?.ticket?.toString().padStart(8, '0');
         datosFactura.neto = venta.factura?.neto;
         datosFactura.iva = venta.factura?.iva;
         datosFactura.cae = venta.factura?.cae;
@@ -149,15 +151,14 @@ export class FacturaService {
       }
 
       //Obtenemos datos grabados para la facturacion
-      const parametrosFacturacion = await firstValueFrom(this.parametrosService.ObtenerParametrosFacturacion());
-      if(parametrosFacturacion.condicion == 'responsable_inscripto'){
-          datosFactura.condicion = "RESPONSABLE INSCRIPTO";
-      }else{
-        datosFactura.condicion = "MONOTRIBUTISTA";
-      }
+      const parametrosFacturacion = await firstValueFrom(this.miscService.ObtenerEmpresa(venta.idEmpresa));
+      datosFactura.condicion = parametrosFacturacion.condicion.toUpperCase();
       datosFactura.CUIL = parametrosFacturacion.cuil;
       datosFactura.direccion = parametrosFacturacion.direccion;
-      datosFactura.razon = parametrosFacturacion.razon;
+      datosFactura.razon = parametrosFacturacion.razonSocial;
+      datosFactura.telefono = parametrosFacturacion.telefono;
+      datosFactura.email = parametrosFacturacion.email;
+      datosFactura.inicioActividad = parametrosFacturacion.inicioAct;
       
       //Definimos datos del receptor
       switch (datosFactura.condReceptor) {
@@ -189,22 +190,27 @@ export class FacturaService {
       let totalIva = 0;
       let totalGeneral = 0;
 
-      const forzarLogicaB =
-        venta.cliente?.idCategoria === 1 &&
-        venta.cliente?.idCondicionIva === 1;
+     const forzarFacturaB =
+      venta.cliente?.idCategoria === 1 &&
+      venta.cliente?.idCondicionIva === 1;
 
-      const esFacturaB = venta.idTipoComprobante === 6 || forzarLogicaB;
+      const esTipoA = venta.idTipoComprobante === 1;
+      const esTipoB = venta.idTipoComprobante === 6;
 
-      // 3Calcular IVA correctamente
-      if (!esFacturaB) {
-        // FACTURA A → precios sin IVA
+      // FACTURA B (tipo 6 o forzada)
+      if (esTipoB || forzarFacturaB) {
+        totalIva = subtotalNeto * 21 / 121;
+        totalGeneral = subtotalNeto; // ya incluye IVA
+
+      // FACTURA A (tipo 1)
+      } else if (esTipoA) {
         totalIva = subtotalNeto * 0.21;
         totalGeneral = subtotalNeto + totalIva;
 
+      // Otros comprobantes → sin IVA
       } else {
-        // FACTURA B → precios con IVA incluido
-        totalIva = subtotalNeto * 21 / 121;
-        totalGeneral = subtotalNeto; // ya incluye IVA
+        totalIva = 0;
+        totalGeneral = subtotalNeto;
       }
 
       //Definimos totales
@@ -345,28 +351,35 @@ export class FacturaService {
                 [
                   {
                     stack: [
-                      { text: comprobante.nombreLocal?.toUpperCase(), style: 'titulo', alignment: 'center' },
-                      {
-                        text: [
-                          { text: 'Condición Frente IVA: ', bold: true },
-                          { text: datosFactura.condicion }
-                        ],
-                        style: 'simple'
-                      },
-                      {
-                        text: [
-                          { text: 'Razón Social: ', bold: true },
-                          { text: datosFactura.razon }
-                        ],
-                        style: 'simple'
-                      },
+                      { text: datosFactura.razon?.toUpperCase(), style: 'titulo', alignment: 'center' },
                       {
                         text: [
                           { text: 'Dirección: ', bold: true },
                           { text: datosFactura.direccion }
                         ],
                         style: 'simple'
-                      }
+                      },
+                       {
+                        text: [
+                          { text: 'Telefono: ', bold: true },
+                          { text: datosFactura.telefono }
+                        ],
+                        style: 'simple'
+                      },
+                       {
+                        text: [
+                          { text: 'Email: ', bold: true },
+                          { text: datosFactura.email }
+                        ],
+                        style: 'simple'
+                      },
+                      {
+                        text: [
+                          { text: 'Cond. IVA: ', bold: true },
+                          { text: datosFactura.condicion?.toUpperCase() }
+                        ],
+                        style: 'simple'
+                      },
                     ]
                   },
                   {
@@ -384,8 +397,8 @@ export class FacturaService {
                         { text: 'FACTURA', style: 'titulo', alignment: 'center' },
                         {
                           text: [
-                            { text: 'Punto y Nro Comp: ', bold: true },
-                            { text: datosFactura.puntoVta + "-" + datosFactura.ticket }
+                            { text: 'Nro Comp: ', bold: true },
+                            { text: datosFactura.puntoVta + "-" + datosFactura.ticket,  bold: true  }
                           ],
                           style: 'simple'
                         },
@@ -404,6 +417,20 @@ export class FacturaService {
                         text: [
                           { text: 'CUIT: ', bold: true },
                           { text: datosFactura.CUIL }
+                        ],
+                        style: 'simple'
+                      },
+                      {
+                        text: [
+                          { text: 'Inicio De Actividades: ', bold: true },
+                          { text: datosFactura.inicioActividad }
+                        ],
+                        style: 'simple'
+                      },
+                      {
+                        text: [
+                          { text: 'Razón Social: ', bold: true },
+                          { text: datosFactura.razon }
                         ],
                         style: 'simple'
                       }
@@ -434,7 +461,7 @@ export class FacturaService {
                           { text: 'Condición de Venta: ', bold: true },
                           { text: 'Contado' }
                         ],
-                        style: 'simple'
+                        style: 'simple', margin: [8, 5, 0, 4]
                       },                      {
                         text: [
                           { text: 'Condición del Receptor: ', bold: true },
@@ -462,6 +489,9 @@ export class FacturaService {
               ]
             },
             layout: {
+              fillColor: function (rowIndex) {
+                return rowIndex === 0 ? '#eeeeee' : null;
+              },
               hLineWidth: function () { return 0.5; },
               vLineWidth: function () { return 0.5; },
               hLineColor: function () { return '#aaa'; },
@@ -471,7 +501,7 @@ export class FacturaService {
           },
           
           //Tabla de productos
-          { text: `Productos`, style: 'recargaDescuento', alignment: 'left' },
+          { text: `Detalle Productos`, style: 'recargaDescuento', alignment: 'left', bold:true },
           {
             table: {
               widths: ['*', 'auto', 'auto', 'auto', 'auto'],
@@ -479,7 +509,7 @@ export class FacturaService {
             },
             layout: {
               fillColor: function (rowIndex, node, columnIndex) {
-                return rowIndex === 0 ? '#CCCCCC' : null;
+                return rowIndex === 0 ? '#eeeeee' : null;
               },
               hLineWidth: function (i, node) {
                 // Línea después del header (i == 1) y después de la última fila (i == node.table.body.length)
@@ -489,7 +519,7 @@ export class FacturaService {
                 return 0;
               },
               hLineColor: function (i, node) {
-                return i === 1 ? 'black' : '#CCCCCC';
+                return i === 1 ? '#636363' : '#CCCCCC';
               },
               paddingTop: function (i, node) { return 2; },
               paddingBottom: function (i, node) { return 2; },
@@ -501,7 +531,7 @@ export class FacturaService {
 
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios
-            { text: `Servicios`, style: 'recargaDescuento', alignment: 'left' },
+            { text: `Detalle Servicios`, style: 'recargaDescuento', alignment: 'left', bold:true },
             {
               table: {
                 widths: ['*', 'auto', 'auto', 'auto', 'auto'],
@@ -652,8 +682,8 @@ export class FacturaService {
         ],
         styles: {
           simple: {
-            fontSize: 11,
-            margin: [8, 0, 0, 2]
+            fontSize: 10,
+            margin: [8, 0, 0, 4]
           },
           tipoComprobante: {
             fontSize: 30,
