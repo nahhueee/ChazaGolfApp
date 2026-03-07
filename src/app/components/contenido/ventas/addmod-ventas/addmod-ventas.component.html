@@ -259,31 +259,6 @@
                      dataKey="codProducto" 
                      #tablaProductos>
                 <ng-template #header>
-                    <!-- <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-
-                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                            <th>Color</th>
-                            <th>XS</th>
-                            <th>S</th>
-                            <th>M</th>
-                            <th>L</th>
-                            <th>XL</th>
-                            <th>XXL</th>
-                            <th>3XL</th>
-                            <th>4XL</th>
-                            <th>5XL</th>
-                            <th>6XL</th>
-                        }
-                        
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Total</th>
-                        <th>Quitar</th>
-                    </tr> -->
-
-
                     <tr>
                         <th rowspan="5">Código</th>
                         <th rowspan="5">Nombre</th>
@@ -709,12 +684,5 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<p-dialog [modal]="true" [(visible)]="modalFacturarVisible" [style]="{ width: '900px' }">
-   <ng-template #header>
-        <div class="modal-header">
-            <i class="pi pi-dollar"></i>
-            <span> Facturar Venta</span>
-        </div>
-    </ng-template>
-    <app-facturar-venta [objFacturar]="objFacturar" (cerrar)="GuardarFacturar($event)"/>
-</p-dialog>
+<app-facturar-venta [objFacturar]="objFacturar" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" (cerrar)="GuardarFacturar($event)"/>
+

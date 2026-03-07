@@ -1010,6 +1010,7 @@ export class AddModVentasComponent {
           // Sumar cantidad y total
           existente.cantidad = (existente.cantidad ?? 0) + cantidad;
           existente.total = (existente.unitario ?? 0) * (existente.cantidad ?? 0);
+          existente.totalMostrar = existente.total;
 
           // Asignar cantidad a tX
           this.AsignarTalle(existente, talleSel.talle, cantidad, talleSel.idLineaTalle);
@@ -1036,6 +1037,8 @@ export class AddModVentasComponent {
             precio: talleSel.precio,
             unitario: precio,
             total: precio * cantidad,
+            precioMostrar: precio,
+            totalMostrar: precio * cantidad,
             tallesSeleccionados: talleSel.talle
           });
 
@@ -1475,7 +1478,7 @@ export class AddModVentasComponent {
     this.objFacturar.total = Number(this.totalGeneral.toFixed(2));
     this.objFacturar.neto = Number(this.subtotal.toFixed(2));
     this.objFacturar.iva = Number(this.totalIva.toFixed(2));
-    this.objFacturar.tipoFactura = this.formFacturacion.get('tComprobante')?.value;
+    this.objFacturar.tipoComprobante = this.formFacturacion.get('tComprobante')?.value;
     this.objFacturar.tipoFacturaDesc = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
     this.objFacturar.docNro = this.clienteSeleccionado!.documento;
     this.objFacturar.docTipo = this.clienteSeleccionado!.idTipoDocumento;
@@ -1486,6 +1489,7 @@ export class AddModVentasComponent {
     this.objFacturar.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
     this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value;
     this.objFacturar.pagos = this.pagosFactura;
+
     this.modalFacturarVisible = true;
   }
 

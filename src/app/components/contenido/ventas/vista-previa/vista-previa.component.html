@@ -82,9 +82,9 @@
                         <td>{{ producto.t9 }}</td>
                         <td>{{ producto.t10 }}</td>
                         <td style="width: 150px;">{{ producto.cantidad }}</td>
-                        <td style="width: 150px;">${{ producto.unitario | decimalFormat}}</td>
+                        <td style="width: 150px;">${{ producto.precioMostrar | decimalFormat}}</td>
                         <td style="width: 150px;">{{ producto.descuentoAplicado ?? 0 }}%</td>
-                        <td style="width: 150px;">${{ producto.total | decimalFormat }}</td>
+                        <td style="width: 150px;">${{ producto.totalMostrar | decimalFormat }}</td>
                     </tr>
                 </ng-template>
             </p-table>

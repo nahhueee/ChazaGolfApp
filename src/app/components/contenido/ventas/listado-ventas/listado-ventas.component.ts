@@ -25,6 +25,8 @@ import { FacturaService } from '../../../../services/factura.service';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
+import { TipoComprobante } from '../../../../models/ObjFacturar';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -41,8 +43,9 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
     DatePicker,
     VistaPreviaComponent,
     SplitButtonModule,
-    PopoverModule
-  ],
+    PopoverModule,
+    NotasVentaComponent
+],
   templateUrl: './listado-ventas.component.html',
   styleUrl: './listado-ventas.component.scss',
   providers: [ConfirmationService],
@@ -53,8 +56,10 @@ export class ListadoVentasComponent {
   loading: boolean = false;
   filtroActual!: FiltroGral;
   tipo: 'factura' | 'pre' = 'factura';
+  tipoNota: 'Crédito' | 'Débito' = 'Crédito';
   primeraCarga = true;
   detalleVisible: boolean = false;
+  notasVisible: boolean = false;
   ventaSeleccionada:Venta = new Venta();
   
   filtros:FormGroup;
@@ -62,6 +67,7 @@ export class ListadoVentasComponent {
   clientesFiltrados:Cliente[]=[];
   procesos:ProcesoVenta[] = [];
   @ViewChild('op') op!: Popover;
+  @ViewChild('notas') notas!: Popover;
 
 
   constructor(
@@ -125,6 +131,7 @@ export class ListadoVentasComponent {
 
     this.ventasService.ObtenerVentas(this.filtroActual).subscribe(response => {
       this.ventas = response.registros;
+      console.log(this.ventas)
       this.totalRecords = response.total;
       this.loading = false;
     });
@@ -137,16 +144,38 @@ export class ListadoVentasComponent {
     );
   }
 
+  // ElegirNota(venta:Venta){
+  //   this.notas.toggle(event);
+  //   this.ventaSeleccionada = venta;
+  // }
+
+  VerResumen(venta:Venta){
+    this.ventaSeleccionada = venta;
+    this.PrepararPrecios();
+    this.detalleVisible = true;
+  }
+
+  EmitirNotaCredito(venta:Venta){
+    this.tipoNota = 'Crédito'; 
+    this.ventaSeleccionada = venta;
+    this.PrepararPrecios();
+    this.notasVisible = true; 
+  }
+  Actualizar(actualiza){
+    this.notasVisible = false;
+    if(actualiza)
+      this.Buscar();
+  }
+
   ElegirComprobante(venta:Venta){
     this.op.toggle(event);
     this.ventaSeleccionada = venta;
   }
-
   VerComprobante(){
     this.comprobanteService.VerComprobante(this.ventaSeleccionada)
   }
-
   VerFactura(){
+    this.PrepararPrecios();
     this.facturaService.VerFactura(this.ventaSeleccionada)
   }
 
@@ -224,4 +253,43 @@ export class ListadoVentasComponent {
     this.Buscar();
   }
 
+  PrepararPrecios(){
+    const esTipoA = [
+      TipoComprobante.FACTURA_A,
+      TipoComprobante.NC_A,
+      TipoComprobante.ND_A
+    ].includes(this.ventaSeleccionada.idTipoComprobante!);
+
+    this.ventaSeleccionada.productos.forEach(producto => {
+      const unitario = Number(producto.unitario) || 0; // Precio con iva
+      const cantidad = Number(producto.cantidad) || 0;
+
+      let precioNeto = 0; // Precio neto
+      if(esTipoA)
+        precioNeto = unitario / 1.21;
+      else
+        precioNeto = unitario;
+
+      producto.precioMostrar = precioNeto;
+      let totalNeto = precioNeto * cantidad;
+      producto.total = totalNeto;
+
+      // Porcentaje del descuento
+      const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, producto.topeDescuento ?? 100);
+      producto.descuentoAplicado = descuentoAplicado;
+
+      // Importe del descuento
+      const importeDescuento = totalNeto * (descuentoAplicado / 100);
+      producto.importeDescuento = importeDescuento;
+
+      // Total bruto del item
+      const totalFinalNeto = totalNeto - importeDescuento;
+      producto.totalMostrar = totalFinalNeto ;
+
+      producto.stockInicial = Object.fromEntries(
+        Object.entries(producto)
+          .filter(([key]) => /^t\d+$/.test(key))
+      );
+    });
+  }
 }

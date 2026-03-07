@@ -34,6 +34,7 @@ import { TallesProducto } from "./Producto";
     servicios:ServiciosFactura[];
     pagos:PagosFactura[];
     factura?:FacturaVenta;
+    notas?:NotaCreditoVenta[];
 
     nroRelacionado?:number;
     tipoRelacionado?:string;
@@ -66,9 +67,13 @@ import { TallesProducto } from "./Producto";
     t10?: number;
     precio?: number;
     unitario?: number;
+    precioMostrar?: number;
     total?: number;
+    totalMostrar?: number;
     descuentoAplicado?:number;
+    importeDescuento?:number;
     tallesSeleccionados:string = "";
+    stockInicial: any = {};
   
     constructor(data?: any) {
       if (data) {
@@ -92,10 +97,13 @@ import { TallesProducto } from "./Producto";
         this.t9 = data.t9;
         this.t10 = data.t10;
         this.precio = data.precio;
+        this.precioMostrar = data.precioMostrar;
+        this.totalMostrar = data.totalMostrar;
         this.unitario = data.unitario;
         this.nomProducto = data.nomProducto;
         this.total = data.total;
         this.descuentoAplicado = data.descuentoAplicado;
+        this.importeDescuento = data.importeDescuento;
         this.tallesSeleccionados = data.tallesSeleccionados;
       }
     }
@@ -140,6 +148,11 @@ import { TallesProducto } from "./Producto";
     }
   }
 
+  export class NotaCreditoVenta{
+    idNotaVenta:number = 0;
+    nroProceso:number = 0;
+    total:number = 0;
+  }
   
   
   

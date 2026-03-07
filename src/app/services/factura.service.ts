@@ -10,6 +10,7 @@ import { Venta } from '../models/Factura';
 import { ObjTicketFactura } from '../models/ObjTicketFactura';
 import { ObjComprobante } from '../models/ObjComprobant';
 import { MiscService } from './misc.service';
+import { TipoComprobante } from '../models/ObjFacturar';
 
 @Injectable({
   providedIn: 'root'
@@ -62,47 +63,17 @@ export class FacturaService {
   
     private async ArmarComprobante(venta: Venta) {
       const procesarItems = (items: any[]) => {
-        const esFacturaA = venta.idTipoComprobante === 1;
-        const descuentoGeneral = Number(venta.descuento) || 0;
-
         return items?.reduce((acc, item) => {
-          const unitario = Number(item.unitario) || 0;
-          const cantidad = Number(item.cantidad) || 0;
 
-          // Total bruto
-          let totalBruto = unitario * cantidad;
+          const totalItem = item.total || 0;
+          const descuentoItem = item.importeDescuento || 0;
 
-          // Quitar IVA si corresponde
-          if (esFacturaA) {
-            totalBruto = this.QuitarIva(totalBruto, 21);
-          }
-
-          // Calcular descuento respetando tope
-          const descuentoMax = item.topeDescuento ?? 100;
-          const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
-          item.descuentoAplicado = descuentoAplicado;
-
-          const importeDescuento = totalBruto * (descuentoAplicado / 100);
-
-          // Total final del item
-          const totalFinalItem = totalBruto - importeDescuento;
-
-          // Acumuladores
-          acc.subtotal += totalBruto;
-          acc.descuento += importeDescuento;
-          acc.total += totalFinalItem;
+          acc.total += totalItem;
+          acc.descuento += descuentoItem;
 
           return acc;
 
-        }, {
-          subtotal: 0,
-          descuento: 0,
-          total: 0
-        }) || {
-          subtotal: 0,
-          descuento: 0,
-          total: 0
-        };
+        }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
       };
 
       const productos = procesarItems(venta.productos);
@@ -110,46 +81,52 @@ export class FacturaService {
 
       const comprobante:ObjComprobante = this.GenerarDatosComunes(venta);
       
-      //Obtenemos los datos de la vena facturada
+      //Obtenemos los datos de la venta facturada
       let datosFactura:ObjTicketFactura = new ObjTicketFactura();
       datosFactura.razonReceptor = venta.cliente?.razonSocial;
       datosFactura.DNI = venta.cliente?.documento;
       datosFactura.tipoDNI = venta.cliente?.idTipoDocumento;
       datosFactura.condReceptor = venta.cliente?.idCondicionIva;
-      
+      datosFactura.desFactura = venta.tipoComprobante!;
 
-      if(comprobante.proceso != "COTIZACION"){
+      let esNota:boolean = false;
+
+      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100){
         datosFactura.puntoVta = venta.factura?.ptoVenta?.toString().padStart(5, '0');
         datosFactura.ticket = venta.factura?.ticket?.toString().padStart(8, '0');
         datosFactura.neto = venta.factura?.neto;
         datosFactura.iva = venta.factura?.iva;
         datosFactura.cae = venta.factura?.cae;
-        datosFactura.nroTipoFactura = venta.factura?.tipoFactura;
+        datosFactura.tipoComprobante = venta.factura?.tipoComprobante;
+        datosFactura.desComprobante = venta.factura?.desComprobante;
+
+        if(venta.factura?.comprobanteAsociado && venta.factura?.comprobanteAsociado.numero){
+          datosFactura.comprobanteRelacionado =  venta.factura?.comprobanteAsociado.puntoVenta?.toString().padStart(5, '0');
+          datosFactura.comprobanteRelacionado += ' - ';
+          datosFactura.comprobanteRelacionado += venta.factura?.comprobanteAsociado.numero?.toString().padStart(8, '0');
+        }
+
+        const esNotaCreditoDebito = [
+            TipoComprobante.NC_A,
+            TipoComprobante.ND_A,
+            TipoComprobante.NC_B,
+            TipoComprobante.ND_B,
+            TipoComprobante.NC_C,
+            TipoComprobante.ND_C
+        ].includes(venta.idTipoComprobante!);
+
+        esNota = esNotaCreditoDebito;
 
         //Formateamos la fecha
         const fecha = new Date(venta.factura?.caeVto!);
         datosFactura.caeVto = fecha.toLocaleDateString('es-ES', {
           day: '2-digit', month: '2-digit', year: '2-digit'
         });
+      }else{
+        datosFactura.tipoComprobante = venta.idTipoComprobante;
+        datosFactura.desComprobante = venta.idTipoComprobante == 99 ? 'X' : 'NC X';
       }
       
-      
-      //Indicamos el tipo de factura realizada
-      switch (datosFactura.nroTipoFactura) {
-        case 1:
-            datosFactura.tipoFactura = "A";
-            break;
-        case 6:
-            datosFactura.tipoFactura = "B";
-            break;
-        case 11:
-            datosFactura.tipoFactura = "C";
-            break;
-        default:
-            datosFactura.tipoFactura = "X";
-            break;
-      }
-
       //Obtenemos datos grabados para la facturacion
       const parametrosFacturacion = await firstValueFrom(this.miscService.ObtenerEmpresa(venta.idEmpresa));
       datosFactura.condicion = parametrosFacturacion.condicion.toUpperCase();
@@ -180,12 +157,13 @@ export class FacturaService {
       }
 
       //Importes base
-      const subtotalBruto = productos.subtotal + servicios.subtotal;
+      const subtotalBruto = productos.total + servicios.total;
       const totalDescuento = productos.descuento + servicios.descuento;
 
       //Neto sin IVA
       const subtotalNeto = subtotalBruto - totalDescuento;
-
+      comprobante.subTotal = subtotalNeto;
+      comprobante.descuento = totalDescuento;
 
       let totalIva = 0;
       let totalGeneral = 0;
@@ -194,7 +172,11 @@ export class FacturaService {
       venta.cliente?.idCategoria === 1 &&
       venta.cliente?.idCondicionIva === 1;
 
-      const esTipoA = venta.idTipoComprobante === 1;
+      const esTipoA = [
+            TipoComprobante.FACTURA_A,
+            TipoComprobante.NC_A,
+            TipoComprobante.ND_A
+      ].includes(venta.idTipoComprobante!);
       const esTipoB = venta.idTipoComprobante === 6;
 
       // FACTURA B (tipo 6 o forzada)
@@ -214,8 +196,6 @@ export class FacturaService {
       }
 
       //Definimos totales
-      comprobante.subTotal = subtotalBruto;
-      comprobante.descuento = totalDescuento;
       comprobante.totalIva = totalIva;
       comprobante.totalFinal = totalGeneral;
       comprobante.redondeo = venta.redondeo;
@@ -225,19 +205,20 @@ export class FacturaService {
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
       comprobante.cantServicios = venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
   
-      if(venta.proceso != "COTIZACION"){
+      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100){
         //Obtenemos el codigo QR
         datosFactura.qr = await firstValueFrom(this.ventasService.ObtenerQR(venta.id!));
       }
       
-      return this.ArmarFacturaA4(comprobante, datosFactura);
+      return this.ArmarFacturaA4(comprobante, datosFactura, esNota);
     }
   
   
     //Genera los datos comunes del documento y la estructura de la tabla
     private GenerarDatosComunes(venta:Venta): ObjComprobante {
       let comprobante = new ObjComprobante();
-  
+      
+      comprobante.nroProceso = venta.nroProceso;
       comprobante.papel = this.parametrosService.GetPapel();
       comprobante.nombreLocal = "CHAZA GOLF"
       comprobante.horaVenta = venta.hora;
@@ -286,18 +267,12 @@ export class FacturaService {
       ];
 
       venta.productos.forEach(item => {
-        let unitario = Number(item.unitario) || 0;
-
-        if (venta.idTipoComprobante == 1) {
-          unitario = this.QuitarIva(unitario, 21);
-        }
-
         comprobante.filasProducto?.push([
           CortarNombreProducto(item.nomProducto),
           FormatearCantidad(item.cantidad),
-          { text: unitario.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
+          { text: item.precioMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotal(unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
+          { text: item.totalMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
         ]);
       });
   
@@ -336,7 +311,7 @@ export class FacturaService {
       return precio / factor;
     };
       
-    private ArmarFacturaA4(comprobante:ObjComprobante, datosFactura:ObjTicketFactura){
+    private ArmarFacturaA4(comprobante:ObjComprobante, datosFactura:ObjTicketFactura, notas:boolean = false){
       return {
         pageSize: 'A4',
         pageOrientation: 'portrait',
@@ -384,17 +359,16 @@ export class FacturaService {
                   },
                   {
                     stack: [
-                      { text: datosFactura.tipoFactura, style: 'tipoComprobante' },
-                      (comprobante.proceso != "COTIZACION") ? [
-                        { text: "Cod." + datosFactura.nroTipoFactura, fontSize: 7 }
-                      ] : [],
+                      { text: datosFactura.desComprobante, style: 'tipoComprobante' },
+                      { text: "Cod." + datosFactura.tipoComprobante, fontSize: 7 }
                     ],
                     alignment: 'center'
                   },
                   {
                     stack: [
-                      (comprobante.proceso != "COTIZACION") ? [
-                        { text: 'FACTURA', style: 'titulo', alignment: 'center' },
+                      { text: datosFactura.desFactura, style: 'titulo', alignment: 'center' },
+
+                      (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X") ? [
                         {
                           text: [
                             { text: 'Nro Comp: ', bold: true },
@@ -403,9 +377,23 @@ export class FacturaService {
                           style: 'simple'
                         },
                       ] : [
-                        { text: 'COTIZACIÓN', style: 'titulo', alignment: 'center' },
+                        {
+                          text: [
+                            { text: 'Nro Comp: ', bold: true },
+                            { text: comprobante.nroProceso,  bold: true  }
+                          ],
+                          style: 'simple'
+                        },
                       ],
-                     
+                      (notas) ? [
+                        {
+                          text: [
+                            { text: 'Asociado: ', bold: true },
+                            { text: datosFactura.comprobanteRelacionado }
+                          ],
+                          style: 'simple'
+                        },
+                      ] : [],
                       {
                         text: [
                           { text: 'Fecha Emisión: ', bold: true },
@@ -579,7 +567,7 @@ export class FacturaService {
                     stack: [
                       { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
-                      (datosFactura.nroTipoFactura === 1) ? [
+                      (datosFactura.tipoComprobante === 1) ? [
                          { text: `IVA: $${comprobante.totalIva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
                       ] : [],                     
 
@@ -601,7 +589,7 @@ export class FacturaService {
           },
 
           //Pie de página
-          (comprobante.proceso != "COTIZACION") ? [ 
+          (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X") ? [ 
             {
               columns: [
 
@@ -637,10 +625,10 @@ export class FacturaService {
                   },
 
                   // Columna derecha descripcion del IVA
-                  (datosFactura.nroTipoFactura != 11) ? [ //Ocultamos para facturas C
+                  (datosFactura.tipoComprobante != 11) ? [ //Ocultamos para facturas C
                     {
                       stack: [
-                        (datosFactura.nroTipoFactura == 6) ? [
+                        (datosFactura.tipoComprobante == 6) ? [
                           { text: 'IVA 21% Incluido', fontSize: 10, margin: [0, 12, 0, 5] },
                         ] : [
                           { text: 'IVA 21% Discriminado', fontSize: 10, margin: [0, 12, 0, 5] },
@@ -686,7 +674,7 @@ export class FacturaService {
             margin: [8, 0, 0, 4]
           },
           tipoComprobante: {
-            fontSize: 30,
+            fontSize: 25,
             bold: true,
             decoration: 'underline',
             margin: [0, 10, 0, 3]

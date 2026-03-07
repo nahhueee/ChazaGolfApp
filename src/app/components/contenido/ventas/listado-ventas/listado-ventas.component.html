@@ -44,8 +44,6 @@
             <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
             <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
         </div>
-
-        
     </form>
 
     <div class="tabla">
@@ -68,9 +66,9 @@
                     <th>Proceso</th>
                     <th>Nro</th>
                     <th>Fecha</th>
-                    <th>Hora</th>
                     <th>Cliente</th>
                     <th>Total</th>
+                    <th>Factura</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -78,20 +76,35 @@
             <ng-template #body let-venta>
                 <tr>
                     <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO'"/>
                     </td>
                     <td>{{ venta.proceso }}</td>
                     <td>{{ venta.nroProceso }}</td>
-                    <td>{{ venta.fecha | date:'dd-MM-yyyy' }}</td>
-                    <td>{{ venta.hora }}</td>
+                    <td>{{ venta.fecha | date:'dd-MM-yyyy' }} | {{ venta.hora }}</td>
                     <td>{{ venta.cliente.nombre }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
+                    
+                    @if(venta.factura){
+                        <td>{{ venta.factura.desComprobante }} Nro: {{ venta.factura.ticket }}</td>
+                    }@else {
+                        <td>--</td>
+                    }
+
                     <td>
                         <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
                     </td>
                     <td>
                         <div class="acciones">
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
+
+                            @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada") 
+                            && venta.proceso != "NOTA DE CREDITO" && venta.proceso != "NOTA DE DEBITO"){
+                                <p-button severity="primary" styleClass="p-button-sm" 
+                                [rounded]="true" [outlined]="true" icon="pi pi-file-edit"
+                                [disabled]="venta.notas && venta.notas.length > 0"
+                                (onClick)="EmitirNotaCredito(venta)" pTooltip="Emitir Nota de Crédito" tooltipPosition="bottom"/>
+                            }
+
                             @if(tipo == "factura"){
                                 <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
                             }@else {
@@ -108,6 +121,7 @@
 </div>
 
 <app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada"></app-vista-previa>
+<app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
 
 <p-popover #op>
     <div class="opciones-impresion">
@@ -119,16 +133,34 @@
         </p-button>
 
         <p-button
-         [label]="ventaSeleccionada.proceso === 'COTIZACION' 
+         [label]="ventaSeleccionada.idTipoComprobante === 99 || ventaSeleccionada.idTipoComprobante === 100
             ? 'Ver Comprobante' 
             : 'Ver Factura'"
         severity="success"
         styleClass="p-button-sm w-full"
         [disabled]="
-        ventaSeleccionada.proceso !== 'COTIZACION' &&
-        ventaSeleccionada.factura?.cae == null
+            ventaSeleccionada.proceso == 'FACTURA' &&
+            ventaSeleccionada.factura?.cae == null
         "
         (click)="VerFactura(); op.hide()">
+        </p-button>
+  </div>
+</p-popover>
+
+<p-popover #notas>
+    <div class="opciones-notas">
+        <p-button
+        label="Emitir Nota Crédito"
+        severity="primary"
+        styleClass="p-button-sm w-full"
+        (onClick)="tipoNota = 'Crédito'; notasVisible = true; notas.hide()">
+        </p-button>
+
+        <p-button
+        label="Emitir Nota Débito"
+        severity="primary"
+        styleClass="p-button-sm w-full"
+        (click)="tipoNota = 'Débito'; notasVisible = true; notas.hide()">
         </p-button>
   </div>
 </p-popover>

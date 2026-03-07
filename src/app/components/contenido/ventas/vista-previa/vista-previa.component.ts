@@ -7,6 +7,7 @@ import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ComprobanteService } from '../../../../services/comprobante.service';
+import { TipoComprobante } from '../../../../models/ObjFacturar';
 
 @Component({
   selector: 'app-vista-previa',
@@ -52,54 +53,19 @@ export class VistaPreviaComponent {
     }
   }
 
-  QuitarIva = (precio: number, tasa: number = 21) => {
-    const factor = 1 + (tasa / 100);
-    return precio / factor;
-  };
-
   CalcularTotalGeneral() {
     const procesarItems = (items: any[]) => {
-      const esFacturaA = this.venta.idTipoComprobante === 1;
-      const descuentoGeneral = Number(this.venta.descuento) || 0;
-
       return items?.reduce((acc, item) => {
-        const unitario = Number(item.unitario) || 0;
-        const cantidad = Number(item.cantidad) || 0;
 
-        // Total bruto
-        let totalBruto = unitario * cantidad;
+        const totalItem = item.total || 0;
+        const descuentoItem = item.importeDescuento || 0;
 
-        // Quitar IVA si corresponde
-        if (esFacturaA) {
-          totalBruto = this.QuitarIva(totalBruto, 21);
-        }
-
-        // Calcular descuento respetando tope
-        const descuentoMax = item.topeDescuento ?? 100;
-        const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
-        item.descuentoAplicado = descuentoAplicado;
-
-        const importeDescuento = totalBruto * (descuentoAplicado / 100);
-
-        // Total final del item
-        const totalFinalItem = totalBruto - importeDescuento;
-
-        // Acumuladores
-        acc.subtotal += totalBruto;
-        acc.descuento += importeDescuento;
-        acc.total += totalFinalItem;
+        acc.total += totalItem;
+        acc.descuento += descuentoItem;
 
         return acc;
 
-      }, {
-        subtotal: 0,
-        descuento: 0,
-        total: 0
-      }) || {
-        subtotal: 0,
-        descuento: 0,
-        total: 0
-      };
+      }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
     };
 
     const productos = procesarItems(this.venta.productos);
@@ -109,11 +75,12 @@ export class VistaPreviaComponent {
     this.totalServicios = servicios.total;
     
     //Importes base
-    const subtotalBruto = productos.subtotal + servicios.subtotal;
+    const subtotalBruto = productos.total + servicios.total;
     const totalDescuento = productos.descuento + servicios.descuento;
 
     //Neto sin IVA
     const subtotalNeto = subtotalBruto - totalDescuento;
+    this.subTotal = subtotalNeto;
 
     let totalIva = 0;
     let totalGeneral = 0;
@@ -123,7 +90,12 @@ export class VistaPreviaComponent {
       this.venta.cliente?.idCategoria === 1 &&
       this.venta.cliente?.idCondicionIva === 1;
 
-    const esTipoA = this.venta.idTipoComprobante === 1;
+    const esTipoA = [
+         TipoComprobante.FACTURA_A,
+         TipoComprobante.NC_A,
+         TipoComprobante.ND_A
+    ].includes(this.venta.idTipoComprobante!);
+    
     const esTipoB = this.venta.idTipoComprobante === 6;
 
     // FACTURA B (tipo 6 o forzada)

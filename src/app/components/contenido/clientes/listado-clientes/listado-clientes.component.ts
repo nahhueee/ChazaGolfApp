@@ -8,6 +8,9 @@ import { Cliente } from '../../../../models/Cliente';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ClientesService } from '../../../../services/clientes.service';
 import { Router } from '@angular/router';
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { FloatLabel } from 'primeng/floatlabel';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 @Component({
   selector: 'app-listado-clientes',
   standalone: true,
@@ -16,17 +19,25 @@ import { Router } from '@angular/router';
     Button,
     Dialog,
     AddModClientesComponent,
-    TooltipModule
+    TooltipModule,
+    AutoCompleteModule,
+    FloatLabel,
+    FormsModule,
+    ReactiveFormsModule,
   ],
   templateUrl: './listado-clientes.component.html',
   styleUrl: './listado-clientes.component.scss',
 })
 export class ListadoClientesComponent {
-  clientes: Cliente[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
   filtroActual!: FiltroGral;
   
+  clientes: Cliente[] = [];
+  clientesTodos: Cliente[] = [];
+  clientesFiltrados:Cliente[]=[];
+  cliente: FormControl = new FormControl();
+
   clienteSeleccionado!: Cliente | undefined;
   mostrarmodalAddMod: boolean = false;
 
@@ -35,7 +46,11 @@ export class ListadoClientesComponent {
     private router:Router
   ){}
 
-  Buscar(event?: TableLazyLoadEvent, busqueda?: string, recargaConFiltro: boolean = false) {
+  ngOnInit(){
+    this.ObtenerClientes();
+  }
+
+  Buscar(event?: TableLazyLoadEvent, recargaConFiltro: boolean = false) {
     this.loading = true;
 
     const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
@@ -45,7 +60,7 @@ export class ListadoClientesComponent {
       this.filtroActual = new FiltroGral({
         pagina: pageIndex + 1,  
         tamanioPagina: pageSize,
-        busqueda: busqueda
+        busqueda: this.cliente.value
       });
     }
 
@@ -63,12 +78,34 @@ export class ListadoClientesComponent {
 
   Actualizar(valor:boolean){
     if(valor)
-      this.Buscar(undefined, undefined, true);
+      this.Buscar(undefined, true);
 
     this.mostrarmodalAddMod = false;
   }
 
   VerEstadistica(id:number, cliente:string){
     this.router.navigate(['/clientes/estadisticas', id, cliente]);
+  }
+
+  ObtenerClientes(){
+    this.clientesService.SelectorClientes()
+      .subscribe(response => {
+        this.clientesTodos = response;
+      });
+  }
+  
+  FiltrarClientes(event: any) {
+    const query = event.query.toLowerCase();
+    this.clientesFiltrados = this.clientesTodos.filter(c => {
+      const nombre = c.nombre!.toLowerCase();
+      const dni = c.documento!.toString(); 
+      const razon = c.razonSocial!.toLowerCase();
+      return nombre.includes(query) || dni.includes(query) || razon.includes(query);
+    });
+  }
+
+  LimpiarFiltro(){
+    this.cliente.reset();
+    this.Buscar();
   }
 }

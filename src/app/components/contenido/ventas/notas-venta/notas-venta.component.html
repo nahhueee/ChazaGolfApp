@@ -1,0 +1,168 @@
+<p-confirmdialog key="confirmacion"/>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '90vw' }" [maximizable]="true" (onHide)="CerrarModal(false)">
+    <ng-template pTemplate="header">
+        <div class="header-custom">
+            <span>Emitir Nota de {{tipo}}</span>
+        </div>
+    </ng-template>
+    
+    <div class="contenido">
+        <div class="data-cliente">
+            <div class="enLinea">
+                <div class="recuadro">
+                <p>{{venta.tipoComprobante}}</p>
+                <p-divider />
+                <span>Tipo de Comprobante</span>
+                </div>
+
+                @if(venta.proceso != "COTIZACION"){
+                    <div class="recuadro">
+                    <p>{{venta.factura?.ptoVenta}} - {{venta.factura?.ticket}}</p> 
+                    <p-divider />
+                    <span>Nro</span>
+                    </div>
+                }
+                
+
+                <div class="recuadro">
+                <p>{{venta.fecha | date:'dd-MM-yy'}}</p>
+                <p-divider />
+                <span>Fecha</span>
+                </div>
+
+                <div class="recuadro">
+                    <p>{{venta.cliente?.nombre}}</p>
+                    <p-divider />
+                    <span>Cliente</span>
+                </div>
+
+                <div class="recuadro">
+                    <p>{{venta.cliente?.condicionIva}}</p>
+                    <p-divider />
+                    <span>Cond. Iva Cliente</span>
+                </div>
+
+                <div class="recuadro">
+                    <p>{{venta.total! | decimalFormat}}</p>
+                    <p-divider />
+                    <span>Total Venta</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="alerta alerta-warn">
+            <span class="alerta-icon">⚠️</span>
+            <div class="alerta-texto">
+                Selecciona los articulos en devolución para definir el total de la nota de crédito
+            </div>
+        </div>
+
+       <p-table [value]="venta.productos" 
+                    dataKey="codProducto" 
+                    #tablaProductos
+                    [(selection)]="productosSeleccionados"
+                    selectionMode="multiple"
+                    (onRowSelect)="CalcularTotalGeneral()"
+                    (onRowUnselect)="CalcularTotalGeneral()"
+                    (onHeaderCheckboxToggle)="CalcularTotalGeneral()"
+                    >
+            <ng-template #header>
+                <tr>
+                    <th rowspan="5" style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                    <th rowspan="5">Código</th>
+                    <th rowspan="5">Nombre</th>
+                    <th rowspan="5">Color</th>
+                    <th colspan="10" class="text-center bloque-talles"></th>
+                    <th rowspan="5">Cant.</th>
+                    <th rowspan="5">Precio</th>
+                    <th rowspan="5">Descuento</th>
+                    <th rowspan="5">Total</th>
+                    </tr>
+
+                    <!-- 4 filas visuales -->
+                    <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
+
+                    <th *ngFor="let col of columnasFijas; let i = index">
+                        {{ linea.talles![i] || '' }}
+                    </th>
+
+                </tr>
+                
+
+            </ng-template>
+            <ng-template #body let-producto let-editing="editing">
+                <tr  [ngClass]="{'fila-deshabilitada': !EstaSeleccionado(producto)}">
+                    <td><p-tableCheckbox [value]="producto"></p-tableCheckbox></td>
+                    <td>{{ producto.codProducto }}</td>
+                    <td>{{ producto.nomProducto }}</td>
+                    <td>
+                        <div class="color-cell">
+                            <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                            {{ producto.color }}
+                        </div>
+                    </td>
+                    <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
+                        [pEditableColumn]="producto[t]" 
+                        [pEditableColumnField]="t">
+                        <p-cellEditor>
+                        <ng-template pTemplate="input">
+                            <input 
+                            pInputText 
+                            id="editable"
+                            type="number" 
+                            [value]="producto[t]"
+                            [disabled]="!EstaSeleccionado(producto)"
+                            (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                            (keydown.tab)="ActualizarCantidad(producto, t, $event)"
+                            (focus)="SelectContent($event)"
+                            style="max-width: 50px;" />
+                        </ng-template>
+                        <ng-template pTemplate="output">
+                            {{ producto[t] }}
+                        </ng-template>
+                        </p-cellEditor>
+                    </td>
+                    
+                    <td>{{ producto.cantidad }}</td>
+                    <td>{{ producto.precioMostrar | decimalFormat }}</td>
+                    <td>{{ producto.descuentoAplicado ?? 0 | decimalFormat }}%</td>
+                    <td>{{ producto.totalMostrar | decimalFormat }}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+
+
+        <div class="resumen">
+            <div class="fila">
+                <span>Subtotal:</span>
+                <span class="monto">${{subTotal | decimalFormat}}</span>
+            </div>
+            <div class="fila">
+                <span>Descuento:</span>
+                <span class="monto">${{totalDescuento | decimalFormat}}</span>
+            </div>
+
+            @if(mostrarIva){
+            <div class="fila">
+                <span>IVA 21%:</span>
+                <span class="monto">${{totalIva | decimalFormat}}</span>
+            </div>
+            }                    
+
+            <br>
+            <div class="fila">
+                <span>Total Nota:</span>
+                <span class="monto">${{totalGeneral | decimalFormat}}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="botones">
+        <p-button label="Volver" severity="secondary" (click)="CerrarModal(false)" icon="pi pi-angle-left"/>
+        <p-button label="Guardar" (onClick)="Confirmar()" icon="pi pi-save" />
+    </div>
+</p-dialog>
+
+<!-- Modal Facturar -->
+<app-facturar-venta [objFacturar]="objFacturar" [visible]="modalFacturarVisible" [titulo]="'Facturar Nota de Crédito'" (cerrar)="Guardar($event)"/>

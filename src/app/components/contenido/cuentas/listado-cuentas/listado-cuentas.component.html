@@ -1,21 +1,27 @@
 <div class="contenido">
-    <p-floatlabel variant="on" class="busqueda">
-        <p-autocomplete
-            [formControl]="cliente"
-            [suggestions]="clientesFiltrado"
-            placeholder="Buscar cliente por Nombre, DNI o Razón Social"
-            emptyMessage="No se encontraron resultados"
-            (completeMethod)="FiltrarClientes($event)"
-            optionLabel="nombre"
-        >
-            <!-- Template para las sugerencias -->
-            <ng-template let-cliente pTemplate="item">
-                {{ cliente.nombre }} - {{ cliente.documento }} - {{ cliente.razonSocial }}
-            </ng-template>
+     <div class="filtros">
+        <p-floatlabel variant="on" class="busqueda">
+            <p-autocomplete
+                [formControl]="cliente"
+                [suggestions]="clientesFiltrado"
+                placeholder="Buscar cliente por Nombre, DNI o Razón Social"
+                emptyMessage="No se encontraron resultados"
+                (completeMethod)="FiltrarClientes($event)"
+                optionValue="nombre"
+                optionLabel="nombre"
+            >
+                <ng-template let-cliente pTemplate="item">
+                    {{ cliente.nombre }} - {{ cliente.documento }} - {{ cliente.razonSocial }}
+                </ng-template>
 
-        </p-autocomplete>
-        <label>Filtrar Cliente</label>
-    </p-floatlabel>
+            </p-autocomplete>
+            <label>Filtrar Cliente</label>
+        </p-floatlabel>
+        <div class="btns">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltro()" />
+        </div>
+    </div>
 
     <div class="tabla">
         <p-table 

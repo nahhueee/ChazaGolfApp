@@ -63,7 +63,7 @@ export class ListadoCuentasComponent {
       this.filtroActual = new FiltroGral({
         pagina: pageIndex + 1,  
         tamanioPagina: pageSize,
-        //busqueda: busqueda,
+        busqueda: this.cliente.value
         // orden:
         // direccion:
       });
@@ -95,5 +95,10 @@ export class ListadoCuentasComponent {
       const razon = c.razonSocial!.toString(); 
       return nombre.includes(query) || dni.includes(query) || razon.includes(query);
     });
+  }
+
+  LimpiarFiltro(){
+    this.cliente.reset();
+    this.Buscar();
   }
 }
