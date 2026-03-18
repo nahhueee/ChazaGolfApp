@@ -27,6 +27,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
+import { FilesService } from '../../../../services/files.service';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -54,7 +55,7 @@ export class ListadoVentasComponent {
   ventas: Venta[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
-  filtroActual!: FiltroGral;
+  filtroActual!: FiltroVenta;
   tipo: 'factura' | 'pre' = 'factura';
   tipoNota: 'Crédito' | 'Débito' = 'Crédito';
   primeraCarga = true;
@@ -79,7 +80,8 @@ export class ListadoVentasComponent {
     private comprobanteService:ComprobanteService,
     private facturaService:FacturaService,
     private confirmationService: ConfirmationService,
-    private Notificaciones: NotificacionesService
+    private Notificaciones: NotificacionesService,
+    private filesService:FilesService
   ){
     this.filtros = new FormGroup({
       proceso: new FormControl(),
@@ -131,9 +133,41 @@ export class ListadoVentasComponent {
 
     this.ventasService.ObtenerVentas(this.filtroActual).subscribe(response => {
       this.ventas = response.registros;
-      console.log(this.ventas)
       this.totalRecords = response.total;
       this.loading = false;
+    });
+  }
+
+  Exportar(){
+    if(this.filtros.get('fechas')?.value == null || this.filtros.get('fechas')?.value == ''){
+      this.Notificaciones.Warn("Debe seleccionar al menos un rango de fechas.");
+      return;
+    }
+
+    this.filtroActual = new FiltroVenta({
+      tipo: this.tipo,
+      idProceso: this.filtros.value.proceso?.id ?? 0,
+      nroProceso: this.filtros.value.nroProceso,
+      fechas: this.filtros.value.fechas,
+      cliente: this.filtros.value.cliente?.id ?? 0
+    });
+
+    this.filesService.DescargarVentasExcel(this.filtroActual).subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+
+      // Fecha en formato DD-MM-YY
+      const fecha = new Date();
+      const dd = String(fecha.getDate()).padStart(2, '0');
+      const mm = String(fecha.getMonth() + 1).padStart(2, '0'); // Meses empiezan en 0
+      const yy = String(fecha.getFullYear()).slice(-2); // últimos 2 dígitos del año
+
+      const nombreArchivo = `Ventas_${dd}-${mm}-${yy}.xlsx`;
+
+      a.href = url;
+      a.download = nombreArchivo; 
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
   }
 

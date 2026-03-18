@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { FiltroProducto } from '../models/filtros/FiltroProducto';
+import { FiltroVenta } from '../models/filtros/FiltroVenta';
 
 @Injectable({
   providedIn: 'root'
@@ -20,5 +21,9 @@ export class FilesService {
   
   DescargarResultadosExcel(filtros:FiltroProducto){
     return this.apiService.getFile('files/descargar-excel', filtros);
+  }
+
+  DescargarVentasExcel(filtros:FiltroVenta){
+    return this.apiService.getFile('files/ventas-excel', filtros);
   }
 }

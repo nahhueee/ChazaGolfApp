@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Venta } from '../models/Factura';
 import { ObjFacturar } from '../models/ObjFacturar';
+import { FiltroVenta } from '../models/filtros/FiltroVenta';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +14,7 @@ export class VentasService {
   private apiService = inject(ApiService);
 
   //#region OBTENER
-  ObtenerVentas(filtro:FiltroGral): Observable<any> {
+  ObtenerVentas(filtro:FiltroVenta): Observable<any> {
     return this.apiService.post('ventas/obtener', filtro)
   }
   ObtenerVenta(idVenta:number): Observable<any> {
