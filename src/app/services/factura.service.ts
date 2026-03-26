@@ -88,6 +88,7 @@ export class FacturaService {
       datosFactura.tipoDNI = venta.cliente?.idTipoDocumento;
       datosFactura.condReceptor = venta.cliente?.idCondicionIva;
       datosFactura.desFactura = venta.tipoComprobante!;
+      datosFactura.tipoPago = venta.pagos.map(p => p.metodo).join(' | ');
 
       let esNota:boolean = false;
 
@@ -136,6 +137,7 @@ export class FacturaService {
       datosFactura.telefono = parametrosFacturacion.telefono;
       datosFactura.email = parametrosFacturacion.email;
       datosFactura.inicioActividad = parametrosFacturacion.inicioAct;
+      datosFactura.IIBB = parametrosFacturacion.IIBB;
       
       //Definimos datos del receptor
       switch (datosFactura.condReceptor) {
@@ -421,7 +423,14 @@ export class FacturaService {
                           { text: datosFactura.razon }
                         ],
                         style: 'simple'
-                      }
+                      },
+                      {
+                        text: [
+                          { text: 'IIBB: ', bold: true },
+                          { text: datosFactura.IIBB }
+                        ],
+                        style: 'simple'
+                      },
                     ]
                   }
                 ]
@@ -447,7 +456,7 @@ export class FacturaService {
                       {
                         text: [
                           { text: 'Condición de Venta: ', bold: true },
-                          { text: 'Contado' }
+                          { text: datosFactura.tipoPago }
                         ],
                         style: 'simple', margin: [8, 5, 0, 4]
                       },                      {

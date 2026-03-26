@@ -1,0 +1,213 @@
+.contenido{
+    background-color: var(--surface-card);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.form{
+    width: 800px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+}
+.vertical{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+.horizontal{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+textarea{
+    width: 100% !important;
+}
+
+
+//Productos
+.tabla{
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--surface-card);
+
+  h3{
+    font-size: 15px;
+    font-family: 'Poppins';
+    margin-bottom: 20px;
+  }
+}
+
+
+/*#region PRODUCTOS*/
+.formProducto{
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  margin-bottom: 30px;
+
+  .izq{
+    width: 100%;
+    flex: 1;
+
+    .campos{
+      display: flex;
+      gap: 20px;
+    }
+  }
+  .der{
+    width: 100%;
+    flex: 1;
+  }
+}
+
+.LineaProducto{
+  display: flex;
+  gap: 30px;
+  width: 100%;
+  margin-bottom: 15px;
+  align-items: start;
+
+  .completeProductos, .selectorColores{
+    flex: 1;
+  }
+}
+
+.color-cell{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.box-color{
+  height: 20px;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.opcion-color {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cuadro-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+}
+
+
+.talles{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); 
+  grid-template-rows: repeat(2, auto);  
+  gap: 5px; 
+  flex: 2;
+  
+  .talle, .NoTalle{
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+
+    width: 100%;
+    border-radius: 8px;
+    background-color: var(--surface-ground);
+
+    p{
+      font-family: 'Poppins';
+      font-size: 16px
+    }
+    span{
+      font-size: 13px;
+    }
+  }
+  .talle:hover{
+    color: var(--p-primary-color);
+    cursor: pointer;
+  }
+  .talle.disabled {
+    opacity: 0.4;
+    pointer-events: none; 
+    cursor: not-allowed;
+   }
+
+  .badge-flotante {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    z-index: 2;
+  }
+}
+/*#endregion */
+
+
+::ng-deep .p-datatable .fila-talles th {
+  padding: 2px 7px !important;
+  font-size: 16px;
+  line-height: 1.1;
+  height: 24px;
+}
+
+::ng-deep .p-datatable .fila-talles {
+  height: 24px;
+}
+
+::ng-deep .p-datatable .bloque-talles {
+  border-bottom: none !important;
+  padding: 5px !important;
+}
+
+::ng-deep .p-datatable .fila-talles th {
+  border-bottom: none;
+}
+
+::ng-deep .p-datatable .fila-talles:last-child th {
+  border-bottom: 1px solid var(--p-datatable-header-cell-border-color);
+  padding-bottom: 5px;
+}
+
+::ng-deep .p-datatable .ultima-fila-talles th {
+  padding-bottom: 10px !important; 
+}
+
+::ng-deep input[type="number"]#editable::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+
+.botones{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 15px;
+    z-index: 1;
+    position: fixed;
+    bottom: 0;
+    padding: 10px 0px;
+    background: var(--surface-ground) !important;
+    box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--surface-border);
+}
+
+.acciones{
+    display: flex;
+    gap: 5px;
+}

@@ -1,0 +1,202 @@
+<p-confirmpopup />
+<p-confirmdialog key="confirmarDialog"/>
+
+<div class="contenido">
+    <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar(false)' autocomplete="off">
+      <div class="vertical">
+        <!-- Proveedor -->
+        <p-floatlabel variant="in">
+            <p-select [options]="proveedores" formControlName="proveedor" optionValue="id" optionLabel="descripcion" [appendTo]="'body'"/>
+            <label>Proveedor</label>
+        </p-floatlabel>
+
+        <div class="horizontal">
+          <!-- Corte -->
+          <p-floatlabel variant="in">
+              <input pInputText formControlName="corte" type="number" />
+              <label>Nro Corte</label>
+          </p-floatlabel>
+
+          <!-- Fecha -->
+          <p-floatlabel variant="in">
+              <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+              <label>Fecha</label>
+          </p-floatlabel>
+        </div>
+      </div>
+      <!-- Observaciones -->
+      <p-floatlabel variant="in">
+          <textarea pTextarea rows="5" cols="30" formControlName="observaciones" style="resize: none"></textarea>
+          <label>Observaciones</label>
+      </p-floatlabel>
+    </form>
+
+    <p-divider />
+    <p-button class="btnEtiquetas" label="Ver Etiquetas" variant="outlined" severity="contrast" icon="pi pi-barcode" (onClick)="Etiquetas()"/>
+
+
+    <div class="tabla">
+        <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
+                  <div class="izq">
+                      <div class="campos">
+                          <!-- Codigo - Nombre -->
+                          <p-floatlabel variant="in">
+                              <p-autocomplete
+                                  formControlName="producto"
+                                  [suggestions]="productosFiltrados"
+                                  placeholder="Buscar por código o nombre"
+                                  emptyMessage="No se encontraron resultados"
+                                  (completeMethod)="FiltrarProductos($event)"
+                                  (onSelect)="SeleccionarProducto();"
+                                  optionLabel="nombre"
+                              >
+                                  <!-- Template para las sugerencias -->
+                                  <ng-template let-producto pTemplate="item">
+                                      {{ producto.codigo }} - {{ producto.nombre }}
+                                  </ng-template>
+
+                              </p-autocomplete>
+                              <label>Producto</label>
+                          </p-floatlabel>
+
+                          <p-floatlabel variant="in" class="selectorColores">
+                              <p-select 
+                                  [options]="coloresDisponibles"
+                                  optionLabel="color"
+                                  [showClear]="true"
+                                  formControlName="colorSeleccionado"
+                                  (onChange)="SeleccionarVariante($event.value.idProducto)"
+                              >
+                                  <!-- Template de cada opción -->
+                                  <ng-template pTemplate="item" let-item>
+                                      <div class="opcion-color">
+                                          <div class="cuadro-color" [style.background]="item.hexa"></div>
+                                          <span>{{ item.color }}</span>
+                                      </div>
+                                  </ng-template>
+
+                                  <!-- Template para la opción seleccionada -->
+                                  <ng-template pTemplate="selectedItem" let-item>
+                                      <div class="opcion-color">
+                                          <div class="cuadro-color" [style.background]="item?.hexa"></div>
+                                          <span>{{ item?.color }}</span>
+                                      </div>
+                                  </ng-template>
+                              </p-select>
+
+                              <label>Color</label>
+                          </p-floatlabel>
+                      </div>
+                      <p-button label="Confirmar Producto" type="submit" [raised]="true" icon="pi pi-check"/>
+                  </div>
+                  <div class="der">
+                    <div class="talles"> 
+                        @if(productoSeleccionado && productoSeleccionado.id != 0){
+                            @for (item of tallesProducto; track item) {
+                              <div class="talle"
+                                  [class.disabled]="!item.disponible"
+                                  (click)="item.disponible && (item.cantAgregar += 1)">
+
+                                @if(item.cantAgregar != 0){
+                                  <p-badge 
+                                    [value]="item.cantAgregar" 
+                                    badgeSize="small" 
+                                    severity="success" 
+                                    class="badge-flotante"/>
+                                }
+
+                                <p>{{ item.talle }}</p>
+                              </div>
+                            }
+                        }@else{
+                            @for (opcion of tallesBase; track $index) {
+                                <div class="NoTalle">
+                                    <p>{{opcion}}</p>
+                                </div>
+                            }
+                        }
+                    </div>
+                  </div>
+              </form>
+
+              <p-table [value]="productosOrden" dataKey="codProducto" #tablaProductos>
+                  <ng-template #header>
+                      <tr>
+                          <th rowspan="5">Código</th>
+                          <th rowspan="5">Nombre</th>
+
+                          <th rowspan="5">Color</th>
+                          <th colspan="10" class="text-center bloque-talles"></th>
+
+                          <th rowspan="5">Cantidad</th>
+                          <th rowspan="5">Estado</th>
+                          <th rowspan="5">Acciones</th>
+                        </tr>
+
+                          <!-- 4 filas visuales -->
+                          <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
+
+                          <th *ngFor="let col of columnasFijas; let i = index">
+                              {{ linea.talles![i] || '' }}
+                          </th>
+
+                      </tr>
+                      
+
+                  </ng-template>
+                  <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
+                      <tr>
+                          <td>{{ producto.codProducto }}</td>
+                          <td>{{ producto.nomProducto }}</td>
+                          <td>
+                              <div class="color-cell">
+                                  <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                                  {{ producto.color }}
+                              </div>
+                          </td>
+                          <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
+                              [pEditableColumn]="producto[t]" 
+                              [pEditableColumnField]="t">
+                              <p-cellEditor>
+                              <ng-template pTemplate="input">
+                                  <input 
+                                  pInputText 
+                                  id="editable"
+                                  type="number" 
+                                  [value]="producto[t]"
+                                  (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                  (keydown.tab)="ActualizarCantidad(producto, t, $event)"
+                                  (focus)="SelectContent($event)"
+                                  style="max-width: 50px;" />
+                              </ng-template>
+                              <ng-template pTemplate="output">
+                                  {{ producto[t] }}
+                              </ng-template>
+                              </p-cellEditor>
+                          </td>
+                          <td>{{ producto.cantidad }}</td>
+                          <td>
+                              <p-tag [value]="producto.estado" [severity]="GetSeverity(producto.estado)" />
+                          </td>
+
+                          <td>
+                            <div class="acciones">
+                              @if(producto.estado == 'Pendiente'){
+                              <p-button [disabled]="producto.estado == 'Eliminado'" severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-download" (onClick)="MarcarComoIngresado($event, producto.idProducto, true)" pTooltip="Marcar como ingresado" tooltipPosition="bottom"/>
+                              }@else {
+                                <p-button [disabled]="producto.estado == 'Eliminado'" severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-undo" (onClick)="MarcarComoIngresado($event, producto.idProducto, false)" pTooltip="Revertir ingreso" tooltipPosition="bottom"/>
+                              }
+                              <p-button [disabled]="producto.estado == 'Ingresado' || producto.estado == 'Eliminado'" severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, rowIndex)" />
+                            </div>
+                          </td>
+                      </tr>
+                  </ng-template>
+              </p-table>
+    </div>
+</div>
+
+<div class="botones">
+  <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
+  <p-button label="Guardar" (onClick)="Guardar(false)" icon="pi pi-save" [disabled]="ordenIngreso.estado == 'Finalizada'" />
+  <p-button label="Finalizar" (onClick)="Finalizar()" icon="pi pi-check" [disabled]="ordenIngreso.estado == 'Finalizada'"/>
+</div>

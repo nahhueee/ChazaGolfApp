@@ -7,6 +7,7 @@ import { MenuModule } from 'primeng/menu';
 import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { CommonModule } from '@angular/common';
+import { UsuariosService } from '../../../services/usuarios.service';
 
 @Component({
   selector: 'app-navegacion',
@@ -26,15 +27,20 @@ export class NavegacionComponent {
   itemsPreFacturacion: MenuItem[] | undefined;
   itemsProducto: MenuItem[] | undefined;
   itemsCliente: MenuItem[] | undefined;
+  itemsOrdenes: MenuItem[] | undefined;
   esDark: boolean = false;
   activo: string = 'inicio';
 
   constructor(
     private router:Router,
-    private temaService:TemaService
+    private temaService:TemaService,
+    private usuariosService:UsuariosService
   ){}
 
   ngOnInit() {
+    const sesion = this.usuariosService.GetSesion();
+    if(!sesion) this.router.navigateByUrl('/ingresar');
+
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         this.ActualizarActivo(event.urlAfterRedirects);
@@ -64,6 +70,11 @@ export class NavegacionComponent {
         { label: 'Listado', icon: 'pi pi-list', routerLink: '/clientes' }
     ];
 
+     this.itemsOrdenes = [
+        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ordenes-ingreso/adm', 0] },
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/ordenes-ingreso' }
+    ];
+
     this.esDark = localStorage.getItem('theme') === 'dark';
   }
 
@@ -80,6 +91,8 @@ export class NavegacionComponent {
       this.activo = 'clientes';
     } else if (url.startsWith('/cuentas')) {
       this.activo = 'cuentas';
+    } else if (url.startsWith('/ordenes-ingreso')) {
+      this.activo = 'ordenes';      
     } else {
       this.activo = '';
     }

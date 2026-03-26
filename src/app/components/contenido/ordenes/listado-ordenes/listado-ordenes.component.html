@@ -1,0 +1,69 @@
+<div class="contenido">
+    <form [formGroup]="filtros" autocomplete="off" class="filtros">
+      <div class="izq">
+        <!-- Nro Corte -->
+        <p-floatlabel variant="on">
+            <input pInputText formControlName="nroCorte"  type="text"/>
+            <label>N° Corte</label>
+        </p-floatlabel>
+
+        <!-- Estados -->
+        <p-floatlabel variant="on">
+            <p-select [options]="estados" formControlName="estado"/>
+            <label>Estado</label>
+        </p-floatlabel>
+      </div>
+       
+      <div class="der">
+          <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+          <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+      </div>
+    </form>
+        
+    <div class="tabla">
+        <p-table 
+        [value]="ordenes"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[10,20,50]"
+        [tableStyle]="{ 'min-width': '60rem' }">
+        
+            <ng-template #header>
+                <tr>
+                    <th>Editar</th>
+                    <th>Nro</th>
+                    <th>Proveedor</th>
+                    <th>Nro Corte</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-orden>
+                <tr>
+                    <td>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(orden.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                    </td>
+                    <td>{{ orden.id }}</td>
+                    <td>SUCEDE SRL</td>
+                    <td>{{ orden.corte }}</td>
+                    <td>{{ orden.fecha | date:'dd-MM-yy'}}</td>
+                    <td>
+                        <p-tag [value]="orden.estado" [severity]="GetSeverity(orden.estado)" />
+                    </td>
+                    <td>
+                        <div class="acciones">
+                            <!-- <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" pTooltip="Finalizar" tooltipPosition="bottom"/> -->
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-barcode" pTooltip="Ver Etiquetas" tooltipPosition="bottom" (onClick)="Etiquetas(orden.productos)"/>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+

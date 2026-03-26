@@ -10,6 +10,15 @@ import { ApiService } from './api.service';
 export class UsuariosService {
   private apiService = inject(ApiService);
 
+  GetSesion() {
+    const raw = localStorage.getItem("sesion");
+    return raw ? JSON.parse(raw) : null;
+  }
+  GetUsuarioSesion(): string | null {
+    const sesion = this.GetSesion();
+    return sesion?.data?.usuario?.toString() || '';
+  }
+
   //#region OBTENER
   ObtenerUsuarios(filtro:FiltroGral): Observable<any> {
     return this.apiService.post('usuarios/obtener', filtro)

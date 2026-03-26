@@ -18,6 +18,9 @@
             <p-menu #menuClientes [model]="itemsCliente" [popup]="true" />
 
             <button pButton label="Cuentas Corriente" [ngClass]="{ 'activo': activo === 'cuentas' }" icon="pi pi-wallet" class="p-button-text" (click)="activo = 'cuentas'; Navegar('cuentas')" ></button>
+
+            <button pButton label="Órdenes Ingreso" [ngClass]="{ 'activo': activo === 'ordenes' }" icon="pi pi-file-import" class="p-button-text" (click)="activo = 'ordenes'; menuOrdenes.toggle($event)"></button>
+            <p-menu #menuOrdenes [model]="itemsOrdenes" [popup]="true" />
         </div>
         
         <div class="opciones">

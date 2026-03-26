@@ -12,6 +12,8 @@ import { ServiciosComponent } from './components/contenido/servicios/listado-ser
 import { ListadoCuentasComponent } from './components/contenido/cuentas/listado-cuentas/listado-cuentas.component';
 import { VentasClienteComponent } from './components/contenido/cuentas/ventas-cliente/ventas-cliente.components';
 import { EstadisticaClientes } from './components/contenido/clientes/estadistica-clientes/estadistica-clientes.component';
+import { ListadoOrdenesComponent } from './components/contenido/ordenes/listado-ordenes/listado-ordenes.component';
+import { AddmodOrdenesComponent } from './components/contenido/ordenes/addmod-ordenes/addmod-ordenes.component';
 
 export const routes: Routes = [
     {
@@ -71,4 +73,13 @@ export const routes: Routes = [
         path: 'cuentas/administrar/:idCliente/:cliente',
         component:VentasClienteComponent
     },
+    {
+        path: 'ordenes-ingreso',
+        component:ListadoOrdenesComponent
+    },
+    {
+        path: 'ordenes-ingreso/adm/:idOrden',
+        component:AddmodOrdenesComponent
+    },
+
 ];

@@ -138,11 +138,13 @@ export class Temporada {
 export class LineasTalle {
     id?:number;
     talles?:string[] = [];
+    mostrar?:number;
 
     constructor(data?: any) {
         if (data) {
           this.id = data.id;
           this.talles = data.talles;
+          this.mostrar = data.mostrar;
         }
     }
 }

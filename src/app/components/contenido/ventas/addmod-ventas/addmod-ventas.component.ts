@@ -536,6 +536,7 @@ export class AddModVentasComponent {
     this.miscService.ObtenerLineasTalle()
       .subscribe(response => {
         this.lineasTalles = response;
+        this.lineasTalles = this.lineasTalles.filter(l => l.mostrar == 1)
       });
   }
 

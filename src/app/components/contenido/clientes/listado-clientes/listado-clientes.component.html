@@ -1,27 +1,29 @@
 <div class="contenido">
-    <div class="filtros">
-        <p-floatlabel variant="on" class="busqueda">
-            <p-autocomplete
-                [formControl]="cliente"
-                [suggestions]="clientesFiltrados"
-                placeholder="Buscar cliente por Nombre, DNI o Razón Social"
-                emptyMessage="No se encontraron resultados"
-                (completeMethod)="FiltrarClientes($event)"
-                optionValue="nombre"
-                optionLabel="nombre"
-            >
-                <ng-template let-cliente pTemplate="item">
-                    {{ cliente.nombre }} - {{ cliente.documento }} - {{ cliente.razonSocial }}
-                </ng-template>
+    <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
+        <div class="izq">
+            <!-- Nombre -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="nombre"  type="text"/>
+                <label>Nombre</label>
+            </p-floatlabel>
 
-            </p-autocomplete>
-            <label>Filtrar Cliente</label>
-        </p-floatlabel>
-        <div class="btns">
-            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
-            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltro()" />
+            <!-- Condicion -->
+            <p-floatlabel variant="on">
+                <p-select [options]="condicionesIva" formControlName="condicionIva" optionValue="id" optionLabel="descripcion"/>
+                <label>Estado</label>
+            </p-floatlabel>
+
+            <!-- Documento -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="documento" type="number"/>
+                <label>Documento</label>
+            </p-floatlabel>
         </div>
-    </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+    </form>
         
     <div class="tabla">
         <p-table 

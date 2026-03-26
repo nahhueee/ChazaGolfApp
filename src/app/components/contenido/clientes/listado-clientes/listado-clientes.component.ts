@@ -5,12 +5,14 @@ import { AddModClientesComponent } from '../addmod-clientes/addmod-clientes.comp
 import { TooltipModule } from 'primeng/tooltip';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Cliente } from '../../../../models/Cliente';
-import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { ClientesService } from '../../../../services/clientes.service';
 import { Router } from '@angular/router';
 import { AutoCompleteModule } from 'primeng/autocomplete';
-import { FloatLabel } from 'primeng/floatlabel';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup } from '@angular/forms';
+import { FiltroClientes } from '../../../../models/filtros/FiltroClientes';
+import { MiscService } from '../../../../services/misc.service';
+import { CondicionesIva } from '../../../../models/CondicionesIva';
+import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 @Component({
   selector: 'app-listado-clientes',
   standalone: true,
@@ -21,9 +23,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
     AddModClientesComponent,
     TooltipModule,
     AutoCompleteModule,
-    FloatLabel,
-    FormsModule,
-    ReactiveFormsModule,
+    ...FORMS_IMPORTS,
   ],
   templateUrl: './listado-clientes.component.html',
   styleUrl: './listado-clientes.component.scss',
@@ -31,24 +31,39 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 export class ListadoClientesComponent {
   totalRecords: number = 0;
   loading: boolean = false;
-  filtroActual!: FiltroGral;
+  filtroActual!: FiltroClientes;
   
   clientes: Cliente[] = [];
-  clientesTodos: Cliente[] = [];
-  clientesFiltrados:Cliente[]=[];
-  cliente: FormControl = new FormControl();
+  condicionesIva: CondicionesIva[] = [];
 
   clienteSeleccionado!: Cliente | undefined;
   mostrarmodalAddMod: boolean = false;
 
+  filtros:FormGroup;
+
   constructor(
     private clientesService:ClientesService,
+    private miscService:MiscService,
     private router:Router
-  ){}
+  ){
+    this.filtros = new FormGroup({
+      nombre: new FormControl(''),
+      condicionIva: new FormControl(''),
+      documento: new FormControl('')
+    });
+  }
 
   ngOnInit(){
-    this.ObtenerClientes();
+    this.ObtenerCondicionesIva();
   }
+
+  ObtenerCondicionesIva(){
+    this.miscService.ObtenerCondicionesIva()
+      .subscribe(response => {
+        this.condicionesIva = response;
+      });
+  }
+
 
   Buscar(event?: TableLazyLoadEvent, recargaConFiltro: boolean = false) {
     this.loading = true;
@@ -57,10 +72,12 @@ export class ListadoClientesComponent {
     const pageSize = event?.rows ?? 10;
 
     if (!recargaConFiltro) {
-      this.filtroActual = new FiltroGral({
+      this.filtroActual = new FiltroClientes({
         pagina: pageIndex + 1,  
         tamanioPagina: pageSize,
-        busqueda: this.cliente.value
+        nombre: this.filtros.get('nombre')?.value ?? '',
+        condicionIva: this.filtros.get('condicionIva')?.value ?? '',
+        documento: this.filtros.get('documento')?.value ?? ''
       });
     }
 
@@ -87,25 +104,8 @@ export class ListadoClientesComponent {
     this.router.navigate(['/clientes/estadisticas', id, cliente]);
   }
 
-  ObtenerClientes(){
-    this.clientesService.SelectorClientes()
-      .subscribe(response => {
-        this.clientesTodos = response;
-      });
-  }
-  
-  FiltrarClientes(event: any) {
-    const query = event.query.toLowerCase();
-    this.clientesFiltrados = this.clientesTodos.filter(c => {
-      const nombre = c.nombre!.toLowerCase();
-      const dni = c.documento!.toString(); 
-      const razon = c.razonSocial!.toLowerCase();
-      return nombre.includes(query) || dni.includes(query) || razon.includes(query);
-    });
-  }
-
-  LimpiarFiltro(){
-    this.cliente.reset();
+  LimpiarFiltros(){
+    this.filtros.reset();
     this.Buscar();
   }
 }

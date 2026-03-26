@@ -18,6 +18,7 @@ export class ObjTicketFactura {
     IIBB?:string;
     razon?:string;
     qr?:string;
+    tipoPago:string;
 
     //Receptor
     DNI?:number;
