@@ -1,4 +1,5 @@
 export class ObjComprobante {
+    nroRemito: number;
     nroProceso?:number;
     papel?:string;
     nombreLocal?:string;
@@ -19,6 +20,7 @@ export class ObjComprobante {
   
     constructor(data?: any) {
         if (data) {
+          this.nroRemito = data.nroRemito;
           this.nroProceso = data.nroProceso;
           this.papel = data.papel;
           this.nombreLocal = data.nombreLocal;

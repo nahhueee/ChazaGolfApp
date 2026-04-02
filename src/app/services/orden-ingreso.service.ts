@@ -6,6 +6,7 @@ import { FiltroGral } from '../models/filtros/FiltroGral';
 import { Servicio } from '../models/Servicio';
 import { OrdenIngreso } from '../models/OrdenIngreso';
 import { FiltroOrdenes } from '../models/filtros/FIltroOrdenes';
+import { Recepcion } from '../models/Recepcion';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +22,10 @@ export class OrdenIngresoService {
   ObtenerOrdenIngreso(id:number): Observable<any>{
     return this.apiService.get(`orden-ingreso/obtener/${id}`)
   }
+
+  ObtenerHistorialRecepciones(idOrden:number): Observable<any>{
+    return this.apiService.get(`orden-ingreso/obtener-recepciones/${idOrden}`)
+  }
   //#endregion
 
   //#region ABM
@@ -34,6 +39,10 @@ export class OrdenIngresoService {
 
   Eliminar(id:number): Observable<any>{
     return this.apiService.delete(`orden-ingreso/eliminar/${id}`)
+  }
+
+  AgregarRecepcion(recepcion:Recepcion): Observable<any>{
+    return this.apiService.post('orden-ingreso/agregar-recepcion', recepcion)
   }
   //#endregion
 }

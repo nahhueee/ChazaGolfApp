@@ -1,0 +1,84 @@
+<p-confirmdialog key="confirmarDialog"/>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '90vw' }" [maximizable]="true" (onHide)="Cerrar()">
+   <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-file-import"></i>
+            <span> Nueva Recepción</span>
+        </div>
+    </ng-template>
+
+    <div class="contenido">
+      <p-table [value]="productos || []">     
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Color</th>
+            <th *ngFor="let t of talles" class="talle-col">{{t}}</th>
+            <th>Total</th>
+            <th>Sin Rec.</th>
+          </tr>
+        </ng-template>
+
+        <!-- BODY CUSTOM -->
+        <ng-template pTemplate="body" let-prod let-ri="rowIndex">
+
+          <!-- FILA DISPLAY -->
+          <tr class="fila" [class.deshabilitar]="prod.noRecepcionar">
+            <td>{{ prod.codProducto }}</td>
+            <td>{{ prod.nomProducto }}</td>
+            <td>
+              <div class="color-cell">
+                  <div class="box-color" [ngStyle]="{'background': prod.hexa}"></div>
+                  {{ prod.color }}
+              </div>
+            </td>
+
+            <td *ngFor="let t of talles; let i = index" class="talle-col">
+              {{ prod['t' + (i + 1)] || 0 }}
+            </td>
+
+            <td>{{ getCantidadPendiente(prod) }}</td>
+            <td><p-button class="btnDeshabilitar" [severity]="prod.noRecepcionar ? 'success' : 'danger'" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [icon]="prod.noRecepcionar ? 'pi pi-check-circle' : 'pi pi-minus-circle'" (onClick)="NoRecepcionar(prod)" [pTooltip]="prod.noRecepcionar ? 'Habilitar Recepción' : 'Sin Recepción'" tooltipPosition="bottom"/>
+            </td> 
+          </tr>
+
+          <!-- FILA INPUT -->
+          <tr class="fila-input" [class.deshabilitar-inputs]="prod.noRecepcionar">
+            <td></td>
+            <td></td>
+            <td class="label-recepcion">
+              Recepción
+            </td>
+
+            <td *ngFor="let t of talles; let i = index">
+              <input pInputText
+                    type="number"
+                    [formControl]="getControl(ri, i)"
+                    (blur)="onBlur(ri, i)"
+                    (focus)="selectAll($event)"
+                    class="input-talle"
+                    [class.input-error]="getControl(ri, i).invalid && getControl(ri, i).touched" 
+                    min="0"
+                    max="999"
+                    />
+            </td>
+
+            <td>
+              <strong>{{ getTotal(ri) }}</strong>
+            </td>
+
+            
+          </tr>
+
+        </ng-template>
+
+      </p-table>
+    </div>
+
+    <div class="botones">
+        <p-button label="Volver" severity="secondary" (click)="Cerrar()" icon="pi pi-angle-left"/>
+        <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
+    </div>
+</p-dialog>

@@ -25,7 +25,10 @@ export class ProductoOrden{
     t10?: number;
     tallesSeleccionados:string = "";
     codigosBarra:[] = [];
- 
+    _original?: { [key: string]: number | null };
+    noRecepcionar:boolean = false;
+  
+
     constructor(data?: any) {
       if (data) {
         this.id = data.id;

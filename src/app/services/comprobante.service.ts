@@ -71,6 +71,7 @@ export class ComprobanteService {
       comprobante.horaVenta = venta.hora;
       comprobante.cliente = venta.cliente?.id + " - " + venta.cliente?.nombre;
       comprobante.proceso = venta.proceso;
+      comprobante.nroRemito = venta.id!;
   
       const fecha = new Date(venta.fecha!);
       comprobante.fechaVenta = fecha.toLocaleDateString('es-ES', {
@@ -252,6 +253,13 @@ export class ComprobanteService {
               { text: comprobante.fechaVenta + " " + comprobante.horaVenta, style: 'fecha', alignment: 'right' }
             ]
           },  
+          {
+            text: [
+              { text: 'Nro Remito: ', bold: true },
+              { text: comprobante.nroRemito.toString().padStart(8, '0')}
+            ],
+            style: 'simple'
+          },
           {
             text: [
               { text: 'Proceso: ', bold: true },

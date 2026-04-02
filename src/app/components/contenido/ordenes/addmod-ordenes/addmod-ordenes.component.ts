@@ -22,6 +22,7 @@ import { Tooltip } from 'primeng/tooltip';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ProductoImprimir } from '../../../../models/ProductoImprimir';
 import { EtiquetasService } from '../../../../services/etiquetas.service';
+import { RecepcionHistorial } from '../../../../models/Recepcion';
 
 
 interface TalleUI {
@@ -47,7 +48,7 @@ interface TalleUI {
     ConfirmPopupModule,
     ConfirmDialogModule,
     Tooltip
-  ],
+],
   templateUrl: './addmod-ordenes.component.html',
   styleUrls: ['./addmod-ordenes.component.scss'],
   providers: [ConfirmationService],
@@ -74,6 +75,11 @@ export class AddmodOrdenesComponent implements OnInit {
   @ViewChild('tablaProductos') tablaProductos: Table | undefined;
 
   ordenIngreso:OrdenIngreso = new OrdenIngreso();
+  recepcionesPorProducto: { [idProducto: number]: RecepcionHistorial[] } = {};
+  expandedRows: { [key: string]: boolean } = {};
+  talles = ["XS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL"];
+
+  recepcionesRevertir:number[] = [];
 
   constructor(
     private router:Router,
@@ -106,9 +112,19 @@ export class AddmodOrdenesComponent implements OnInit {
       if (id && id !== 0) {
         this.ordenIngreso.id = id;
         this.ObtenerOrdenIngreso();
+        this.ObtenerRecepciones();
       } else {
         this.ordenIngreso = new OrdenIngreso();
         this.ordenIngreso.id = 0;
+        this.productosOrden = [];
+        this.formulario.reset();
+        this.formProductos.reset();
+        this.productoSeleccionado = new Producto();
+        this.formulario.get('fecha')?.setValue(new Date());
+        this.formulario.get('proveedor')?.setValue(this.proveedores[0].id);
+        this.recepcionesRevertir = [];
+        this.recepcionesPorProducto = {};
+        this.expandedRows = {};
       } 
     });
 
@@ -134,12 +150,18 @@ export class AddmodOrdenesComponent implements OnInit {
     this.ordenesIngresoService.ObtenerOrdenIngreso(this.ordenIngreso.id!)
       .subscribe(response => {
         this.ordenIngreso = response;
-        console.log(this.ordenIngreso)
         this.formulario.get('proveedor')?.setValue(this.ordenIngreso.idProveedor);
         this.formulario.get('fecha')?.setValue(new Date(this.ordenIngreso.fecha ?? ''));
         this.formulario.get('observaciones')?.setValue(this.ordenIngreso.observaciones);
         this.formulario.get('corte')?.setValue(this.ordenIngreso.corte);
         this.productosOrden = this.ordenIngreso.productos;
+      });
+  }
+
+  ObtenerRecepciones(){
+    this.ordenesIngresoService.ObtenerHistorialRecepciones(this.ordenIngreso.id!)
+      .subscribe(response => {
+        this.recepcionesPorProducto = response;
       });
   }
 
@@ -290,7 +312,7 @@ export class AddmodOrdenesComponent implements OnInit {
         const cantidad = talleSel.cantAgregar ?? 0;
                 
         // Ver si ya existe ese producto con ese precio en el detalle
-        let existente = this.productosOrden.find((p: ProductoOrden) => p.idProducto === this.productoSeleccionado.id);
+        let existente = this.productosOrden.find((p: ProductoOrden) => p.idProducto === this.productoSeleccionado.id && p.estado === "Pendiente");
 
         if (existente) {
           // Sumar cantidad y total
@@ -360,19 +382,19 @@ export class AddmodOrdenesComponent implements OnInit {
     this.Notificaciones.Success("Producto quitado correctamente");
   }
 
-  GetSeverity(estado: string): 'danger' | 'warn' | 'success' {
+  GetSeverity(estado: string): 'danger' | 'warn' | 'success' | 'secondary' {
     const value = estado.toLowerCase();
     if (value === 'eliminado') {
       return 'danger';
     }
     if (value === 'pendiente') {
-      return 'warn';
+      return 'secondary';
     }
-    if (value === 'Ingresado') {
+    if (value === 'ingresado') {
       return 'success';
     }
 
-    return 'success';
+    return 'warn';
   }
 
 
@@ -408,39 +430,31 @@ export class AddmodOrdenesComponent implements OnInit {
     input.select();
   }
 
-  Finalizar(){
-    this.markFormTouched(this.formulario);
-    if(!this.formulario.valid) return;
-
-    if(this.productosOrden.length == 0){
-      this.Notificaciones.Warn("Debe agregar al menos un producto.");
-      return
-    }
-
+  
+  AgregarParaRevertir(event: Event, idProducto:number, idRecepcion:number){
     this.confirmationService.confirm({
-      key: 'confirmarDialog',
-      message: '¿Estas seguro que deseas finalizar esta orden de ingreso?.<br> Se van a marcar como "ingresado" todos los productos',
-      header: 'Confirmación',
-      closable: true,
-      closeOnEscape: true,
+      target: event.target as EventTarget, 
+      message: '¿Revertir recepción?',
       icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       rejectButtonProps: {
-          label: 'Cancelar',
           severity: 'secondary',
-          outlined: true,
-      },
-      acceptButtonProps: {
-          label: 'Aceptar',
+          outlined: true
       },
       accept: () => {
-        this.productosOrden.forEach(p => p.estado = "Ingresado");
-        this.Guardar(true);
-      },
-      reject: () => {},
+        this.recepcionesRevertir.push(idRecepcion);
+        const lista = this.recepcionesPorProducto[idProducto];
+        const recepcion = lista.find(r => r.id === idRecepcion);
+
+        if (recepcion) {
+          recepcion.paraRevertir = !recepcion.paraRevertir;
+        }
+      }
     });
   }
 
-  Guardar(finalizando:boolean){
+  Guardar(){
     this.markFormTouched(this.formulario);
     if(!this.formulario.valid) return;
 
@@ -450,22 +464,14 @@ export class AddmodOrdenesComponent implements OnInit {
     this.ordenIngreso.corte = this.formulario.get('corte')?.value;
     this.ordenIngreso.usuario = this.usuariosService.GetUsuarioSesion()!;
     this.ordenIngreso.productos = this.productosOrden;
-
-    if(finalizando)
-      this.ordenIngreso.estado = "Finalizada";
-    else
-      this.ordenIngreso.estado = this.CalcularEstado();
+    this.ordenIngreso.recepcionesRevertir = this.recepcionesRevertir;
 
     if(this.ordenIngreso.id == 0){
       this.ordenesIngresoService.Agregar(this.ordenIngreso)
       .subscribe(response => {
         if(response=='OK'){
           
-          if(finalizando)
-            this.Notificaciones.Success("Orden de ingreso creada y finalizada correctamente");
-          else
-            this.Notificaciones.Success("Orden de ingreso creada correctamente");
-
+          this.Notificaciones.Success("Orden de ingreso creada correctamente");
           this.router.navigateByUrl("/ordenes-ingreso");
         }else{
           this.Notificaciones.Warn(response);
@@ -476,11 +482,7 @@ export class AddmodOrdenesComponent implements OnInit {
       .subscribe(response => {
         if(response=='OK'){
 
-          if(finalizando)
-            this.Notificaciones.Success("Orden de ingreso modificada y finalizada correctamente");
-          else
-            this.Notificaciones.Success("Orden de ingreso modificada correctamente");
-
+          this.Notificaciones.Success("Orden de ingreso modificada correctamente");
           this.router.navigateByUrl("/ordenes-ingreso");
         }else{
           this.Notificaciones.Warn(response);

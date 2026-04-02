@@ -9,6 +9,8 @@ export class OrdenIngreso{
   usuario: string = "";
   productos: ProductoOrden[] = [];
   estado: string = "";
+  actualizacion: Date = new Date();
+  recepcionesRevertir:number[]=[];
   
   constructor(data?: any) {
     if (data) {

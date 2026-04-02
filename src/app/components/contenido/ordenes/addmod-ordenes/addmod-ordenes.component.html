@@ -2,7 +2,11 @@
 <p-confirmdialog key="confirmarDialog"/>
 
 <div class="contenido">
-    <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar(false)' autocomplete="off">
+    @if(ordenIngreso.id != 0){
+        <p class="informacion">Actualizada: {{ordenIngreso.actualizacion | date:'dd-MM-yyyy HH:mm'}} | Usuario: {{ordenIngreso.usuario}}</p>
+    }
+
+    <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' autocomplete="off">
       <div class="vertical">
         <!-- Proveedor -->
         <p-floatlabel variant="in">
@@ -119,9 +123,10 @@
                   </div>
               </form>
 
-              <p-table [value]="productosOrden" dataKey="codProducto" #tablaProductos>
+              <p-table [value]="productosOrden" dataKey="codProducto" #tablaProductos [expandedRowKeys]="expandedRows">
                   <ng-template #header>
                       <tr>
+                          <th rowspan="5"></th>
                           <th rowspan="5">Código</th>
                           <th rowspan="5">Nombre</th>
 
@@ -146,6 +151,16 @@
                   </ng-template>
                   <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
                       <tr>
+                        <td>
+                        <button 
+                            pButton 
+                            type="button" 
+                            pRowToggler 
+                            [pRowToggler]="producto" 
+                            class="p-button-text p-button-sm"
+                            [icon]="expandedRows[producto.codProducto] ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+                        </button>
+                        </td>
                           <td>{{ producto.codProducto }}</td>
                           <td>{{ producto.nomProducto }}</td>
                           <td>
@@ -180,16 +195,77 @@
                           </td>
 
                           <td>
-                            <div class="acciones">
-                              @if(producto.estado == 'Pendiente'){
-                              <p-button [disabled]="producto.estado == 'Eliminado'" severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-download" (onClick)="MarcarComoIngresado($event, producto.idProducto, true)" pTooltip="Marcar como ingresado" tooltipPosition="bottom"/>
-                              }@else {
-                                <p-button [disabled]="producto.estado == 'Eliminado'" severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-undo" (onClick)="MarcarComoIngresado($event, producto.idProducto, false)" pTooltip="Revertir ingreso" tooltipPosition="bottom"/>
-                              }
-                              <p-button [disabled]="producto.estado == 'Ingresado' || producto.estado == 'Eliminado'" severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, rowIndex)" />
-                            </div>
+                            @if(ordenIngreso.estado != 'Finalizada'){
+                                <div class="acciones"> 
+                                    <p-button [disabled]="producto.estado != 'Pendiente'" severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, rowIndex)" />
+                                </div>
+                            }
                           </td>
                       </tr>
+                  </ng-template>
+                  <ng-template #expandedrow let-producto>
+                    <tr>
+                        <td [attr.colspan]="17">
+
+                        <div class="recepciones-wrapper">
+
+                            <div 
+                            class="recepcion-card"
+                            *ngFor="let r of recepcionesPorProducto[producto.idProducto]"
+                            >
+
+                            <!-- Header -->
+                            <div class="recepcion-header">
+                                <strong>{{ r.fecha | date:'dd-MM-yyyy HH:mm' }}</strong>
+                                |
+                                <div class="usuario">{{ r.usuario }}</div>
+                            </div>
+
+                            <!-- Talles + Total + Acción -->
+                            <div class="talles-row">
+
+                                <div *ngFor="let t of talles" class="talle-item" [ngClass]="{ 'desactivado': (r[t]) === 0 }">
+                                    <span class="label">{{ t }}</span>
+                                    <span class="valor">
+                                        {{ !r[t] || r[t] === 0 ? '-' : r[t] }}
+                                    </span>                                
+                                </div>
+
+                                <!-- TOTAL -->
+                                <div class="talle-item total-item">
+                                <span class="label">Total</span>
+                                <span class="valor">{{ r.total }}</span>
+                                </div>
+
+                                <!-- BOTÓN -->
+                                <div class="talle-item action-item">
+                                    <ng-container *ngIf="!r.paraRevertir; else marcado">
+    
+                                        <p-button 
+                                        severity="warn"
+                                        styleClass="p-button-sm"
+                                        [rounded]="true"
+                                        [outlined]="true"
+                                        icon="pi pi-undo"
+                                        pTooltip="Revertir recepción"
+                                        (onClick)="AgregarParaRevertir($event, producto.idProducto, r.id!)"
+                                        />
+
+                                    </ng-container>
+
+                                    <ng-template #marcado>
+                                        <span class="a-revertir">A revertir</span>
+                                    </ng-template>
+                                </div>
+
+                            </div>
+
+                            </div>
+
+                        </div>
+
+                        </td>
+                    </tr>
                   </ng-template>
               </p-table>
     </div>
@@ -197,6 +273,5 @@
 
 <div class="botones">
   <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
-  <p-button label="Guardar" (onClick)="Guardar(false)" icon="pi pi-save" [disabled]="ordenIngreso.estado == 'Finalizada'" />
-  <p-button label="Finalizar" (onClick)="Finalizar()" icon="pi pi-check" [disabled]="ordenIngreso.estado == 'Finalizada'"/>
+  <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save"/>
 </div>

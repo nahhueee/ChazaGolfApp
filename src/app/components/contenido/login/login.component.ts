@@ -85,7 +85,8 @@ export class LoginComponent {
           data: { 
             idUsuario: this.usuario.id?.toString()!,
             nombre: this.usuario.nombre!,
-            cargo: this.usuario.cargo!
+            cargo: this.usuario.cargo!,
+            usuario: this.usuario.usuario
           },
           timestamp: new Date().getTime(), // guardás el momento actual
         };

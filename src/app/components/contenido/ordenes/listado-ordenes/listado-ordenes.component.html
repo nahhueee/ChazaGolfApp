@@ -58,6 +58,7 @@
                     <td>
                         <div class="acciones">
                             <!-- <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" pTooltip="Finalizar" tooltipPosition="bottom"/> -->
+                            <p-button [disabled]="orden.estado == 'Finalizada'" severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-file-import" (onClick)="NuevaRecepcion(orden)" pTooltip="Nueva Recepción" tooltipPosition="bottom"/>
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-barcode" pTooltip="Ver Etiquetas" tooltipPosition="bottom" (onClick)="Etiquetas(orden.productos)"/>
                         </div>
                     </td>
@@ -67,3 +68,11 @@
     </div>
 </div>
 
+
+<app-add-ingreso 
+  *ngIf="recepcionesVisible"
+  [visible]="recepcionesVisible"
+  [_productosRecepcionar]="ordenSeleccionada"
+  (cerrar)="Actualizar($event)"
+  >
+</app-add-ingreso>

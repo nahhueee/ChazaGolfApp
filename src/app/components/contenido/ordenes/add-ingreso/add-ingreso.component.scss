@@ -1,0 +1,57 @@
+.label-recepcion {
+  font-weight: 600;
+}
+
+.talle-col {
+  width: 100px;
+  text-align: center;
+}
+
+.input-talle {
+  width: 100px;
+  height: 30px;
+  text-align: center;
+  padding: 2px;
+}
+
+
+.color-cell{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.box-color{
+  height: 16px;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.input-error {
+  border: 1px solid var(--error-text);
+}
+
+/* Chrome, Safari, Edge */
+.input-talle::-webkit-outer-spin-button,
+.input-talle::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.fila{
+  background-color: var(--p-inputtext-background);
+}
+.fila.deshabilitar td:not(:last-child) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.deshabilitar-inputs{
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.botones{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+}

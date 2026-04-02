@@ -12,6 +12,7 @@ import { ProductoOrden } from '../../../../models/ProductoOrden';
 import { ProductoImprimir } from '../../../../models/ProductoImprimir';
 import { EtiquetasService } from '../../../../services/etiquetas.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
+import { AddIngresoComponent } from "../add-ingreso/add-ingreso.component";
 
 @Component({
   selector: 'app-listado-ordenes',
@@ -21,8 +22,9 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
     TableModule,
     Button,
     TooltipModule,
-    TagModule
-  ],
+    TagModule,
+    AddIngresoComponent
+],
   templateUrl: './listado-ordenes.component.html',
   styleUrls: ['./listado-ordenes.component.scss']
 })
@@ -33,6 +35,9 @@ export class ListadoOrdenesComponent implements OnInit {
 
   filtros:FormGroup;
   filtroActual: FiltroOrdenes = new FiltroOrdenes();
+
+  ordenSeleccionada:OrdenIngreso;
+  recepcionesVisible:boolean = false;
 
   estados = [
     "Nueva", "Pendiente", "Finalizada"
@@ -100,6 +105,17 @@ export class ListadoOrdenesComponent implements OnInit {
 
   Editar(id:number){
     this.router.navigateByUrl(`/ordenes-ingreso/adm/${id}`)
+  }
+
+  NuevaRecepcion(orden:OrdenIngreso){
+    this.ordenSeleccionada = orden;
+    this.recepcionesVisible = true;
+  }
+
+  Actualizar(actualiza){
+    this.recepcionesVisible = false;
+    if(actualiza)
+      this.Buscar();
   }
 
   Etiquetas(productos:ProductoOrden[]){

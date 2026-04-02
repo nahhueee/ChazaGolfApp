@@ -10,11 +10,16 @@
     flex-direction: column;
 }
 
+.informacion{
+  text-align: center;
+  font-size: 14px;
+}
+
 .form{
-    width: 800px;
-    padding: 20px;
-    display: flex;
-    gap: 20px;
+  width: 800px;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
 }
 .vertical{
     display: flex;
@@ -189,6 +194,66 @@ textarea{
 
 ::ng-deep input[type="number"]#editable::-webkit-inner-spin-button {
   -webkit-appearance: none;
+}
+
+
+.recepcion-header{
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 10px;
+  margin-top: 17px;
+  margin-left: 25px;
+}
+
+.talles-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+  background-color: var(--surface-ground);
+  padding: 10px 20px;
+  border-radius: 10px;
+}
+.talles-row .action-item{
+  border: none;
+}
+
+.talle-item {
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  padding: 6px 4px;
+  font-size: 14px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.valor {
+  font-weight: bold;
+}
+.desactivado{
+  opacity: 0.4;
+}
+
+.total-item {
+  font-weight: bold;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.a-revertir {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-warn);
 }
 
 
