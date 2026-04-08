@@ -88,7 +88,7 @@ export class LoginComponent {
             cargo: this.usuario.cargo!,
             usuario: this.usuario.usuario
           },
-          timestamp: new Date().getTime(), // guardás el momento actual
+          timestamp: new Date().getTime(), 
         };
         localStorage.setItem('sesion', JSON.stringify(sesion));
         this.spinner.show("welcomeSpinner");

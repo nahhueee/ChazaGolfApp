@@ -549,26 +549,23 @@ export class AddmodProductosComponent {
           const idTalle = this.talles.find(x => x.descripcion === elemento.talle)?.id;
           elemento.codigoBarra = this.GenerarCodigo(this.producto.empresa!, this.producto.codigo!, idTalle!, color.id);
         });
-
         productoAInsertar.color = color;
         productoAInsertar.proceso = 1;
         return this.productosService.Agregar(productoAInsertar);      
       });
     }
     //Modificando
-    else{
+    else {
       if (this.producto.id && this.producto.color?.id) {
+
+        // Modificar producto principal
         const productoPrincipal = this.prepararProductoModificar(
           this.producto.id,
           this.producto.color.id
         );
+        operaciones$.push(this.productosService.Modificar(productoPrincipal));
 
-        //Modificamos el producto
-        operaciones$.push(
-          this.productosService.Modificar(productoPrincipal)
-        );
-
-        //Modificamos los relacionados
+        // Modificar los relacionados YA existentes
         this.producto.relacionados?.forEach(rel => {
           if (!rel.idProducto || !rel.color?.id) return;
 
@@ -576,20 +573,48 @@ export class AddmodProductosComponent {
             rel.idProducto,
             rel.color.id
           );
+          operaciones$.push(this.productosService.Modificar(productoRelacionado));
+        });
 
-          operaciones$.push(
-            this.productosService.Modificar(productoRelacionado)
-          );
+        // ✅ NUEVO: Insertar colores que no existían antes
+        const idsExistentes = new Set([
+          this.producto.color.id,
+          ...(this.producto.relacionados?.map(r => r.color?.id).filter(Boolean) ?? [])
+        ]);
+
+        const coloresNuevos = this.coloresSeleccionados.value.filter(
+          (color: any) => !idsExistentes.has(color.id)
+        );
+
+        coloresNuevos.forEach((color: any) => {
+          const productoAInsertar = { ...this.producto };
+
+          this.producto.talles!.forEach(elemento => {
+            const idTalle = this.talles.find(x => x.descripcion === elemento.talle)?.id;
+            elemento.codigoBarra = this.GenerarCodigo(
+              this.producto.empresa!,
+              this.producto.codigo!,
+              idTalle!,
+              color.id
+            );
+          });
+
+          productoAInsertar.color = color;
+          productoAInsertar.id = 0;        // forzar INSERT
+          productoAInsertar.proceso = 1;
+          operaciones$.push(this.productosService.Agregar(productoAInsertar));
         });
       }
     }
 
     forkJoin(operaciones$).subscribe(respuestas => {
+      
       const ok = respuestas.filter(r => r === 'OK').length;
       const existen = respuestas.filter(r => r === 'Ya existe un producto con el mismo código y color.').length;
       const fallos = respuestas.filter(r => r !== 'OK' && r !== 'Ya existe un producto con el mismo código y color.').length;
 
       if (ok === respuestas.length) {
+        this.coloresExistentes = this.coloresSeleccionados.value.map((c: any) => c.id);
         this.Notificaciones.Success("Los productos fueron procesados correctamente");
       } else if(existen === respuestas.length){
         this.Notificaciones.Warn("Ya existen productos con el mismo código y color seleccionado.");
@@ -598,6 +623,7 @@ export class AddmodProductosComponent {
         this.Notificaciones.Warn("Los productos no pudieron ser procesados.");
         return;
       }else {
+        this.coloresExistentes = this.coloresSeleccionados.value.map((c: any) => c.id);
         this.Notificaciones.Warn(`Solo ${ok} de ${respuestas.length} productos se procesaron correctamente.`);
         if(existen > 0){
           this.Notificaciones.Warn(`Hay ${existen} productos con el mismo código y color seleccionado.`);

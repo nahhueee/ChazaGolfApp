@@ -11,7 +11,7 @@ import { ConfirmationService } from 'primeng/api';
 import { OrdenIngresoService } from '../../../../services/orden-ingreso.service';
 import { DetalleRecepcion, Recepcion } from '../../../../models/Recepcion';
 import { UsuariosService } from '../../../../services/usuarios.service';
-import { ProductoOrden } from '../../../../models/ProductoOrden';
+import { ProductoOrden, ProductoOrdenBaja } from '../../../../models/ProductoOrden';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -42,13 +42,9 @@ export class AddIngresoComponent {
     this.idOrden = value.id!;
     
     const productosClon = JSON.parse(JSON.stringify(value.productos));
-
-    this.productos = productosClon.filter(prod => {
-      return this.talles.some((_, i) => {
-        const key = this.getKeyByIndex(i);
-        return (prod[key] || 0) > 0;
-      });
-    });
+    this.productos = productosClon
+    .filter(prod => prod.fechaBaja == null)
+    .filter(prod => this.talles.some((_, i) => (prod[this.getKeyByIndex(i)] || 0) > 0));
 
     this.productos.forEach(p => {
       p._original = {};
@@ -58,7 +54,6 @@ export class AddIngresoComponent {
         p._original![key] = p[key]!;
       });
     });
-
     this.inicializarForm();
 
   }
@@ -84,16 +79,31 @@ export class AddIngresoComponent {
           const valor = prod[key] ?? 0;
 
           grupo[key] = new FormControl(
-            { value: valor, disabled: valor === null || valor === 0 }, 
+            { value: 0, disabled: valor === null || valor === 0 }, 
             [this.maxValidator(valor)] 
           );
         });
+
+        // Control de observación — obligatorio si noRecepcionar está activo
+        grupo['obs'] = new FormControl(
+          { value: prod.obsBaja ?? '', disabled: !prod.noRecepcionar },
+          [this.obsRequeridaValidator(prod)]
+        );
 
         return this.fb.group(grupo);
       })
     );
   }
   
+  obsRequeridaValidator(prod: any): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (prod.noRecepcionar && !control.value?.trim()) {
+        return { obsRequerida: true };
+      }
+      return null;
+    };
+  }
+
   maxValidator(max: number): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       const value = control.value;
@@ -106,6 +116,9 @@ export class AddIngresoComponent {
     };
   }
 
+  getObsControl(rowIndex: number): FormControl {
+    return (this.form.at(rowIndex) as FormGroup).get('obs') as FormControl;
+  }
   getKeyByIndex(i: number): string {
     return 't' + (i + 1);
   }
@@ -156,15 +169,41 @@ export class AddIngresoComponent {
     }
   }
 
-  NoRecepcionar(prod){
+  NoRecepcionar(prod: any, rowIndex: number) {
     prod.noRecepcionar = !prod.noRecepcionar;
+
+    const obsCtrl = (this.form.at(rowIndex) as FormGroup).get('obs');
+
+    if (prod.noRecepcionar) {
+      obsCtrl?.enable();
+      obsCtrl?.markAsTouched(); // muestra error de inmediato si queda vacío
+    } else {
+      obsCtrl?.disable();
+      obsCtrl?.reset('');
+    }
+
+    obsCtrl?.updateValueAndValidity();
   }
   
+  LlenarCampos(rowIndex: number) {
+    const prod = this.productos[rowIndex];
+    const group = this.form.at(rowIndex) as FormGroup;
+
+    this.talles.forEach((_, i) => {
+      const key = this.getKeyByIndex(i);
+      const valor = prod[key] ?? 0;
+      const control = group.get(key);
+
+      if (control && valor > 0) {
+        control.setValue(valor);
+      }
+    });
+  }
 
   Guardar() {
     this.confirmationService.confirm({
       key: 'confirmarDialog',
-      message: '¿Confirmas el ingreso de estos talles de producto?',
+      message: '¿Confirmas el ingreso o la no recepción de los productos?',
       header: 'Confirmación',
       closable: true,
       closeOnEscape: true,
@@ -183,29 +222,45 @@ export class AddIngresoComponent {
         recepcion.fecha = new Date();
         recepcion.usuario = this.usuarioService.GetUsuarioSesion()!;
         recepcion.detalles = [];
+        recepcion.bajas = [];
 
         this.form.controls.forEach((group, rowIndex) => {
           const prod = this.productos[rowIndex];
-          if (prod.noRecepcionar) return;
+          if (prod.noRecepcionar){
+            const baja: ProductoOrdenBaja = {
+              id: 0,
+              idProducto: prod.idProducto,
+              idLineaTalle: prod.idLineaTalle,
+              ...Object.fromEntries(
+                Object.entries(prod._original!)
+                  .filter(([key]) => key.match(/^t\d+$/))
+              ),
+              talles: prod.tallesSeleccionados ?? '',
+              obsBaja: this.getObsControl(rowIndex).value,
+              usuarioBaja: recepcion.usuario,
+            } as ProductoOrdenBaja;
 
-          this.talles.forEach((_, i) => {
-            const key = this.getKeyByIndex(i);
-            const ingreso = group.get(key)?.value;
+            recepcion.bajas.push(baja);
+           
+          }else{
+            this.talles.forEach((_, i) => {
+              const key = this.getKeyByIndex(i);
+              const ingreso = group.get(key)?.value;
 
-            if (ingreso && ingreso > 0) {
-              const detalle = new DetalleRecepcion({
-                idProducto: prod.idProducto,
-                idLineaTalle: prod.idLineaTalle,
-                cantidad: ingreso,
-                original: prod[key] ?? 0,
-                talle: key, 
-              });
+              if (ingreso && ingreso > 0) {
+                const detalle = new DetalleRecepcion({
+                  idProducto: prod.idProducto,
+                  idLineaTalle: prod.idLineaTalle,
+                  cantidad: ingreso,
+                  original: prod[key] ?? 0,
+                  talle: key, 
+                });
 
-              recepcion.detalles.push(detalle);
-            }
-          });
+                recepcion.detalles.push(detalle);
+              }
+            });
+          }
         });
-
         this.ordenIngresoService.AgregarRecepcion(recepcion)
         .subscribe(response => {
           if(response=='OK'){

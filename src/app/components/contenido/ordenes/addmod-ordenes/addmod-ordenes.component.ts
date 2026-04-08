@@ -23,6 +23,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ProductoImprimir } from '../../../../models/ProductoImprimir';
 import { EtiquetasService } from '../../../../services/etiquetas.service';
 import { RecepcionHistorial } from '../../../../models/Recepcion';
+import { AutoComplete } from 'primeng/autocomplete';
 
 
 interface TalleUI {
@@ -32,6 +33,10 @@ interface TalleUI {
   cantidad: number;
   cantAgregar: number;
   linea: number;
+}
+interface Revertir {
+  idRecepcion: number;
+  idProducto: number;
 }
 
 @Component({
@@ -46,8 +51,7 @@ interface TalleUI {
     DividerModule,
     TagModule,
     ConfirmPopupModule,
-    ConfirmDialogModule,
-    Tooltip
+    ConfirmDialogModule
 ],
   templateUrl: './addmod-ordenes.component.html',
   styleUrls: ['./addmod-ordenes.component.scss'],
@@ -57,7 +61,9 @@ export class AddmodOrdenesComponent implements OnInit {
   proveedores = [
     {id: 1, descripcion: 'SUCEDE SRL'},
   ];
-  
+
+  @ViewChild('inputProducto') autoComplete!: AutoComplete;
+
   formulario:FormGroup;
   formProductos:FormGroup;
   productosFiltrados:ProductoBusqueda[]=[];
@@ -76,10 +82,14 @@ export class AddmodOrdenesComponent implements OnInit {
 
   ordenIngreso:OrdenIngreso = new OrdenIngreso();
   recepcionesPorProducto: { [idProducto: number]: RecepcionHistorial[] } = {};
-  expandedRows: { [key: string]: boolean } = {};
+  expandedRows: { [key: number]: boolean } = {};
   talles = ["XS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL"];
 
-  recepcionesRevertir:number[] = [];
+  recepcionesRevertir:Revertir[] = [];
+
+  nroMostrar:number;
+  usuarioMostrar:string;
+  fechaMostrar:Date;
 
   constructor(
     private router:Router,
@@ -114,6 +124,10 @@ export class AddmodOrdenesComponent implements OnInit {
         this.ObtenerOrdenIngreso();
         this.ObtenerRecepciones();
       } else {
+        this.ObtenerProximoNroOrden();
+        this.usuarioMostrar = this.usuariosService.GetUsuarioSesion()!;
+        this.fechaMostrar = new Date();
+
         this.ordenIngreso = new OrdenIngreso();
         this.ordenIngreso.id = 0;
         this.productosOrden = [];
@@ -146,6 +160,13 @@ export class AddmodOrdenesComponent implements OnInit {
       });
   }
 
+   ObtenerProximoNroOrden(){
+      this.ordenesIngresoService.ObtenerProximoNroOrden()
+        .subscribe(response => {
+         this.nroMostrar = response;
+        });
+    }
+
   ObtenerOrdenIngreso(){
     this.ordenesIngresoService.ObtenerOrdenIngreso(this.ordenIngreso.id!)
       .subscribe(response => {
@@ -155,6 +176,10 @@ export class AddmodOrdenesComponent implements OnInit {
         this.formulario.get('observaciones')?.setValue(this.ordenIngreso.observaciones);
         this.formulario.get('corte')?.setValue(this.ordenIngreso.corte);
         this.productosOrden = this.ordenIngreso.productos;
+
+        this.nroMostrar = this.ordenIngreso.id!;
+        this.usuarioMostrar = this.ordenIngreso.usuario;
+        this.fechaMostrar = this.ordenIngreso.alta!;
       });
   }
 
@@ -356,7 +381,7 @@ export class AddmodOrdenesComponent implements OnInit {
     this.formProductos.reset();
     setTimeout(() => {
         if (this.tablaProductos) this.tablaProductos.editingCell = null;
-        //this.inputCodigo.nativeElement.focus();
+        this.autoComplete.inputEL!.nativeElement.focus();
     }, 0);
   }
 
@@ -384,7 +409,7 @@ export class AddmodOrdenesComponent implements OnInit {
 
   GetSeverity(estado: string): 'danger' | 'warn' | 'success' | 'secondary' {
     const value = estado.toLowerCase();
-    if (value === 'eliminado') {
+    if (value === 'incompleto') {
       return 'danger';
     }
     if (value === 'pendiente') {
@@ -443,10 +468,9 @@ export class AddmodOrdenesComponent implements OnInit {
           outlined: true
       },
       accept: () => {
-        this.recepcionesRevertir.push(idRecepcion);
+        this.recepcionesRevertir.push({idRecepcion, idProducto});
         const lista = this.recepcionesPorProducto[idProducto];
-        const recepcion = lista.find(r => r.id === idRecepcion);
-
+        const recepcion = lista.find(r => r.idRecepcion === idRecepcion);
         if (recepcion) {
           recepcion.paraRevertir = !recepcion.paraRevertir;
         }
@@ -458,11 +482,16 @@ export class AddmodOrdenesComponent implements OnInit {
     this.markFormTouched(this.formulario);
     if(!this.formulario.valid) return;
 
+    if(this.productosOrden.length == 0){
+      this.Notificaciones.Warn('Seleccione al menos un producto.');
+      return;
+    }
+
     this.ordenIngreso.idProveedor = this.formulario.get('proveedor')?.value;
     this.ordenIngreso.fecha = this.formulario.get('fecha')?.value;
     this.ordenIngreso.observaciones = this.formulario.get('observaciones')?.value;
     this.ordenIngreso.corte = this.formulario.get('corte')?.value;
-    this.ordenIngreso.usuario = this.usuariosService.GetUsuarioSesion()!;
+    this.ordenIngreso.usuario = this.usuarioMostrar;
     this.ordenIngreso.productos = this.productosOrden;
     this.ordenIngreso.recepcionesRevertir = this.recepcionesRevertir;
 

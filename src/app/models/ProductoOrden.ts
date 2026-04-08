@@ -27,8 +27,16 @@ export class ProductoOrden{
     codigosBarra:[] = [];
     _original?: { [key: string]: number | null };
     noRecepcionar:boolean = false;
-  
-
+    baja?: {
+        t1: number; t2: number; t3: number; t4: number; t5: number;
+        t6: number; t7: number; t8: number; t9: number; t10: number;
+        obs: string;
+        usuarioBaja: string;
+        fechaBaja: Date;
+        total: number;
+    } | null;
+    obsBaja?:string;
+    
     constructor(data?: any) {
       if (data) {
         this.id = data.id;
@@ -56,4 +64,24 @@ export class ProductoOrden{
         this.tallesSeleccionados = data.tallesSeleccionados;
       }
     }
+  }
+
+  export class ProductoOrdenBaja{
+    id: number = 0;
+    idProducto? : number;
+    idLineaTalle?:number;
+    t1?: number;
+    t2?: number;
+    t3?: number;
+    t4?: number;
+    t5?: number;
+    t6?: number;
+    t7?: number;
+    t8?: number;
+    t9?: number;
+    t10?: number;
+    talles:string = "";
+    obsBaja:string = "";
+    usuarioBaja:string = "";
+    fechaBaja?:Date;
   }

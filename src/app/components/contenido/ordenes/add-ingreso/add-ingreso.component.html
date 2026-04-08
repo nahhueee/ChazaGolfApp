@@ -40,7 +40,7 @@
             </td>
 
             <td>{{ getCantidadPendiente(prod) }}</td>
-            <td><p-button class="btnDeshabilitar" [severity]="prod.noRecepcionar ? 'success' : 'danger'" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [icon]="prod.noRecepcionar ? 'pi pi-check-circle' : 'pi pi-minus-circle'" (onClick)="NoRecepcionar(prod)" [pTooltip]="prod.noRecepcionar ? 'Habilitar Recepción' : 'Sin Recepción'" tooltipPosition="bottom"/>
+            <td><p-button class="btnDeshabilitar" [severity]="prod.noRecepcionar ? 'success' : 'danger'" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [icon]="prod.noRecepcionar ? 'pi pi-check-circle' : 'pi pi-minus-circle'" (onClick)="NoRecepcionar(prod, ri)" [pTooltip]="prod.noRecepcionar ? 'Habilitar Recepción' : 'No recepcionar producto'" tooltipPosition="bottom"/>
             </td> 
           </tr>
 
@@ -69,7 +69,31 @@
               <strong>{{ getTotal(ri) }}</strong>
             </td>
 
+            <td>
+              <p-button severity="info" styleClass="p-button-sm" pTooltip="Autocompletar campos" tooltipPosition="bottom" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="LlenarCampos(ri)" />
+            </td>
+
             
+          </tr>
+
+          <tr class="fila-obs" [class.obs-visible]="prod.noRecepcionar">
+            <td></td>
+            <td></td>
+            <td class="label-obs">Observación</td>
+            <td [attr.colspan]="talles.length + 1">
+              <input
+                pInputText
+                type="text"
+                [formControl]="getObsControl(ri)"
+                placeholder="Motivo por el cual no se recepciona..."
+                class="input-obs"
+                [class.input-error]="getObsControl(ri).invalid && getObsControl(ri).touched"
+                maxlength="200"
+              />
+              <small class="error-obs" *ngIf="getObsControl(ri).hasError('obsRequerida') && getObsControl(ri).touched">
+                Debe ingresar una observación para no recepcionar.
+              </small>
+            </td>
           </tr>
 
         </ng-template>
@@ -79,6 +103,6 @@
 
     <div class="botones">
         <p-button label="Volver" severity="secondary" (click)="Cerrar()" icon="pi pi-angle-left"/>
-        <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
+        <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" [disabled]="form.invalid" />
     </div>
 </p-dialog>

@@ -26,6 +26,14 @@ export class OrdenIngresoService {
   ObtenerHistorialRecepciones(idOrden:number): Observable<any>{
     return this.apiService.get(`orden-ingreso/obtener-recepciones/${idOrden}`)
   }
+
+  ObtenerProximoNroOrden(): Observable<any> {
+    return this.apiService.get('orden-ingreso/obtener-proximo')
+  }
+
+  ObtenerDatosReporte(idOrden:number): Observable<any> {
+    return this.apiService.get(`orden-ingreso/datos-reporte/${idOrden}`)
+  }
   //#endregion
 
   //#region ABM

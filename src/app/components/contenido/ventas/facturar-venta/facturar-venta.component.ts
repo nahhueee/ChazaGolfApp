@@ -53,7 +53,6 @@ export class FacturarVentaComponent {
           TipoComprobante.ND_C,
           TipoComprobante.NC_X
       ].includes(this.datosFacturar.tipoComprobante!);
-      console.log(this.esNotaCreditoDebito)
     }
   }
 

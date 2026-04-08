@@ -1,9 +1,12 @@
+import { ProductoOrdenBaja } from "./ProductoOrden";
+
 export class Recepcion{
   id? : number;
   idOrden? : number;
   fecha? : Date;
   usuario: string = "";
   detalles: DetalleRecepcion[] = [];
+  bajas: ProductoOrdenBaja[] = [];
   
   constructor(data?: any) {
     if (data) {
@@ -23,7 +26,9 @@ export class DetalleRecepcion{
   cantidad? : number;
   original? : number;
   talle? : string;
-
+  fechaBaja? : Date;
+  obsBaja? : string;
+  
   constructor(data?: any) {
     if (data) {
       this.id = data.id;
@@ -33,13 +38,15 @@ export class DetalleRecepcion{
       this.cantidad = data.cantidad;
       this.original = data.original;
       this.talle = data.talle;
+      this.fechaBaja = data.fechaBaja;
+      this.obsBaja = data.obsBaja;
     }
   }
 }
 
 export class RecepcionHistorial{
-  id? : number;
   idProducto? : number;
+  idRecepcion? : number;
   idLineaTalle? : number;
   fecha? : Date;
   usuario? : string;

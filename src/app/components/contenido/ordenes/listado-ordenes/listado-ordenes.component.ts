@@ -13,6 +13,7 @@ import { ProductoImprimir } from '../../../../models/ProductoImprimir';
 import { EtiquetasService } from '../../../../services/etiquetas.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { AddIngresoComponent } from "../add-ingreso/add-ingreso.component";
+import { OrdenIngresoReporteService } from '../../../../services/orden-ingreso-reporte.service';
 
 @Component({
   selector: 'app-listado-ordenes',
@@ -40,15 +41,17 @@ export class ListadoOrdenesComponent implements OnInit {
   recepcionesVisible:boolean = false;
 
   estados = [
-    "Nueva", "Pendiente", "Finalizada"
+    "Nueva", "Pendiente", "Finalizada", "Incompleta"
   ]
 
   constructor(
     private ordenIngresoService:OrdenIngresoService,
     private etiquetasService:EtiquetasService,
+    private ordenesIngresoReporteService:OrdenIngresoReporteService,
     private router:Router
   ) { 
     this.filtros = new FormGroup({
+      nroOrden: new FormControl(''),
       nroCorte: new FormControl(''),
       estado: new FormControl('')
     });
@@ -70,7 +73,7 @@ export class ListadoOrdenesComponent implements OnInit {
       return 'warn';
     }
 
-    if (value === 'finalizada') {
+    if (value === 'finalizada' || value === 'incompleta') {
       return 'success';
     }
 
@@ -87,6 +90,7 @@ export class ListadoOrdenesComponent implements OnInit {
       pagina: pageIndex + 1,  
       tamanioPagina: pageSize,
       busqueda: busqueda,
+      nroOrden: this.filtros.get('nroOrden')?.value ?? 0,
       nroCorte: this.filtros.get('nroCorte')?.value ?? 0,
       estado: this.filtros.get('estado')?.value ?? ''
     });
@@ -103,7 +107,7 @@ export class ListadoOrdenesComponent implements OnInit {
     this.Buscar();
   }
 
-  Editar(id:number){
+  Visualizar(id:number){
     this.router.navigateByUrl(`/ordenes-ingreso/adm/${id}`)
   }
 
@@ -116,6 +120,10 @@ export class ListadoOrdenesComponent implements OnInit {
     this.recepcionesVisible = false;
     if(actualiza)
       this.Buscar();
+  }
+
+  Imprimir(orden:OrdenIngreso){
+    this.ordenesIngresoReporteService.VerReporte(orden);
   }
 
   Etiquetas(productos:ProductoOrden[]){

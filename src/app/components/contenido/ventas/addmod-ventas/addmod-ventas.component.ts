@@ -1496,7 +1496,6 @@ export class AddModVentasComponent {
 
   GuardarFacturar(factura?:FacturaVenta){
     if(factura && factura!=undefined){
-      console.log(factura)
       if(factura.estado == "Aprobado" || factura.estado == "Cotizacion"){
         this.Guardar(factura, true);
       }else{

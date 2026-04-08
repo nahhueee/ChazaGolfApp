@@ -2,50 +2,49 @@
 <p-confirmdialog key="confirmarDialog"/>
 
 <div class="contenido">
-    @if(ordenIngreso.id != 0){
-        <p class="informacion">Actualizada: {{ordenIngreso.actualizacion | date:'dd-MM-yyyy HH:mm'}} | Usuario: {{ordenIngreso.usuario}}</p>
-    }
-
+    <p class="informacion">{{ordenIngreso.id == 0 ? 'Nueva Orden de Ingreso Nro:' : 'Orden de Ingreso NRO:'}} <span> {{nroMostrar}}</span> | Creada por <span>{{usuarioMostrar}}</span> el día <span>{{fechaMostrar | date:'dd/MM/yyyy HH:mm' }}</span></p>
+    
     <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' autocomplete="off">
       <div class="vertical">
         <!-- Proveedor -->
         <p-floatlabel variant="in">
-            <p-select [options]="proveedores" formControlName="proveedor" optionValue="id" optionLabel="descripcion" [appendTo]="'body'"/>
+            <p-select [options]="proveedores" formControlName="proveedor" optionValue="id" optionLabel="descripcion" [appendTo]="'body'" [readonly]="ordenIngreso.id != 0"/>
             <label>Proveedor</label>
         </p-floatlabel>
 
         <div class="horizontal">
           <!-- Corte -->
           <p-floatlabel variant="in">
-              <input pInputText formControlName="corte" type="number" />
+              <input pInputText formControlName="corte" type="number" [readonly]="ordenIngreso.id != 0"/>
               <label>Nro Corte</label>
           </p-floatlabel>
 
           <!-- Fecha -->
           <p-floatlabel variant="in">
-              <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+              <p-datepicker formControlName="fecha" showIcon iconDisplay="input" [disabled]="ordenIngreso.id != 0"/>
               <label>Fecha</label>
           </p-floatlabel>
         </div>
       </div>
       <!-- Observaciones -->
       <p-floatlabel variant="in">
-          <textarea pTextarea rows="5" cols="30" formControlName="observaciones" style="resize: none"></textarea>
+          <textarea pTextarea rows="5" cols="30" formControlName="observaciones" style="resize: none" [readonly]="ordenIngreso.id != 0"></textarea>
           <label>Observaciones</label>
       </p-floatlabel>
     </form>
 
     <p-divider />
-    <p-button class="btnEtiquetas" label="Ver Etiquetas" variant="outlined" severity="contrast" icon="pi pi-barcode" (onClick)="Etiquetas()"/>
+    <p-button *ngIf="ordenIngreso.id!=0" class="btnEtiquetas" label="Ver Etiquetas" variant="outlined" severity="contrast" icon="pi pi-barcode" (onClick)="Etiquetas()"/>
 
 
     <div class="tabla">
-        <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
+        <form *ngIf="ordenIngreso.id==0" [formGroup]="formProductos" class="formProducto" autocomplete="off" (keyup.enter)="AgregarProducto()" (ngSubmit)="AgregarProducto()">
                   <div class="izq">
                       <div class="campos">
                           <!-- Codigo - Nombre -->
                           <p-floatlabel variant="in">
                               <p-autocomplete
+                                  #inputProducto
                                   formControlName="producto"
                                   [suggestions]="productosFiltrados"
                                   placeholder="Buscar por código o nombre"
@@ -121,157 +120,186 @@
                         }
                     </div>
                   </div>
-              </form>
+        </form>
 
-              <p-table [value]="productosOrden" dataKey="codProducto" #tablaProductos [expandedRowKeys]="expandedRows">
-                  <ng-template #header>
-                      <tr>
-                          <th rowspan="5"></th>
-                          <th rowspan="5">Código</th>
-                          <th rowspan="5">Nombre</th>
+        <p-table [value]="productosOrden" dataKey="idProducto" #tablaProductos [expandedRowKeys]="expandedRows">
+            <ng-template #header>
+                <tr>
+                    <th rowspan="5"></th>
+                    <th rowspan="5">Código</th>
+                    <th rowspan="5">Nombre</th>
 
-                          <th rowspan="5">Color</th>
-                          <th colspan="10" class="text-center bloque-talles"></th>
+                    <th rowspan="5">Color</th>
+                    <th colspan="10" class="text-center bloque-talles"></th>
 
-                          <th rowspan="5">Cantidad</th>
-                          <th rowspan="5">Estado</th>
-                          <th rowspan="5">Acciones</th>
-                        </tr>
+                    <th rowspan="5">Cantidad</th>
+                    <th rowspan="5">Estado</th>
+                    <th rowspan="5">Quitar</th>
+                </tr>
 
-                          <!-- 4 filas visuales -->
-                          <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
+                    <!-- 4 filas visuales -->
+                    <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
 
-                          <th *ngFor="let col of columnasFijas; let i = index">
-                              {{ linea.talles![i] || '' }}
-                          </th>
+                    <th *ngFor="let col of columnasFijas; let i = index">
+                        {{ linea.talles![i] || '' }}
+                    </th>
 
-                      </tr>
-                      
+                </tr>
+                
 
-                  </ng-template>
-                  <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
-                      <tr>
-                        <td>
-                        <button 
-                            pButton 
-                            type="button" 
-                            pRowToggler 
-                            [pRowToggler]="producto" 
-                            class="p-button-text p-button-sm"
-                            [icon]="expandedRows[producto.codProducto] ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
-                        </button>
-                        </td>
-                          <td>{{ producto.codProducto }}</td>
-                          <td>{{ producto.nomProducto }}</td>
-                          <td>
-                              <div class="color-cell">
-                                  <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
-                                  {{ producto.color }}
-                              </div>
-                          </td>
-                          <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
-                              [pEditableColumn]="producto[t]" 
-                              [pEditableColumnField]="t">
-                              <p-cellEditor>
-                              <ng-template pTemplate="input">
-                                  <input 
-                                  pInputText 
-                                  id="editable"
-                                  type="number" 
-                                  [value]="producto[t]"
-                                  (keydown.enter)="ActualizarCantidad(producto, t, $event)"
-                                  (keydown.tab)="ActualizarCantidad(producto, t, $event)"
-                                  (focus)="SelectContent($event)"
-                                  style="max-width: 50px;" />
-                              </ng-template>
-                              <ng-template pTemplate="output">
-                                  {{ producto[t] }}
-                              </ng-template>
-                              </p-cellEditor>
-                          </td>
-                          <td>{{ producto.cantidad }}</td>
-                          <td>
-                              <p-tag [value]="producto.estado" [severity]="GetSeverity(producto.estado)" />
-                          </td>
+            </ng-template>
+            <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
+                <tr>
+                <td>
+                <button 
+                    pButton 
+                    type="button" 
+                    pRowToggler 
+                    [pRowToggler]="producto" 
+                    class="p-button-text p-button-sm"
+                    [icon]="expandedRows[producto.idProducto] ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+                </button>
+                </td>
+                    <td>{{ producto.codProducto }}</td>
+                    <td>{{ producto.nomProducto }}</td>
+                    <td>
+                        <div class="color-cell">
+                            <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                            {{ producto.color }}
+                        </div>
+                    </td>
+                    <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
+                        [pEditableColumn]="producto[t]" 
+                        [pEditableColumnField]="t">
+                        <p-cellEditor>
+                        <ng-template pTemplate="input">
+                            <input 
+                            pInputText 
+                            id="editable"
+                            type="number" 
+                            [value]="producto[t]"
+                            (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                            (keydown.tab)="ActualizarCantidad(producto, t, $event)"
+                            (focus)="SelectContent($event)"
+                            style="max-width: 50px;" />
+                        </ng-template>
+                        <ng-template pTemplate="output">
+                            {{ producto[t] }}
+                        </ng-template>
+                        </p-cellEditor>
+                    </td>
+                    <td>{{ producto.cantidad }}</td>
+                    <td>
+                        <p-tag [value]="producto.estado" [severity]="GetSeverity(producto.estado)" />
+                    </td>
 
-                          <td>
-                            @if(ordenIngreso.estado != 'Finalizada'){
-                                <div class="acciones"> 
-                                    <p-button [disabled]="producto.estado != 'Pendiente'" severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, rowIndex)" />
-                                </div>
-                            }
-                          </td>
-                      </tr>
-                  </ng-template>
-                  <ng-template #expandedrow let-producto>
-                    <tr>
-                        <td [attr.colspan]="17">
+                    <td>
+                    @if(ordenIngreso.id == 0){
+                        <div class="acciones"> 
+                            <p-button [disabled]="producto.estado != 'Pendiente'" severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, rowIndex)" />
+                        </div>
+                    }
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #expandedrow let-producto>
+            <tr>
+                <td [attr.colspan]="17">
 
-                        <div class="recepciones-wrapper">
+                <div class="recepciones-wrapper">
 
-                            <div 
-                            class="recepcion-card"
-                            *ngFor="let r of recepcionesPorProducto[producto.idProducto]"
-                            >
+                    <div class="recepcion-card" *ngFor="let r of recepcionesPorProducto[producto.idProducto]">
 
-                            <!-- Header -->
-                            <div class="recepcion-header">
-                                <strong>{{ r.fecha | date:'dd-MM-yyyy HH:mm' }}</strong>
-                                |
-                                <div class="usuario">{{ r.usuario }}</div>
-                            </div>
-
-                            <!-- Talles + Total + Acción -->
-                            <div class="talles-row">
-
-                                <div *ngFor="let t of talles" class="talle-item" [ngClass]="{ 'desactivado': (r[t]) === 0 }">
-                                    <span class="label">{{ t }}</span>
-                                    <span class="valor">
-                                        {{ !r[t] || r[t] === 0 ? '-' : r[t] }}
-                                    </span>                                
-                                </div>
-
-                                <!-- TOTAL -->
-                                <div class="talle-item total-item">
-                                <span class="label">Total</span>
-                                <span class="valor">{{ r.total }}</span>
-                                </div>
-
-                                <!-- BOTÓN -->
-                                <div class="talle-item action-item">
-                                    <ng-container *ngIf="!r.paraRevertir; else marcado">
-    
-                                        <p-button 
-                                        severity="warn"
-                                        styleClass="p-button-sm"
-                                        [rounded]="true"
-                                        [outlined]="true"
-                                        icon="pi pi-undo"
-                                        pTooltip="Revertir recepción"
-                                        (onClick)="AgregarParaRevertir($event, producto.idProducto, r.id!)"
-                                        />
-
-                                    </ng-container>
-
-                                    <ng-template #marcado>
-                                        <span class="a-revertir">A revertir</span>
-                                    </ng-template>
-                                </div>
-
-                            </div>
-
-                            </div>
-
+                        <!-- Header -->
+                        <div class="recepcion-header">
+                            <strong>{{ r.fecha | date:'dd-MM-yyyy HH:mm' }}</strong>
+                            |
+                            <div class="usuario">{{ r.usuario }}</div>
                         </div>
 
-                        </td>
-                    </tr>
-                  </ng-template>
-              </p-table>
+                        <!-- Talles + Total + Acción -->
+                        <div class="talles-row">
+
+                            <div *ngFor="let t of talles" class="talle-item" [ngClass]="{ 'desactivado': (r[t]) === 0 }">
+                                <span class="label">{{ t }}</span>
+                                <span class="valor">
+                                    {{ !r[t] || r[t] === 0 ? '-' : r[t] }}
+                                </span>                                
+                            </div>
+
+                            <!-- TOTAL -->
+                            <div class="talle-item total-item">
+                            <span class="label">Total</span>
+                            <span class="valor">{{ r.total }}</span>
+                            </div>
+
+                            <!-- BOTÓN -->
+                            <!-- <div class="talle-item action-item">
+                                <ng-container *ngIf="!r.paraRevertir; else marcado">
+
+                                    <p-button 
+                                    severity="warn"
+                                    styleClass="p-button-sm"
+                                    [rounded]="true"
+                                    [outlined]="true"
+                                    icon="pi pi-undo"
+                                    pTooltip="Revertir recepción"
+                                    (onClick)="AgregarParaRevertir($event, producto.idProducto, r.idRecepcion!)"
+                                    />
+
+                                </ng-container>
+
+                                <ng-template #marcado>
+                                    <span class="a-revertir">A revertir</span>
+                                </ng-template>
+                            </div> -->
+
+                        </div>
+                    </div>
+
+                    <div *ngIf="producto.baja != null" class="obs-card">
+                        <!-- Header -->
+                        <div class="obs-header">
+                            <strong>{{ producto.baja.fechaBaja | date:'dd-MM-yyyy HH:mm' }}</strong>
+                            |
+                            <div class="usuario">{{ producto.baja.usuarioBaja }}</div>
+                            |
+                            <span>No recepcionado</span>
+                        </div>
+
+                        <div class="talles-row">
+                            <div *ngFor="let t of talles; let i = index" 
+                                class="talle-item" 
+                                [ngClass]="{ 'desactivado': producto.baja['t' + (i+1)] == 0 }">
+                                <span class="label">{{ t }}</span>
+                                <span class="valor">
+                                    {{ producto.baja['t' + (i+1)] == 0 ? '-' : producto.baja['t' + (i+1)] }}
+                                </span>
+                            </div>
+
+                            <!-- TOTAL -->
+                            <div class="talle-item total-item">
+                            <span class="label">Total</span>
+                            <span class="valor">{{ producto.baja.total }}</span>
+                            </div>
+                        </div>
+                        
+
+                        <div class="obs-row">
+                            <p>{{producto.baja.obs}}</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                </td>
+            </tr>
+            </ng-template>
+        </p-table>
     </div>
 </div>
 
 <div class="botones">
-  <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
-  <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save"/>
+  <p-button label="Volver" severity="secondary" icon="pi pi-angle-left" class="btnCerrar" (onClick)="Cerrar()"/>
+  <p-button *ngIf="ordenIngreso.id == 0" label="Guardar" (onClick)="Guardar()" icon="pi pi-save"/>
 </div>

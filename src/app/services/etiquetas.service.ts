@@ -20,14 +20,14 @@ export class EtiquetasService {
 
   //#region PDF
     async GenerarEtiquetas(productos:ProductoImprimir[]) {
-      if (!this.pdfMake) {
-        await this.init();
-      }
+      await this.init();
+
       const documentDefinition = await this.ArmarArchivo(productos);
       this.pdfMake.createPdf(documentDefinition).open();
     }
   
     private async ArmarArchivo(productos: ProductoImprimir[]) {
+      try {
         const contenido: any[] = [];
 
         for (let i = 0; i < productos.length; i++) {
@@ -47,11 +47,16 @@ export class EtiquetasService {
             width: 108,
             height: 57
             },
+            pageOrientation: 'landscape',
             pageMargins: [0, 0, 0, 0],
             content: contenido
         };
 
         return docDefinition;
+      } catch (e) {
+        console.error('Error generando etiquetas', e);
+      }
+      return null;
     }
 
     //Se encarga de posicionar a los cuadritos en fila

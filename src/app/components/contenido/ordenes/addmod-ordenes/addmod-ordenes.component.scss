@@ -1,6 +1,7 @@
 .contenido{
     background-color: var(--surface-card);
     padding: 15px;
+    padding-bottom: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
@@ -11,8 +12,13 @@
 }
 
 .informacion{
+  margin: 10px 0px;
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
+
+  span{
+    color: var(--p-primary-color);
+  }
 }
 
 .form{
@@ -196,14 +202,20 @@ textarea{
   -webkit-appearance: none;
 }
 
-
-.recepcion-header{
+.recepcion-card, .obs-card{
+  padding: 0px 5%;
+}
+.recepcion-header, .obs-header{
   display: flex;
   gap: 15px;
   align-items: center;
   margin-bottom: 10px;
   margin-top: 17px;
   margin-left: 25px;
+}
+
+.obs-header span{
+  color: var(--text-warn);
 }
 
 .talles-row {
@@ -217,6 +229,12 @@ textarea{
 }
 .talles-row .action-item{
   border: none;
+}
+
+.obs-row{
+  background-color: var(--surface-ground);
+  padding: 10px 20px;
+  border-radius: 10px;
 }
 
 .talle-item {

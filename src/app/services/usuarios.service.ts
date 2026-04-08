@@ -19,6 +19,14 @@ export class UsuariosService {
     return sesion?.data?.usuario?.toString() || '';
   }
 
+  IsSesionValida(minutos = 30): boolean {
+    const sesion = this.GetSesion();
+    if (!sesion || !sesion.timestamp) return false;
+
+    const ahora = Date.now();
+    return (ahora - sesion.timestamp) < minutos * 60 * 1000;
+  }
+
   //#region OBTENER
   ObtenerUsuarios(filtro:FiltroGral): Observable<any> {
     return this.apiService.post('usuarios/obtener', filtro)

@@ -8,6 +8,7 @@ import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { CommonModule } from '@angular/common';
 import { UsuariosService } from '../../../services/usuarios.service';
+import { NotificacionesService } from '../../../services/notificaciones.service';
 
 @Component({
   selector: 'app-navegacion',
@@ -34,12 +35,23 @@ export class NavegacionComponent {
   constructor(
     private router:Router,
     private temaService:TemaService,
-    private usuariosService:UsuariosService
+    private usuariosService:UsuariosService,
+    private Notificaciones:NotificacionesService
   ){}
 
   ngOnInit() {
     const sesion = this.usuariosService.GetSesion();
-    if(!sesion) this.router.navigateByUrl('/ingresar');
+    if (!sesion) {
+      this.router.navigateByUrl('/ingresar');
+      return;
+    }
+
+    if (!this.usuariosService.IsSesionValida(30)) {
+      this.Notificaciones.Info("Es necesario volver a iniciar sesión");
+      localStorage.removeItem("sesion");
+      this.router.navigate(['/ingresar'])
+      return;
+    }
 
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
