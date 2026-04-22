@@ -1,8 +1,10 @@
 export class CuentaCorriente{
   idCliente: number = 0;
   cliente: string = "";
-  cantVentas: number = 0;
-  ultimaDeuda: Date;
-  totalDeuda: number;
+  debe: number = 0;
+  haber: Date;
+  saldo: number;
+  estado: string;
+  ultimoMovimiento: Date;
 }
 

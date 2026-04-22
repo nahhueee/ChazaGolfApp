@@ -9,6 +9,9 @@ import { GlobalesService } from '../../../../services/globales.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Dialog } from 'primeng/dialog';
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
+import { TextareaModule } from 'primeng/textarea';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 interface pagoDTO {
   idMetodo: number;
   monto: number;
@@ -20,10 +23,13 @@ interface pagoDTO {
   imports: [
     FORMS_IMPORTS,
     TableModule,
-    Dialog
+    Dialog,
+    TextareaModule,
+    ConfirmDialogModule
   ],
   templateUrl: './entrega-dinero.component.html',
   styleUrl: './entrega-dinero.component.scss',
+  providers: [ConfirmationService],
 })
 export class EntregaDineroComponent {
   @Output() visibleChange = new EventEmitter<boolean>();
@@ -48,11 +54,13 @@ export class EntregaDineroComponent {
     private miscService:MiscService,
     private globalesService:GlobalesService,
     private Notificaciones:NotificacionesService,
-    private cuentasService:CuentasCorrientesService
+    private cuentasService:CuentasCorrientesService,
+    private confirmationService: ConfirmationService,
   ){
     this.formPagos = new FormGroup({
       metodo: new FormControl('', [Validators.required]),
-      monto: new FormControl('', [Validators.min(0)])
+      monto: new FormControl('', [Validators.min(0)]),
+      observaciones: new FormControl('', [Validators.maxLength(250)]),
     });
   }
 
@@ -72,6 +80,8 @@ export class EntregaDineroComponent {
       signed: true
     }
   }
+
+  get montoControl() {return this.formPagos.get('monto')?.value;}
 
   ObtenerMetodosPago(){
     this.miscService.ObtenerMetodosPago()
@@ -115,50 +125,31 @@ export class EntregaDineroComponent {
     const montoIngresado = this.formPagos.get('monto')?.value;
     const metodoSeleccionado = this.formPagos.get('metodo')?.value;
 
+    const montoFinal = montoIngresado
+      ? this.globalesService.EstandarizarDecimal(montoIngresado)
+      : this.montoRestante;
 
-    if(this.desdeVenta){
-      const montoFinal = montoIngresado
-        ? this.globalesService.EstandarizarDecimal(montoIngresado)
-        : this.montoRestante;
+    if (montoFinal <= 0) return;
 
-      if (montoFinal <= 0) return;
-
-      if (montoFinal > this.montoRestante) {
-        this.Notificaciones.Warn("La entrega por pago no puede superar el total a pagar.");
-        return;
-      }
-
-      const nuevoPago = new PagosFactura();
-      nuevoPago.idMetodo = metodoSeleccionado.id;
-      nuevoPago.metodo = metodoSeleccionado.descripcion;
-      nuevoPago.monto = montoFinal;
-
-      this.venta.pagos.push(nuevoPago);
-
-      const pago:pagoDTO = {
-        idMetodo: metodoSeleccionado.id,
-        monto: montoFinal
-      };
-      this.pagosNuevos.push(pago);
-      this.formPagos.reset();
-      this.formPagos.get('metodo')?.setValue(this.metodosPago[0])
-    }else{
-      const montoFinal = montoIngresado
-        ? this.globalesService.EstandarizarDecimal(montoIngresado)
-        : this.deudaTotal;
-
-      if (montoFinal <= 0) return;
-
-      if (montoFinal > this.deudaTotal) {
-        this.Notificaciones.Warn("La entrega de dinero no puede superar el total de deuda.");
-        return;
-      }
-
-      this.montoEntregar = montoFinal;
-      this.metodoSeleccionado = metodoSeleccionado.id;
-
-      this.alerta = "Estas a punto de registrar una entrega por un total de $" + montoFinal + " a la deuda del cliente. Para confirmar presiona el botón 'Guardar Cambios'."
+    if (montoFinal > this.montoRestante) {
+      this.Notificaciones.Warn("La entrega por pago no puede superar el total a pagar.");
+      return;
     }
+
+    const nuevoPago = new PagosFactura();
+    nuevoPago.idMetodo = metodoSeleccionado.id;
+    nuevoPago.metodo = metodoSeleccionado.descripcion;
+    nuevoPago.monto = montoFinal;
+
+    this.venta.pagos.push(nuevoPago);
+
+    const pago:pagoDTO = {
+      idMetodo: metodoSeleccionado.id,
+      monto: montoFinal
+    };
+    this.pagosNuevos.push(pago);
+    this.formPagos.reset();
+    this.formPagos.get('metodo')?.setValue(this.metodosPago[0])
   }
 
   EliminarPago(indice:number){
@@ -166,6 +157,10 @@ export class EntregaDineroComponent {
   }
 
   Cerrar(recargar:boolean = false) {
+    this.pagosNuevos = [];
+    this.montoEntregar = 0;
+    this.metodoSeleccionado = 0;
+
     this.visibleChange.emit(false);
 
     if (recargar) {
@@ -174,25 +169,89 @@ export class EntregaDineroComponent {
   }
 
   Guardar(){
-    if(this.desdeVenta){
-      this.cuentasService.EntregaDineroVenta(this.venta.id!, this.venta.cliente?.id!, this.venta.deuda, this.pagosNuevos)
-        .subscribe(response => {
-          if(response == "OK"){
-            this.Notificaciones.Success("Pagos registrados correctamente");
-            this.Cerrar(true);
-          }
-      });
-    }else{
-      this.cuentasService.EntregaDinero(this.idCliente, this.metodoSeleccionado, this.montoEntregar)
-      .subscribe(response => {
-          if(response == "OK"){
-            this.alerta = "";
-            this.metodoSeleccionado = 0;
-            this.montoEntregar = 0;
+    if (this.formPagos.invalid) return;
+    const montoIngresado = this.formPagos.get('monto')?.value;
+    const metodoSeleccionado = this.formPagos.get('metodo')?.value;
 
-            this.Notificaciones.Success("Entrega registrada correctamente");
-            this.Cerrar(true);
-          }
+    if(this.desdeVenta){
+      this.confirmationService.confirm({
+        key: 'confirmarDialog',
+        message: '¿Estas seguro de registrar los pagos a la venta?',
+        header: 'Confirmación',
+        closable: true,
+        closeOnEscape: true,
+        icon: 'pi pi-exclamation-triangle',
+        rejectButtonProps: {
+          label: 'Cancelar',
+          severity: 'secondary',
+          outlined: true,
+        },
+        acceptButtonProps: {
+          label: 'Aceptar',
+        },
+        accept: () => {
+          this.cuentasService.EntregaDineroVenta(this.venta.id!, this.venta.cliente?.id!, this.venta.deuda, this.pagosNuevos)
+          .subscribe(response => {
+            if(response == "OK"){
+              this.Notificaciones.Success("Pagos registrados correctamente");
+              this.Cerrar(true);
+            }
+          });
+        },
+        reject: () => {},
+      });
+      
+    }else{
+      const montoFinal = montoIngresado
+      ? this.globalesService.EstandarizarDecimal(montoIngresado)
+      : this.deudaTotal;
+
+      if (montoFinal <= 0) return;
+
+      this.montoEntregar = montoFinal;
+      this.metodoSeleccionado = metodoSeleccionado.id;
+
+      if (montoFinal > this.deudaTotal) {
+          const excedente = montoFinal - this.deudaTotal;
+
+        this.alerta = `Estas a punto de registrar una entrega por $${montoFinal.toLocaleString('es-AR')}. 
+                       Se cancelará la deuda de $${this.deudaTotal.toLocaleString('es-AR')} y el excedente de $${excedente.toLocaleString('es-AR')} quedará como saldo a favor del cliente.`;
+
+      } else if (montoFinal === this.deudaTotal) {
+        this.alerta = `Estas a punto de cancelar completamente la deuda por $${montoFinal.toLocaleString('es-AR')}.`;
+      } else {
+        this.alerta = `Estas a punto de registrar una entrega parcial por $${montoFinal.toLocaleString('es-AR')} a la deuda del cliente.`;
+      }
+
+      this.confirmationService.confirm({
+        key: 'confirmarDialog',
+        message: this.alerta,
+        header: 'Confirmación',
+        closable: true,
+        closeOnEscape: true,
+        icon: 'pi pi-exclamation-triangle',
+        rejectButtonProps: {
+          label: 'Cancelar',
+          severity: 'secondary',
+          outlined: true,
+        },
+        acceptButtonProps: {
+          label: 'Aceptar',
+        },
+        accept: () => {
+          this.cuentasService.EntregaDinero(this.idCliente, this.metodoSeleccionado, this.montoEntregar, this.formPagos.get('observaciones')?.value)
+          .subscribe(response => {
+            if(response == "OK"){
+              this.alerta = "";
+              this.metodoSeleccionado = 0;
+              this.montoEntregar = 0;
+
+              this.Notificaciones.Success("Entrega registrada correctamente");
+              this.Cerrar(true);
+            }
+          });
+        },
+        reject: () => {},
       });
     }
   }

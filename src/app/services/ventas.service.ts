@@ -20,6 +20,9 @@ export class VentasService {
   ObtenerVenta(idVenta:number): Observable<any> {
     return this.apiService.get(`ventas/obtener-una/${idVenta}`);
   }
+  ObtenerVentaCuenta(idVenta:number): Observable<any> {
+    return this.apiService.get(`ventas/obtener-venta-cuenta/${idVenta}`);
+  }
   ObtenerProximoNroProceso(idProceso:number): Observable<any> {
     return this.apiService.get(`ventas/obtener-proximo/` + idProceso);
   }

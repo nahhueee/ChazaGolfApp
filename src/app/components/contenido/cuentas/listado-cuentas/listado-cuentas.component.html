@@ -1,27 +1,35 @@
 <div class="contenido">
-     <div class="filtros">
-        <p-floatlabel variant="on" class="busqueda">
-            <p-autocomplete
-                [formControl]="cliente"
-                [suggestions]="clientesFiltrado"
-                placeholder="Buscar cliente por Nombre, DNI o Razón Social"
-                emptyMessage="No se encontraron resultados"
-                (completeMethod)="FiltrarClientes($event)"
-                optionValue="nombre"
-                optionLabel="nombre"
-            >
-                <ng-template let-cliente pTemplate="item">
-                    {{ cliente.nombre }} - {{ cliente.documento }} - {{ cliente.razonSocial }}
-                </ng-template>
+     <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
+        <div class="izq">
+            <!-- Nombre -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="nombre"  type="text"/>
+                <label>Nombre</label>
+            </p-floatlabel>
 
-            </p-autocomplete>
-            <label>Filtrar Cliente</label>
-        </p-floatlabel>
-        <div class="btns">
-            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
-            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltro()" />
+            <!-- Condicion -->
+            <p-floatlabel variant="on">
+                <p-select [options]="condicionesIva" formControlName="condicionIva" optionValue="id" optionLabel="descripcion"/>
+                <label>Cond. IVA</label>
+            </p-floatlabel>
+
+            <!-- Condicion Pago -->
+            <p-floatlabel variant="on">
+                <p-select [options]="condicionesPago" formControlName="condicionPago" optionValue="id" optionLabel="descripcion"/>
+                <label>Cond. Pago</label>
+            </p-floatlabel>
+
+            <!-- Documento -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="documento" type="number"/>
+                <label>Documento</label>
+            </p-floatlabel>
         </div>
-    </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+    </form>
 
     <div class="tabla">
         <p-table 
@@ -41,9 +49,11 @@
                 <tr>
                     <th>Cod.Cliente</th>
                     <th>Cliente</th>
-                    <th>Cant. Ventas Deuda</th>
-                    <th>Ultima Deuda</th>
-                    <th>Total Deuda</th>
+                    <th>Debe</th>
+                    <th>Haber</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Ult. Movimiento</th>
                     <th>Acciones</th>
                 </tr>
             </ng-template>
@@ -51,12 +61,15 @@
                 <tr>
                     <td>{{ cuenta.idCliente }}</td>
                     <td>{{ cuenta.cliente }}</td>
-                    <td>{{ cuenta.cantVentas }}</td>
-                    <td>{{ cuenta.ultimaDeuda | date:'dd-MM-yyyy' }}</td>
-                    <td>${{ cuenta.totalDeuda | decimalFormat }}</td>
+                    <td>${{ cuenta.debe | decimalFormat }}</td>
+                    <td>${{ cuenta.haber | decimalFormat }}</td>
+                    <td>${{ cuenta.saldo | decimalFormat }}</td>
+                    <td><p-tag [value]="cuenta.estado" [severity]="GetSeverity(cuenta.estado)" /></td>
+                    <td>{{ cuenta.ultimoMovimiento | date:'dd-MM-yyyy HH:mm' }}</td>
                     <td>
                         <div class="acciones">
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-list" (onClick)="VerCuenta(cuenta.idCliente, cuenta.cliente, cuenta.totalDeuda)" pTooltip="Gestionar Cuenta" tooltipPosition="bottom"/>
+                            <!-- <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cuenta.idCliente, cuenta.cliente)" pTooltip="Estadisticas" tooltipPosition="bottom"/> -->
                         </div>
                     </td>
                 </tr>

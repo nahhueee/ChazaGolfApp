@@ -1,47 +1,30 @@
 <div class="contenido">
     <div class="encabezado">
         <div class="info">
-            <h3>{{cliente}}</h3>
-           |
-           <h3>Deuda total <span class="deuda">${{totalDeuda | decimalFormat}}</span></h3>
-           |
-           <div class="btns">
-            <p-button label="Entrega de Dinero" icon="pi pi-dollar" severity="primary" (onClick)="Entrega()" />
-            <p-button label="Historial Entregas" icon="pi pi-history" severity="primary" disabled="true" />
-           </div>
+            <div class="elemento">
+                <h3>{{cliente}}</h3>|<h3>Saldo <span class="deuda" [class.verde] = "totalSaldo < 0"> ${{totalSaldo | decimalFormat}}</span></h3>
+            </div>
+            <div class="elemento">
+                <p-button label="Entrega de Dinero" icon="pi pi-dollar" severity="primary" (onClick)="Entrega()" />
+                <p-button label="Estadisticas" icon="pi pi-chart-line" severity="primary" (onClick)="estadisticasVisible = true" />
+                <!-- <p-button label="Historial Entregas" icon="pi pi-history" severity="primary" disabled="true" /> -->
+                <p-button label="Imprimir Reporte" icon="pi pi-print" severity="contrast" (onClick)="ImprimirReporte()" />
+            </div>
            
         </div>
 
 
         <form [formGroup]="filtros" class="filtros"> 
             <div class="izq">
-                <div class="seleccionable">
-                    <div class="item-seleccionable">
-                        <p-radioButton
-                            name="estadoPago"
-                            inputId="impagas"
-                            formControlName="impagas"
-                            [value]="1"
-                        />
-                        <label for="impagas">Solo ventas impagas</label>
-                    </div>
-
-                    <div class="item-seleccionable">
-                        <p-radioButton
-                            name="estadoPago"
-                            inputId="todas"
-                            formControlName="impagas"
-                            [value]="0"
-                        />
-                        <label for="todas">Todas las ventas</label>
-                    </div>
-                </div>
-
-
                 <p-floatlabel variant="on">
-                    <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
+                    <p-select [options]="procesos" formControlName="proceso"/>
                     <label>Proceso</label>
                 </p-floatlabel>
+
+                <!-- <p-floatlabel variant="on">
+                    <p-select [options]="estados" formControlName="estado"/>
+                    <label>Estado</label>
+                </p-floatlabel> -->
 
                 <p-floatlabel variant="on">
                     <p-datepicker formControlName="fechas" selectionMode="range"/>
@@ -75,10 +58,12 @@
                     <th>Proceso</th>
                     <th>Nro</th>
                     <th>Fecha</th>
-                    <th>Hora</th>
-                    <th>Total</th>
-                    <th>Entregado</th>
-                    <th>Deuda</th>
+                    <th>Comprobante</th>
+                    <th>Referencia</th>
+                    <th>Debe</th>
+                    <th>Haber</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </ng-template>
@@ -86,17 +71,27 @@
                 <tr>
                     <td>{{ venta.proceso }}</td>
                     <td>{{ venta.nroProceso }}</td>
-                    <td>{{ venta.fecha | date:'dd-MM-yyyy' }}</td>
-                    <td>{{ venta.hora }}</td>
-                    <td>${{ venta.total | decimalFormat }}</td>
-                    <td>${{ venta.entregado | decimalFormat}}</td>
-                    <td>${{ venta.deuda | decimalFormat}}</td>
-
+                    <td>{{ venta.fecha | date:'dd-MM-yyyy HH:mm' }}</td>
+                    <td>{{ venta.comprobante }}</td>
+                    <td>{{ venta.referencia }}</td>
+                    <td>${{ venta.debe || 0 | decimalFormat }}</td>
+                    <td>${{ venta.haber | decimalFormat}}</td>
+                    <td>${{ venta.saldo | decimalFormat}}</td>
+                    <td>
+                        @if(venta.estado != ''){
+                            <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
+                        }
+                    </td>
                     <td>
                         <div class="acciones">
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="ventaSeleccionada = venta; detalleVisible = true" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
-                            @if(venta.impaga == 1){
-                                <p-button severity="success" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-dollar" (onClick)="EntregaVenta(venta)" pTooltip="Saldar Deuda" tooltipPosition="bottom"/>
+                            @if(venta.estado != "INICIAL"){
+                                <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ImprimirRegistro($event, venta.id, venta.proceso)" pTooltip="Imprimir Comprobante" tooltipPosition="bottom"/>
+                            }
+                            @if(venta.estado == "CON DEUDA"){
+                                <p-button severity="success" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-dollar" (onClick)="EntregaVenta(venta.id)" pTooltip="Saldar Deuda" tooltipPosition="bottom"/>
+                            }
+                            @if(venta.observaciones && venta.observaciones != ""){
+                                <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-info-circle" (onClick)="VerObservaciones(venta.observaciones)" pTooltip="Ver Observaciones" tooltipPosition="bottom"/>
                             }
                         </div>
                     </td>
@@ -112,6 +107,43 @@
 </div>
 
 
-<app-vista-previa [(visible)]="detalleVisible" [venta]="ventaSeleccionada"></app-vista-previa>
-<app-entrega-dinero  [(visible)]="entregaVisible" [venta]="ventaSeleccionada" [desdeVenta]="desdeVenta" [idCliente]="idCliente" [deudaTotal]="totalDeuda" (recargar)="onRecargar($event)"></app-entrega-dinero>
+<app-entrega-dinero  [(visible)]="entregaVisible" [venta]="ventaSeleccionada" [desdeVenta]="desdeVenta" [idCliente]="idCliente" [deudaTotal]="totalSaldo" (recargar)="onRecargar($event)"></app-entrega-dinero>
+<p-popover #op>
+    <div class="opciones-impresion">
+        <p-button
+        label="Ver Remito"
+        severity="secondary"
+        styleClass="p-button-sm w-full"
+        (click)="VerComprobante(); op.hide()">
+        </p-button>
+
+        <p-button
+         [label]="ventaSeleccionada.idTipoComprobante === 99 || ventaSeleccionada.idTipoComprobante === 100
+            ? 'Ver Comprobante' 
+            : 'Ver Factura'"
+        severity="success"
+        styleClass="p-button-sm w-full"
+        [disabled]="
+            ventaSeleccionada.proceso == 'FACTURA' &&
+            ventaSeleccionada.factura?.cae == null
+        "
+        (click)="VerFactura(); op.hide()">
+        </p-button>
+  </div>
+</p-popover>
+
+<app-estadistica-clientes [(visible)]="estadisticasVisible" [idCliente]="idCliente"></app-estadistica-clientes>
+
+<p-dialog 
+    header="Observaciones"
+    [(visible)]="mostrarObs"
+    [modal]="true"
+    [style]="{width: '400px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <div style="white-space: pre-line;">
+        {{ observacionSeleccionada }}
+    </div>
+</p-dialog>
 

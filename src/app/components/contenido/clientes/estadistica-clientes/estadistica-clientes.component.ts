@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { Venta } from '../../../../models/Factura';
 import { ProcesoVenta } from '../../../../models/ProcesoVenta';
 import { ActivatedRoute } from '@angular/router';
@@ -34,6 +34,7 @@ import {
 } from "ng-apexcharts";
 import { TemaService } from '../../../../services/tema.service';
 import { Subscription } from 'rxjs';
+import { Dialog } from 'primeng/dialog';
 
 export type ChartOptions = {
   series: ApexAxisChartSeries;
@@ -67,23 +68,25 @@ const aliasMetodos: any = {
     TableModule,
     Button,
     TooltipModule,
-    DatePipe,
     DecimalFormatPipe,
-    VistaPreviaComponent,
     DatePicker,
-    Tag,
-    NgApexchartsModule
+    NgApexchartsModule,
+    Dialog
   ],
   templateUrl: './estadistica-clientes.component.html',
   styleUrl: './estadistica-clientes.component.scss',
 })
 export class EstadisticaClientes {
+  @Input() visible = false; 
+  @Output() visibleChange = new EventEmitter<boolean>();
+  @Input() idCliente:number = 0;
+
   detalleVisible: boolean = false;
+
 
   ventas: Venta[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
-  idCliente:number = 0;
   cliente:string = "";
   ventaSeleccionada:Venta = new Venta();
   procesos:ProcesoVenta[] = [];
@@ -94,14 +97,12 @@ export class EstadisticaClientes {
   
 
   //Dashboard
-  cantidad_impagas: number = 0;
-  cantidad_pagas: number = 0;
   cantidad_total_ventas: number = 0;
-  deuda_total: number = 0;
-  total_cobrado: number = 0;
+  cantidad_cotizaciones: number = 0;
+  cantidad_fiscal: number = 0;
   total_facturado: number = 0;
-  total_ventas_impagas: number = 0;
-  total_ventas_pagas: number = 0;
+  total_fiscal: number = 0;
+  total_cotizaciones: number = 0;
 
   //Charts
   grafTipoPagoReady:boolean;
@@ -190,8 +191,6 @@ export class EstadisticaClientes {
   }
 
   ngAfterViewInit(){
-    this.ObtenerProcesosVenta();
-
     setTimeout(() => {
       this.rutaActiva.paramMap.subscribe(params => {
         this.idCliente = Number(params.get('idCliente'));
@@ -203,7 +202,6 @@ export class EstadisticaClientes {
   }
 
   ObtenerDatos(){
-    this.Buscar();
     this.ObtenerTotalesVenta();
     this.ObtenerTotalesPorMetodoPago();
     this.ObtenerTotalesPorComprobante();
@@ -212,35 +210,6 @@ export class EstadisticaClientes {
 
   Filtrar(){
     this.ObtenerDatos();
-  }
-
-  Buscar(event?: TableLazyLoadEvent) {
-    if (this.primeraCarga) {
-      this.primeraCarga = false;
-      return; // ignora la carga automática
-    }
-      
-    this.loading = true;
-
-    const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
-    const pageSize = event?.rows ?? 10;
-
-    const filtroActual = new FiltroVenta({
-      pagina: pageIndex + 1,  
-      tamanioPagina: pageSize,
-      tipo: "factura",
-      cliente: this.idCliente,
-      impagas: 0,
-      idProceso: this.filtros.value.proceso?.id ?? 0,
-      fechas: this.filtros.value.fechas,
-      desdeCuenta: true
-    });
-
-    this.ventasService.ObtenerVentas(filtroActual).subscribe(response => {
-      this.ventas = response.registros;
-      this.totalRecords = response.total;
-      this.loading = false;
-    });
   }
 
   LimpiarFiltros(){
@@ -265,16 +234,13 @@ export class EstadisticaClientes {
 
     this.estadisticasService.ObtenerTotalesVenta(filtro)
       .subscribe(response => {
-        this.cantidad_impagas = response.cantidad_impagas ?? 0;
-        this.cantidad_pagas = response.cantidad_pagas ?? 0;
+        this.cantidad_cotizaciones = response.cantidad_cotizaciones ?? 0;
+        this.cantidad_fiscal = response.cantidad_fiscal ?? 0;
         this.cantidad_total_ventas = response.cantidad_total_ventas ?? 0;
 
-        this.deuda_total = response.deuda_total ?? 0;
-        this.total_cobrado = response.total_cobrado ?? 0;
         this.total_facturado = response.total_facturado ?? 0;
-
-        this.total_ventas_impagas = response.total_ventas_impagas ?? 0;
-        this.total_ventas_pagas = response.total_ventas_pagas ?? 0;
+        this.total_cotizaciones = response.total_cotizaciones ?? 0;
+        this.total_fiscal = response.total_fiscal ?? 0;
       });
   }
 
@@ -321,8 +287,8 @@ export class EstadisticaClientes {
       });
   }
 
-  Cerrar(){
-    this.location.back();
+  Cerrar() {
+    this.visibleChange.emit(false);
   }
 
 
@@ -482,91 +448,111 @@ export class EstadisticaClientes {
     };
   }
 
-  GenerarGraficoProcesos(datos:any){
-    datos.sort((a, b) => b.monto_total - a.monto_total);
 
+  GenerarGraficoProcesos(data:any){
+    const procesos: string[] = [];
     const labels: string[] = [];
-    const seriePagas: number[] = [];
-    const serieImpagas: number[] = [];
-
-    datos.forEach(x => {
-      labels.push(x.proceso);
-      seriePagas.push(x.monto_pagas);
-      serieImpagas.push(x.monto_impagas);
+    const totales: number[] = [];
+    const cantidades: number[] = [];
+    
+    data.sort((a, b) => b.monto_total - a.monto_total);
+    data.forEach(item => {
+      labels.push(item.abrev);
+      procesos.push(item.proceso);
+      totales.push(Number(item.monto_total));
+      cantidades.push(Number(item.cantidad_ventas));
     });
+    
 
     this.chartProcesosOptions = {
       series: [
         {
-          name: 'Pagas',
-          data: seriePagas
+          name: "Totales",
+          type: "column",
+          data: totales
         },
         {
-          name: 'Impagas',
-          data: serieImpagas
+          name: "Cantidad",
+          type: "line",
+          data: cantidades
         }
       ],
       chart: {
-        type: 'bar',
-        stacked: true,
-        background: 'transparent',
         height: 280,
+        type: "line",
         toolbar: {
           show: false
-        }
+        },
+        background: "transparent",
+        zoom: {
+          enabled: false
+        },
+      },
+      stroke: {
+        width: [0, 4],
+        colors: [this.esDark ? "#ffffffff" : "#383838ff"]
       },
       title: {
-        text: "VENTAS POR PROCESO",
-        align:'center',
+        text: "GRAFICO DE PROCESOS",
+        align: 'center',
         margin: 30,
         style: {
           fontWeight: '300',
-          fontSize:  '14px',
+          fontSize:  '15px',
           fontFamily:  'Poppins',
           color: this.esDark ? "#ffffff99" : "#00000099"
         },
       },
-      plotOptions: {
-        bar: {
-          horizontal: false,
-          columnWidth: '80%'
-        }
+      dataLabels: {
+        enabled: true,
+        enabledOnSeries: [1]
       },
       labels: labels,
-      tooltip: {
-        shared: true,
-        intersect: false,
-        y: [
-          {
-            formatter: (val) =>
-              '$' + Number(val).toLocaleString('es-AR', { minimumFractionDigits: 2 })
-          },
-          {
-            formatter: (val) =>
-              '$' + Number(val).toLocaleString('es-AR', { minimumFractionDigits: 2 })
+      yaxis: [
+        {
+          title: {
+            text: "Totales"
           }
-        ]
-      },
+        },
+        {
+          opposite: true,
+          title: {
+            text: "Cantidad"
+          }
+        }
+      ],
       theme: {
         mode: this.esDark ? "dark" : "light", 
       },
-      yaxis: {
-        title: {
-          text: 'Monto'
+      plotOptions: {
+        bar: {
+          distributed: true
         }
       },
-      colors: ['#22c55e', '#ef4444'],
-      dataLabels: {
-        enabled: true,
-        formatter: (val) => {
-          return '$' + val.toLocaleString('es-AR', { minimumFractionDigits: 0 });
+      colors: [
+        '#F59E0B', 
+        '#EF4444', 
+        '#06B6D4', 
+        '#A855F7', 
+        '#84CC16',
+        '#F97316'  
+      ],
+      tooltip: {
+        x: {
+          formatter: (val, opts) => {
+            return procesos[opts.dataPointIndex]; // 👈 magia
+          }
         },
-        style: {
-          fontSize: '11px',
+        y: {
+          formatter: (val, opts) => {
+            if (opts.seriesIndex === 0) {
+              return '$' + val.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+            }
+            return val.toString(); 
+          }
         }
-      },
-
+      }
     };
-
   }
+
 }

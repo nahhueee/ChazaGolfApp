@@ -99,23 +99,22 @@ export class OrdenIngresoReporteService {
                         ],
 
                         // Filas
-                        ...grupo.filas.map(f => [
+                       ...grupo.filas.map(f => [
                             f.tipo,
                             f.fecha || '',
                             f.usuario || '',
-                            f.t1 || 0,
-                            f.t2 || 0,
-                            f.t3 || 0,
-                            f.t4 || 0,
-                            f.t5 || 0,
-                            f.t6 || 0,
-                            f.t7 || 0,
-                            f.t8 || 0,
-                            f.t9 || 0,
-                            f.t10 || 0,
+                            this.mostrar(f.t1),
+                            this.mostrar(f.t2),
+                            this.mostrar(f.t3),
+                            this.mostrar(f.t4),
+                            this.mostrar(f.t5),
+                            this.mostrar(f.t6),
+                            this.mostrar(f.t7),
+                            this.mostrar(f.t8),
+                            this.mostrar(f.t9),
+                            this.mostrar(f.t10),
                             f.total || 0
-                        ])
-                        ]
+                        ])]
                     },
                     layout: 'lightHorizontalLines'
                     });
@@ -171,5 +170,11 @@ export class OrdenIngresoReporteService {
 
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
             `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+   mostrar(valor: any) {
+        if (valor === null || valor === undefined) return '';
+        if (Number(valor) === 0) return '';  
+        return String(valor);
     }
 }

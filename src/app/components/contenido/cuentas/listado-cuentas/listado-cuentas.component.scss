@@ -8,14 +8,24 @@
 .filtros{
     display: flex;
     gap: 30px;
+    margin-top: 5px;
+    margin-bottom: 20px;
 
-    p-floatlabel{
-        max-width: 600px;
-    }
-
-    .btns{
+    .izq{
         display: flex;
         gap: 15px;
+        flex: 1;
     }
+
+    .der{
+        display: flex;
+        gap: 10px;
+    }
+}
+
+
+.acciones{
+    display: flex;
+    gap: 5px;
 }
 

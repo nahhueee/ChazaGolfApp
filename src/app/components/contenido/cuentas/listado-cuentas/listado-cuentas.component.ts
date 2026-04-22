@@ -3,17 +3,16 @@ import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { CuentaCorriente } from '../../../../models/CuentaCorriente';
-import { FiltroGral } from '../../../../models/filtros/FiltroGral';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { InputTextModule } from 'primeng/inputtext';
-import { AutoCompleteModule } from 'primeng/autocomplete';
-import { FloatLabel } from 'primeng/floatlabel';
+import { FormControl, FormGroup } from '@angular/forms';
 import { Cliente } from '../../../../models/Cliente';
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { ClientesService } from '../../../../services/clientes.service';
+import { CondicionesIva } from '../../../../models/CondicionesIva';
+import { FiltroClientes } from '../../../../models/filtros/FiltroClientes';
+import { MiscService } from '../../../../services/misc.service';
+import { FORMS_IMPORTS } from '../../../../imports/forms.import';
+import { TagModule } from 'primeng/tag';
 
 @Component({
   selector: 'app-listado-cuentas',
@@ -22,13 +21,8 @@ import { ClientesService } from '../../../../services/clientes.service';
     TableModule,
     Button,
     TooltipModule,
-    FormsModule,
-    ReactiveFormsModule,
-    DatePipe,
-    InputTextModule,
-    AutoCompleteModule,
-    FloatLabel,
-    DecimalFormatPipe
+    TagModule,
+    ...FORMS_IMPORTS,
 ],
   templateUrl: './listado-cuentas.component.html',
   styleUrl: './listado-cuentas.component.scss',
@@ -37,20 +31,43 @@ export class ListadoCuentasComponent {
   cuentas: CuentaCorriente[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
-  filtroActual!: FiltroGral;
+  filtroActual!: FiltroClientes;
 
   clientes: Cliente[] = [];
-  clientesFiltrado: Cliente[] = [];
-  cliente: FormControl = new FormControl();
+  filtros:FormGroup;
+  condicionesIva: CondicionesIva[] = [];
+
+  condicionesPago = [
+    {id: 1, descripcion: 'CONTADO'},
+    {id: 2, descripcion: 'CUENTA CORRIENTE'},
+    {id: 3, descripcion: 'PAGO DIGITAL'},
+    {id: 4, descripcion: 'OTRO'},
+  ];
 
   constructor(
     private cuentasService:CuentasCorrientesService,
     private clientesService:ClientesService,
-    private router:Router
-  ){}
-
+    private router:Router,
+    private miscService:MiscService
+  ){
+    this.filtros = new FormGroup({
+        nombre: new FormControl(''),
+        condicionIva: new FormControl(''),
+        condicionPago: new FormControl(''),
+        documento: new FormControl('')
+    });
+  }
+  
   ngOnInit(){
     this.ObtenerClientes();
+    this.ObtenerCondicionesIva();
+  }
+
+  ObtenerCondicionesIva(){
+    this.miscService.ObtenerCondicionesIva()
+      .subscribe(response => {
+        this.condicionesIva = response;
+      });
   }
 
   Buscar(event?: TableLazyLoadEvent, recargaConFiltro: boolean = false) {
@@ -59,15 +76,14 @@ export class ListadoCuentasComponent {
     const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
     const pageSize = event?.rows ?? 10;
 
-    if (!recargaConFiltro) {
-      this.filtroActual = new FiltroGral({
-        pagina: pageIndex + 1,  
-        tamanioPagina: pageSize,
-        busqueda: this.cliente.value
-        // orden:
-        // direccion:
-      });
-    }
+    this.filtroActual = new FiltroClientes({
+      pagina: pageIndex + 1,  
+      tamanioPagina: pageSize,
+      nombre: this.filtros.get('nombre')?.value ?? '',
+      condicionIva: this.filtros.get('condicionIva')?.value ?? '',
+      condicionPago: this.filtros.get('condicionPago')?.value ?? '',
+      documento: this.filtros.get('documento')?.value ?? ''
+    });
 
     this.cuentasService.ObtenerCuentas(this.filtroActual).subscribe(response => {
       this.cuentas = response.registros;
@@ -79,6 +95,9 @@ export class ListadoCuentasComponent {
   VerCuenta(idCliente:number, cliente:string, totalDeuda:number){
     this.router.navigate(['/cuentas/administrar', idCliente, cliente]);
   }
+  VerEstadistica(id:number, cliente:string){
+    this.router.navigate(['/clientes/estadisticas', id, cliente]);
+  }
 
   ObtenerClientes(){
     this.clientesService.SelectorClientes(true)
@@ -87,18 +106,24 @@ export class ListadoCuentasComponent {
       });
   }
 
-  FiltrarClientes(event: any) {
-    const query = event.query.toLowerCase();
-    this.clientesFiltrado = this.clientes.filter(c => {
-      const nombre = c.nombre!.toLowerCase();
-      const dni = c.documento!.toString(); 
-      const razon = c.razonSocial!.toString(); 
-      return nombre.includes(query) || dni.includes(query) || razon.includes(query);
-    });
-  }
-
-  LimpiarFiltro(){
-    this.cliente.reset();
+  LimpiarFiltros(){
+    this.filtros.reset();
     this.Buscar();
+  }
+  
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' {
+    const value = estado.toLowerCase();
+
+    if (value === 'al día') {
+      return 'info';
+    }
+
+    if (value === 'debe') {
+      return 'warn';
+    }
+
+    if (value === 'a favor') {return 'success';}
+
+    return 'info';
   }
 }

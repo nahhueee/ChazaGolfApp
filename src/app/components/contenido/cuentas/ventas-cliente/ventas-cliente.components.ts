@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { Venta } from '../../../../models/Factura';
+import { Venta, VentasClienteCuenta } from '../../../../models/Factura';
 import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
 import { ActivatedRoute } from '@angular/router';
 import { VentasService } from '../../../../services/ventas.service';
@@ -19,6 +19,16 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { Location } from '@angular/common';
 import { EntregaDineroComponent } from '../entrega-dinero/entrega-dinero.component';
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
+import { FiltroVentasCliente } from '../../../../models/filtros/FiltroClientes';
+import { TagModule } from 'primeng/tag';
+import { TipoComprobante } from '../../../../models/ObjFacturar';
+import { CuentaCorrienteReporteService } from '../../../../services/cuenta-corriente.reporte.service';
+import { Popover, PopoverModule } from 'primeng/popover';
+import { ComprobanteService } from '../../../../services/comprobante.service';
+import { FacturaService } from '../../../../services/factura.service';
+import { ReciboReporteService } from '../../../../services/recibo.service';
+import { EstadisticaClientes } from "../../clientes/estadistica-clientes/estadistica-clientes.component";
+import { Dialog } from 'primeng/dialog';
 
 @Component({
   selector: 'app-ventas-cliente',
@@ -30,49 +40,68 @@ import { CuentasCorrientesService } from '../../../../services/cuentas-corriente
     TooltipModule,
     DatePipe,
     DecimalFormatPipe,
-    VistaPreviaComponent,
     SelectButtonModule,
     DatePicker,
     RadioButtonModule,
-    EntregaDineroComponent
-  ],
+    EntregaDineroComponent,
+    TagModule,
+    PopoverModule,
+    EstadisticaClientes,
+    Dialog
+],
   templateUrl: './ventas-cliente.components.html',
   styleUrl: './ventas-cliente.components.scss',
 })
 export class VentasClienteComponent {
-  totalDeuda:number = 0;
+  totalSaldo:number = 0;
   decimal_mask:any;
-  detalleVisible: boolean = false;
+  estadisticasVisible: boolean = false;
   entregaVisible: boolean = false;
 
-  ventas: Venta[] = [];
+  ventas: VentasClienteCuenta[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
   idCliente:number = 0;
   cliente:string = "";
   ventaSeleccionada:Venta = new Venta();
-  procesos:ProcesoVenta[] = [];
   desdeVenta: boolean = false;
 
   filtros:FormGroup;
   primeraCarga = true;
 
+  @ViewChild('op') op!: Popover;
+
+  mostrarObs: boolean = false;
+  observacionSeleccionada: string = '';
+
+  estados = [
+    "A FAVOR", "PAGADA", "DEUDA"
+  ]
+
+  procesos = [
+    "COTIZACION", "FACTURA", "NOTA DE CREDITO", "RECIBO"
+  ]
+
   constructor(
     private rutaActiva:ActivatedRoute,
-    private ventasService:VentasService,
     private miscService:MiscService,
     private location: Location,
-    private cuentasService:CuentasCorrientesService
+    private cuentasService:CuentasCorrientesService,
+    private ventasService:VentasService,
+    private reporteService:CuentaCorrienteReporteService,
+    private comprobanteService:ComprobanteService,
+    private facturaService:FacturaService,
+    private reciboService:ReciboReporteService
   ){
     this.filtros = new FormGroup({
-      impagas: new FormControl(1),
+      estado: new FormControl(),
       proceso: new FormControl(),
       fechas: new FormControl(),
     })
   }
 
   ngAfterViewInit(){
-    this.ObtenerProcesosVenta();
+    //this.ObtenerProcesosVenta();
     
     setTimeout(() => {
       //Configuracion para la mascara decimal Imask
@@ -92,15 +121,15 @@ export class VentasClienteComponent {
         this.cliente = params.get('cliente')!;
       });
 
-      this.ObtenerDeudaCliente();
+      this.ObtenerSaldoCliente();
       this.Buscar();
     },10);
   }
 
-  ObtenerDeudaCliente(){
-    this.cuentasService.ObtenerDeudaTotalCliente(this.idCliente)
+  ObtenerSaldoCliente(){
+    this.cuentasService.ObtenerSaldoTotalCliente(this.idCliente)
       .subscribe(response => {
-        this.totalDeuda = response;
+        this.totalSaldo = response;
       });
   }
 
@@ -115,18 +144,16 @@ export class VentasClienteComponent {
     const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
     const pageSize = event?.rows ?? 10;
 
-    const filtroActual = new FiltroVenta({
+    const filtroActual = new FiltroVentasCliente({
       pagina: pageIndex + 1,  
       tamanioPagina: pageSize,
-      tipo: "factura",
       cliente: this.idCliente,
-      impagas: this.filtros.value.impagas,
-      idProceso: this.filtros.value.proceso?.id ?? 0,
+      proceso: this.filtros.value.proceso ?? '',
       fechas: this.filtros.value.fechas,
-      desdeCuenta: true
+      estado: this.filtros.value.estado
     });
 
-    this.ventasService.ObtenerVentas(filtroActual).subscribe(response => {
+    this.cuentasService.ObtenerVentasCliente(filtroActual).subscribe(response => {
       this.ventas = response.registros;
       this.totalRecords = response.total;
       this.loading = false;
@@ -135,15 +162,49 @@ export class VentasClienteComponent {
 
   LimpiarFiltros(){
     this.filtros.reset();
-    this.filtros.get('impagas')?.setValue(1);
     this.Buscar();
   }
 
-  ObtenerProcesosVenta(){
-    this.miscService.ObtenerProcesosVenta('factura')
+  // ObtenerVenta(idVenta:number){
+  //   this.ventasService.ObtenerVenta(idVenta)
+  //     .subscribe(response => {
+  //       this.ventaSeleccionada = response;
+  //       this.PrepararPrecios();
+  //       this.detalleVisible = true;
+  //     });
+  // }
+
+  ImprimirRegistro(event, id:number, tipo:string){
+    if(tipo == "RECIBO")
+      this.VerRecibo(id);
+    else{
+      this.ElegirComprobante(event, id);
+    }
+  }
+
+  ElegirComprobante(event, idVenta:number){
+    this.ventasService.ObtenerVenta(idVenta)
       .subscribe(response => {
-        this.procesos = response;
-      });
+        this.ventaSeleccionada = response;
+        this.op.toggle(event);
+    });
+  }
+  VerComprobante(){
+    this.comprobanteService.VerComprobante(this.ventaSeleccionada)
+  }
+  VerFactura(){
+    this.PrepararPrecios();
+    this.facturaService.VerFactura(this.ventaSeleccionada)
+  }
+  VerRecibo(idRecibo:number){
+    this.cuentasService.ObtenerRecibo(idRecibo)
+      .subscribe(response => {
+        this.reciboService.VerReporte(response)
+    });
+  }
+  VerObservaciones(obs:string) {
+    this.observacionSeleccionada = obs;
+    this.mostrarObs = true;
   }
 
   Cerrar(){
@@ -153,18 +214,106 @@ export class VentasClienteComponent {
   onRecargar(recargar: boolean) {
     if (recargar) {
       this.Buscar();
-      this.ObtenerDeudaCliente();
+      this.ObtenerSaldoCliente();
     }
   }
 
-  EntregaVenta(venta:Venta){
-    this.ventaSeleccionada = venta;
-    this.desdeVenta = true;
-    this.entregaVisible = true;
+  EntregaVenta(idVenta){
+    this.ventasService.ObtenerVentaCuenta(idVenta)
+      .subscribe(response => {
+        this.ventaSeleccionada = response;
+        this.desdeVenta = true;
+        this.entregaVisible = true;
+    });
   }
   Entrega(){
     this.desdeVenta = false;
     this.entregaVisible = true;
   }
 
+  ImprimirReporte(){
+    const fechas = this.filtros.value.fechas;
+    const proceso = this.filtros.value.proceso;
+
+    const formatDate = (d: Date) => {
+      if (!d) return null;
+
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+
+      return `${day}-${month}-${year}`;
+    };
+
+    const filtroActual = new FiltroVentasCliente({
+      pagina: 1,  
+      tamanioPagina: 1,
+      cliente: this.idCliente,
+      proceso: proceso,
+      fechas: fechas,
+      estado: this.filtros.value.estado
+    });
+
+    this.cuentasService.ObtenerVentasClienteReporte(filtroActual).subscribe(response => {
+      this.reporteService.VerReporte({
+          codCliente: this.idCliente.toString(),
+          cliente: this.cliente,
+          saldo: this.totalSaldo,
+          fechaDesde: fechas?.[0] ? formatDate(fechas[0]) : null,
+          fechaHasta: fechas?.[1] ? formatDate(fechas[1]) : null,
+          proceso: proceso || null,
+          movimientos: response 
+      });
+    });
+  }
+
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' {
+    const value = estado.toLowerCase();
+
+    if (value === 'pagada') {return 'info';}
+    if (value === 'con deuda') {return 'warn';}
+    if (value === 'a favor') {return 'success';}
+
+    return 'info';
+  }
+
+  PrepararPrecios(){
+    const esTipoA = [
+      TipoComprobante.FACTURA_A,
+      TipoComprobante.NC_A,
+      TipoComprobante.ND_A
+    ].includes(this.ventaSeleccionada.idTipoComprobante!);
+
+    this.ventaSeleccionada.productos.forEach(producto => {
+      const unitario = Number(producto.unitario) || 0; // Precio con iva
+      const cantidad = Number(producto.cantidad) || 0;
+
+      let precioNeto = 0; // Precio neto
+      if(esTipoA)
+        precioNeto = unitario / 1.21;
+      else
+        precioNeto = unitario;
+
+      producto.precioMostrar = precioNeto;
+      let totalNeto = precioNeto * cantidad;
+      producto.total = totalNeto;
+
+      // Porcentaje del descuento
+      const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, producto.topeDescuento ?? 100);
+      producto.descuentoAplicado = descuentoAplicado;
+
+      // Importe del descuento
+      const importeDescuento = totalNeto * (descuentoAplicado / 100);
+      producto.importeDescuento = importeDescuento;
+
+      // Total bruto del item
+      const totalFinalNeto = totalNeto - importeDescuento;
+      producto.totalMostrar = totalFinalNeto ;
+
+      producto.stockInicial = Object.fromEntries(
+        Object.entries(producto)
+          .filter(([key]) => /^t\d+$/.test(key))
+      );
+    });
+  }
 }

@@ -8,6 +8,7 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { DireccionesService } from '../../../../services/direcciones.service';
 import { MiscService } from '../../../../services/misc.service';
 import { ActivatedRoute, Route, Router } from '@angular/router';
+import { GlobalesService } from '../../../../services/globales.service';
 
 @Component({
   selector: 'app-addmod-clientes',
@@ -31,6 +32,7 @@ export class AddModClientesComponent {
   formulario:FormGroup;
   cliente:Cliente;
   desdeRouting:boolean;
+  decimal_mask: any;
 
   condicionesIVAReceptor: CondicionesIva[] = [];
   tiposDocumento = [
@@ -72,7 +74,8 @@ export class AddModClientesComponent {
     private direccionesService: DireccionesService,
     private miscService:MiscService,
     private rutaActiva: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private globalesService:GlobalesService
   ) {
     this.formulario = new FormGroup({
       nombre: new FormControl('', [Validators.required]),
@@ -90,6 +93,7 @@ export class AddModClientesComponent {
       condPago: new FormControl([null]),
       categoria: new FormControl([null]),
       lista: new FormControl([null]),
+      inicial: new FormControl("0"),
 
       calle: new FormControl(''),
       numero: new FormControl(''),
@@ -116,8 +120,27 @@ export class AddModClientesComponent {
   get provinciaControl() {return this.formulario.get('provincia');}
   get nroControl() {return this.formulario.get('numero');}
   get codPostalControl() {return this.formulario.get('codPostal');}
+  get condicionPagoControl() {return this.formulario.get('condPago')?.value;}
 
+  actualizarEstadoInicial() {
+    if (!this.formulario) return;
+
+    const estaEditando = !!this.cliente && this.cliente.id > 0;
+    const control = this.formulario.get('inicial');
+
+    if (!estaEditando) {
+      control?.enable({ emitEvent: false });
+    } else {
+      control?.disable({ emitEvent: false });
+    }
+  }
   ngOnInit(): void {
+    this.formulario.get('condPago')?.valueChanges.subscribe(() => {
+      this.actualizarEstadoInicial();
+    });
+
+    this.actualizarEstadoInicial(); 
+    
     const path = this.rutaActiva.snapshot.routeConfig?.path;
     if(path === 'clientes/add'){
       this.desdeRouting = true;
@@ -146,6 +169,22 @@ export class AddModClientesComponent {
 
   }
 
+  ngAfterViewInit(){
+    setTimeout(() => {
+      //Configuracion para la mascara decimal Imask
+      this.decimal_mask = {
+        mask: Number,
+        scale: 2,
+        thousandsSeparator: '.',
+        radix: ',',
+        normalizeZeros: true,
+        padFractionalZeros: true,
+        lazy: false,
+        signed: true
+      }
+    },0);
+  }
+
   //#region VARIOS
   CompletarCampos(cliente){
     this.formulario.get('nombre')?.setValue(cliente.nombre);
@@ -155,6 +194,8 @@ export class AddModClientesComponent {
     this.formulario.get('email')?.setValue(cliente.email);
     this.formulario.get('razonSocial')?.setValue(cliente.razonSocial);
     this.formulario.get('documento')?.setValue(cliente.documento);
+    this.formulario.get('inicial')?.setValue(cliente.inicial.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
     this.formulario.get('lista')?.setValue(this.listasPrecio.find(l => l.id == cliente.idListaPrecio));
 
     let condicionIva = this.condicionesIVAReceptor.find(c => c.id == cliente.idCondicionIva);
@@ -275,6 +316,7 @@ export class AddModClientesComponent {
     this.cliente.idCondicionIva = this.formulario.get('condIva')?.value.id;
     this.cliente.idListaPrecio = this.formulario.get('lista')?.value.id;
     this.cliente.documento = this.formulario.get('documento')?.value;
+    this.cliente.inicial = this.globalesService.EstandarizarDecimal(this.formulario.get('inicial')?.value) || 0;
 
     const v = (path: string, prop?: string) => {
       const val = this.formulario.get(path)?.value;

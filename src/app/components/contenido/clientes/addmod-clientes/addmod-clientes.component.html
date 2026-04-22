@@ -45,13 +45,12 @@
         <div class="der">
             <p class="subtitulo"><i class="pi pi-file"></i>Facturación</p>
 
-            <!-- Razon -->
-            <p-floatlabel variant="in">
-                <input pInputText formControlName="razonSocial" type="text" />
-                <label>Razón Social</label>
-            </p-floatlabel>
-
             <div class="horizontal">
+                <!-- Razon -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="razonSocial" type="text" />
+                    <label>Razón Social</label>
+                </p-floatlabel>
                 <!-- Condicion IVA Receptor -->
                 <p-floatlabel variant="in">
                     <p-select [options]="condicionesIVAReceptor" formControlName="condIva" optionLabel="descripcion" (onChange)="CambioCondicion()"/>
@@ -60,15 +59,8 @@
                         {{ condicion.id }} - {{ condicion.descripcion }}
                     </ng-template>
                 </p-floatlabel>
-
-                <!-- Cond. Pago -->
-                <p-floatlabel variant="in">
-                    <p-select [options]="condicionesPago" formControlName="condPago" optionLabel="descripcion" [appendTo]="'body'"/>
-                    <label>Condición Pago</label>
-                </p-floatlabel>
             </div>
             
-
             <div class="horizontal">
                 <!-- Tipo Documento -->
                 <p-floatlabel variant="in">
@@ -107,6 +99,20 @@
                 <p-floatlabel variant="in">
                     <p-select [options]="listasPrecio" formControlName="lista" optionLabel="descripcion" [appendTo]="'body'"/>
                     <label>Lista De Precio</label>
+                </p-floatlabel>
+            </div>
+
+            <div class="horizontal">
+                <!-- Cond. Pago -->
+                <p-floatlabel variant="in">
+                    <p-select [options]="condicionesPago" formControlName="condPago" optionLabel="descripcion" [appendTo]="'body'"/>
+                    <label>Condición Pago</label>
+                </p-floatlabel>
+
+                <!-- Valor Inicial -->
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="inicial" type="text" [imask]="decimal_mask"/>
+                    <label>Inicial en Cuenta</label>
                 </p-floatlabel>
             </div>
         </div>

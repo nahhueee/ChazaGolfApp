@@ -47,7 +47,6 @@
                     <th>Celular</th>
                     <th>Condición</th>
                     <th>Documento</th>
-                    <th>Acciones</th>
                 </tr>
             </ng-template>
             <ng-template #body let-cliente>
@@ -62,11 +61,11 @@
                     <td>{{ cliente.celular }}</td>
                     <td>{{ cliente.condicionIva }}</td>
                     <td>{{ cliente.documento }}</td>
-                    <td>
+                    <!-- <td>
                         <div class="acciones">
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cliente.id, cliente.nombre)" pTooltip="Estadisticas" tooltipPosition="bottom"/>
                         </div>
-                    </td>
+                    </td> -->
                 </tr>
             </ng-template>
         </p-table>
