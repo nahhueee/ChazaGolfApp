@@ -1,4 +1,4 @@
-<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '900px' }">
+<p-dialog [modal]="true" [(visible)]="visible" (onHide)="onHide()" [style]="{ width: '900px' }">
    <ng-template #header>
         <div class="modal-header">
             <i class="pi pi-dollar"></i>
@@ -91,7 +91,7 @@
 
 
     <div class="botones">
-        <p-button label="Volver" severity="secondary" (click)="CerrarModal()" icon="pi pi-angle-left"/>
+        <p-button label="Volver" severity="secondary" (click)="onHide()" icon="pi pi-angle-left"/>
         <p-button label="Confirmar" (onClick)="Facturar()" icon="pi pi-check" />
     </div>
 </p-dialog>

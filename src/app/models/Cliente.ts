@@ -20,6 +20,7 @@ export class Cliente {
     fechaAlta?:Date;
     direcciones?:DireccionesCliente[];
     ultimoDescuento?:UltimoDescuentoCliente;
+    saldo?:number;
 }
 
 export class DireccionesCliente {

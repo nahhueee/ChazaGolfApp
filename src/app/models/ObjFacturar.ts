@@ -6,6 +6,7 @@ export class ObjFacturar {
     iva?:number;
     tipoComprobante?: TipoComprobante;
     tipoFacturaDesc?:string;
+    ptoVenta?:number;
     docNro?:number;
     docTipo?:number;
     docTipoDesc?:string;

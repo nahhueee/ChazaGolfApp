@@ -511,11 +511,14 @@ p-divider {
   }
 }
 
-.noPagos{
+.noPagos, .saldoFavor{
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 15px;
+}
+.noPagos{
+  margin-bottom: 15px;
 }
 /*#endregion */
 

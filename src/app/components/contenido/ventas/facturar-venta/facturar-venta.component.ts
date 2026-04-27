@@ -28,6 +28,7 @@ export class FacturarVentaComponent {
   @Input() visible = false; 
   @Input() titulo = ""; 
   @Output() cerrar = new EventEmitter<FacturaVenta>(); //Pasa el objeto facturado
+  @Output() visibleChange = new EventEmitter<boolean>();
   @Input() set objFacturar(value: ObjFacturar) { 
     if (value){
       this.datosFacturar = value;
@@ -101,24 +102,26 @@ export class FacturarVentaComponent {
               comprobanteAsociado: this.datosFacturar.comprobanteAsociado
             });
 
-            this.CerrarModal(factura);
+            this.onHide(factura);
           },
           error: err => {
             this.manejarErrorFacturacion(err);
             const factura:FacturaVenta = new FacturaVenta();
             factura.estado = "Error";
-            this.CerrarModal(factura);
+            this.onHide(factura);
           }
       });
       
     }else{
       const factura:FacturaVenta = new FacturaVenta();
       factura.estado = "Cotizacion";
-      this.CerrarModal(factura);
+      this.onHide(factura);
     }
   }
 
-  CerrarModal(factura?:FacturaVenta) {
+  onHide(factura?:FacturaVenta) {
+    this.visible = false;    
+    this.visibleChange.emit(false);
     this.cerrar.emit(factura);
   }
 

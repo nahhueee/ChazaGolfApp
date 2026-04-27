@@ -86,6 +86,9 @@
                             <p><strong>Condición Fiscal:</strong> {{ clienteSeleccionado.condicionIva }}</p>
                             <p><strong>Lista de Precio:</strong> {{ clienteSeleccionado.listaPrecio }}</p>
                             <p><strong>Último Descuento:</strong> {{ clienteSeleccionado.ultimoDescuento?.tipoDescuento }} | {{ clienteSeleccionado.ultimoDescuento?.descuento }}</p>
+                            @if(saldoAFavor > 0){
+                                <p><strong>Saldo A Favor:</strong> ${{ saldoAFavor | decimalFormat}} </p>
+                            }
                         </div>
 
                         <p class="link" (click)="modalClienteVisible = true">Ver Más</p>
@@ -558,7 +561,7 @@
                         <tr>
                             <td colspan="3">
                                 <div class="noPagos">
-                                    <i class="pi pi-wallet text-3xl text-500"></i>
+                                    <i class="pi pi-dollar text-3xl text-500"></i>
 
                                     <span class="text-600">
                                         No se registraron métodos de pago.
@@ -573,6 +576,25 @@
                                         (onClick)="AgregarPagoContado()"
                                     />
                                 </div>
+                                @if (saldoAFavor > 0) {
+                                <div class="saldoFavor">
+                                    <i class="pi pi-wallet text-3xl text-500"></i>
+
+                                    <span class="text-600">
+                                        Cliente con saldo a favor en cuenta.
+                                    </span>
+
+                                    <p-button
+                                        label="Usar saldo a favor"
+                                        icon="pi pi-check"
+                                        severity="success"
+                                        variant="outlined"
+                                        styleClass="p-button-sm"
+                                        (onClick)="AgregarPagoAFavor()"
+                                    />
+                                </div>
+                                }
+                                
                             </td>
                         </tr>
                     </ng-template>
@@ -603,6 +625,12 @@
                         <span>Total General:</span>
                         <span class="monto">${{totalGeneral | decimalFormat}}</span>
                     </div> 
+                    <!-- @if(aplicaSaldoAFavor){
+                        <div class="fila">
+                            <span>Saldo:</span>
+                            <span class="monto">- ${{saldoAplicado | decimalFormat}}</span>
+                        </div> 
+                    } -->
                     <div class="fila">
                         <span>Redondeo:</span>
                         <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>

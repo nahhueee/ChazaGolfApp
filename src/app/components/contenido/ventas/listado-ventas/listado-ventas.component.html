@@ -87,7 +87,11 @@
                     <td>${{ venta.total | decimalFormat }}</td>
                     
                     @if(venta.factura){
-                        <td>{{ venta.factura.desComprobante }} Nro: {{ venta.factura.ticket }}</td>
+                        <td>
+                        {{ venta.factura.desComprobante }} |
+                        {{ venta.factura.ptoVenta.toString().padStart(4, '0') }}-
+                        {{ venta.factura.ticket.toString().padStart(8, '0') }}
+                        </td>                    
                     }@else {
                         <td>--</td>
                     }

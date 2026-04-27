@@ -195,6 +195,12 @@
                         <span>Total General:</span>
                         <span class="monto">${{totalGeneral | decimalFormat}}</span>
                     </div>
+                    <!-- @if(aplicaSaldoAFavor){
+                        <div class="fila">
+                            <span>Saldo:</span>
+                            <span class="monto">- ${{saldoAplicado | decimalFormat}}</span>
+                        </div> 
+                    } -->
                     <div class="fila">
                         <span>Redondeo:</span>
                         <span class="monto">${{venta.redondeo | decimalFormat}}</span>

@@ -42,6 +42,8 @@ export class VistaPreviaComponent {
   totalIva:number = 0;
 
   mostrarIva:boolean = false;
+  saldoAplicado:number = 0;
+  aplicaSaldoAFavor:boolean = false;
 
   constructor(
     private comprobanteService:ComprobanteService
@@ -49,6 +51,14 @@ export class VistaPreviaComponent {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
+      // const pagoEnSaldo = this.venta.pagos.find(x => x.idMetodo == 8);
+      // if(pagoEnSaldo){
+      //   this.saldoAplicado = pagoEnSaldo.monto!;
+      //   this.aplicaSaldoAFavor = true;
+      // }else{
+      //   this.saldoAplicado = 0;
+      //   this.aplicaSaldoAFavor = false;
+      // }
       this.CalcularTotalGeneral();
     }
   }
@@ -126,6 +136,9 @@ export class VistaPreviaComponent {
     this.totalIva = totalIva;
     this.totalGeneral = totalGeneral;
     this.totalAPagar = totalGeneral + this.venta.redondeo;
+    this.totalAPagar =
+      this.totalGeneral +
+      this.venta.redondeo;
 
     // cantidades
     this.cantProductos = this.venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
