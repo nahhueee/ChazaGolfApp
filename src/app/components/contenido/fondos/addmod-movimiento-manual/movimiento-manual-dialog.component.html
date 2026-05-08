@@ -1,0 +1,117 @@
+<p-dialog [modal]="true" [(visible)]="visible" (onHide)="onHide()" [style]="{ width: '400px' }">
+   <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-arrow-right-arrow-left"></i>
+            <span class="titulo">{{titulo}}</span>
+        </div>
+    </ng-template>
+
+    <form class="movimiento-manual" [formGroup]="formulario" (ngSubmit)="guardarMovimiento()">
+      <section class="form-grid">
+        @if (mostrarTipoAjuste) {
+          <div class="campo campo-full">
+            <p-floatlabel variant="in">
+              <p-select
+                formControlName="tipoAjuste"
+                [options]="tiposAjuste"
+                optionLabel="label"
+                optionValue="value"
+                [appendTo]="'body'"
+                [disabled]="formularioBloqueado">
+              </p-select>
+              <label>Tipo de ajuste</label>
+            </p-floatlabel>
+          </div>
+        }
+
+        <div class="campo campo-full">
+          <p-floatlabel variant="in">
+            <p-select
+              formControlName="fondo"
+              [options]="fondos"
+              optionLabel="nombre"
+              [appendTo]="'body'"
+              [disabled]="formularioBloqueado"
+              [invalid]="campoInvalido('fondo')">
+            </p-select>
+            <label>Fondo</label>
+            @if (campoInvalido('fondo')) {
+              <small class="error">{{ mensajeError('fondo') }}</small>
+            }
+          </p-floatlabel>
+        </div>
+
+        <div class="campo">
+          <p-floatlabel variant="in">
+            <p-inputnumber
+              formControlName="monto"
+              mode="currency"
+              currency="ARS"
+              locale="es-AR"
+              [min]="0"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              [useGrouping]="true"
+              [disabled]="formularioBloqueado"
+              [invalid]="campoInvalido('monto')">
+            </p-inputnumber>
+            <label>Monto</label>
+            @if (campoInvalido('monto')) {
+              <small class="error">{{ mensajeError('monto') }}</small>
+            }
+          </p-floatlabel>
+        </div>
+
+        <div class="campo campo-full">
+          <p-floatlabel variant="in">
+            <input
+              pInputText
+              formControlName="descripcion"
+              [placeholder]="descripcionPlaceholder"
+              [disabled]="formularioBloqueado"
+              [class.ng-invalid]="campoInvalido('descripcion')"
+              autocomplete="off" />
+            <label>Descripción</label>
+
+            @if (campoInvalido('descripcion')) {
+              <small class="error">{{ mensajeError('descripcion') }}</small>
+            }
+          </p-floatlabel>
+        </div>
+
+        <div class="campo campo-full">
+          <p-floatlabel variant="in">
+            <textarea
+              pTextarea
+              formControlName="observaciones"
+              rows="3"
+              [autoResize]="true"
+              [disabled]="formularioBloqueado">
+            </textarea>
+            <label>Observaciones</label>
+          </p-floatlabel>
+
+          @if (campoInvalido('observaciones')) {
+            <small class="error">{{ mensajeError('observaciones') }}</small>
+          }
+        </div>
+      </section>
+
+      <footer class="modal-footer">
+        <!-- <p-button
+          label="Cancelar"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="formularioBloqueado"
+          (onClick)="cancelar()" /> -->
+
+        <p-button
+          type="submit"
+          [label]="accionPrincipal"
+          icon="pi pi-check"
+          [loading]="guardando"
+          [disabled]="!puedeGuardar" />
+      </footer>
+    </form>
+</p-dialog>
+

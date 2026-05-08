@@ -107,7 +107,7 @@
 </div>
 
 
-<app-entrega-dinero  [(visible)]="entregaVisible" [venta]="ventaSeleccionada" [desdeVenta]="desdeVenta" [idCliente]="idCliente" [deudaTotal]="totalSaldo" (recargar)="onRecargar($event)"></app-entrega-dinero>
+<app-entrega-dinero  [(visible)]="entregaVisible" [venta]="ventaSeleccionada" [pagosRealizados]="pagosRealizados" [desdeVenta]="desdeVenta" [idCliente]="idCliente" [deudaTotal]="totalSaldo" [idCaja]="cajaActiva" (recargar)="onRecargar($event)"></app-entrega-dinero>
 <p-popover #op>
     <div class="opciones-impresion">
         <p-button

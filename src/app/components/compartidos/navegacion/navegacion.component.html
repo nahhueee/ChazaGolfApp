@@ -3,7 +3,7 @@
 <div class="contenedor">
     <div class="navegacion">
         <div class="items">
-            <button pButton label="Inicio" [ngClass]="{ 'activo': activo === 'inicio' }" icon="pi pi-home" class="p-button-text" (click)="activo = 'inicio'; Navegar('inicio')" ></button>
+            <button pButton label="Fondos" [ngClass]="{ 'activo': activo === 'fondos' }" icon="pi pi-chart-bar" class="p-button-text" (click)="activo = 'fondos'; Navegar('fondos')" ></button>
 
             <button pButton label="Facturacion" [ngClass]="{ 'activo': activo === 'facturacion' }" icon="pi pi-money-bill" class="p-button-text" (click)="activo = 'facturacion'; menuFactura.toggle($event)"></button>
             <p-menu #menuFactura [model]="itemsFacturacion" [popup]="true" />
@@ -24,6 +24,7 @@
         </div>
         
         <div class="opciones">
+            <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
             <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
             <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Perfil" tooltipPosition="bottom" icon="pi pi-user"/>
             <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="Navegar('ingresar')"/>

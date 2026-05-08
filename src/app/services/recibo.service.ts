@@ -1,7 +1,4 @@
 import { Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { OrdenIngresoService } from './orden-ingreso.service';
-import { OrdenIngreso } from '../models/OrdenIngreso';
 
 @Injectable({
   providedIn: 'root'
@@ -51,8 +48,43 @@ export class ReciboReporteService {
             ]));
 
             const ventasBody = data.ventas?.map(v => ([
-                { text: `${v.proceso} # ${v.nroProceso}`, alignment: 'left' }
+                {
+                    text: `${v.proceso} #${v.nroProceso}`,
+                    alignment: 'left'
+                }
             ])) || [];
+
+            const detallesBody = data.detalles?.map(d => {
+                let descripcion = '';
+
+                switch (d.tipoAplicacion) {
+                    case 'VENTA':
+                        descripcion = `${d.proceso} #${d.nroProceso}`;
+                        break;
+
+                    case 'SALDO_INICIAL':
+                        descripcion = 'Cancelación saldo inicial';
+                        break;
+
+                    case 'SALDO_A_FAVOR':
+                        descripcion = 'Saldo a favor generado';
+                        break;
+
+                    default:
+                        descripcion = 'Aplicación';
+                }
+
+                return [
+                    {
+                        text: descripcion,
+                        alignment: 'left'
+                    },
+                    {
+                        text: formatMoney(d.montoAplicado),
+                        alignment: 'right'
+                    }
+                ];
+            }) || [];
 
             const documentDefinition = {
                 pageSize: {
@@ -125,21 +157,43 @@ export class ReciboReporteService {
                         margin: [0, 5, 0, 5]
                     },
 
-                    (ventasBody.length > 0) ? [
+                    (detallesBody.length > 0)
+                    ? [
+                        {
+                            text: 'APLICACIÓN DEL IMPORTE',
+                            bold: true,
+                            fontSize: 9,
+                            margin: [0, 3, 0, 1]
+                        },
+                        {
+                            table: {
+                                widths: ['*', 'auto'],
+                                body: detallesBody
+                            },
+                            layout: 'noBorders',
+                            fontSize: 8,
+                            margin: [0, 0, 0, 0]
+                        }
+                    ]
+                    : (ventasBody.length > 0)
+                    ? [
                         {
                             text: 'APLICADO A',
                             bold: true,
                             fontSize: 9,
-                            margin: [0, 0, 0, 5]
+                            margin: [0, 3, 0, 1]
                         },
                         {
                             table: {
                                 widths: ['*'],
                                 body: ventasBody
                             },
-                            layout: 'noBorders'
+                            layout: 'noBorders',
+                            fontSize: 8,
+                            margin: [0, 0, 0, 0]
                         }
-                    ] : [],   
+                    ]
+                    : []
                 ]
             };
 

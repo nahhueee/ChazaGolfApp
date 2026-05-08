@@ -30,7 +30,7 @@
                 <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
             </div>
             
-            <p-table [value]="venta.pagos">
+            <p-table [value]="pagosRealizados">
                 <ng-template #header>
                     <tr>
                         <th>Metodo</th>

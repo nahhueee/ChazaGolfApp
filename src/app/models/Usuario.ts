@@ -6,6 +6,7 @@ export class Usuario{
   nombre?: string;
   email?: string;
   pass?: string;
+  idCaja: number;
  
   cargo?: Cargo = new Cargo();
 
@@ -16,6 +17,7 @@ export class Usuario{
       this.nombre = data.nombre;
       this.email = data.email;
       this.pass = data.pass;
+      this.idCaja = data.idCaja;
       this.cargo = new Cargo({
         id: data.idCargo,
         nombre: data.cargo

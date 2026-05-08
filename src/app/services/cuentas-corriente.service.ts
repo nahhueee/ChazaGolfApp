@@ -32,12 +32,12 @@ export class CuentasCorrientesService {
   }
   //#endregion
 
-  EntregaDineroVenta(idVenta:number, idCliente:number, totalDeuda:number, pagos:any): Observable<any> {
-    return this.apiService.put('cuentas/actualizar-pago', {idVenta, idCliente, totalDeuda, pagos})
+  EntregaDineroVenta(idVenta:number, idCaja:number, idCliente:number, totalDeuda:number, pagos:any): Observable<any> {
+    return this.apiService.put('cuentas/actualizar-pago', {idVenta, idCaja, idCliente, totalDeuda, pagos})
   }
 
-  EntregaDinero(idCliente:number, idMetodo:number, monto:number, observaciones:string): Observable<any> {
-    return this.apiService.put('cuentas/entrega', {idCliente, idMetodo, monto, observaciones})
+  EntregaDinero(idCaja:number, idCliente:number, idMetodo:number, monto:number, observaciones:string): Observable<any> {
+    return this.apiService.put('cuentas/entrega', {idCaja, idCliente, idMetodo, monto, observaciones})
   }
 
 }

@@ -4,7 +4,7 @@ import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { Venta, VentasClienteCuenta } from '../../../../models/Factura';
+import { PagosFactura, Venta, VentasClienteCuenta } from '../../../../models/Factura';
 import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
 import { ActivatedRoute } from '@angular/router';
 import { VentasService } from '../../../../services/ventas.service';
@@ -29,6 +29,7 @@ import { FacturaService } from '../../../../services/factura.service';
 import { ReciboReporteService } from '../../../../services/recibo.service';
 import { EstadisticaClientes } from "../../clientes/estadistica-clientes/estadistica-clientes.component";
 import { Dialog } from 'primeng/dialog';
+import { UsuariosService } from '../../../../services/usuarios.service';
 
 @Component({
   selector: 'app-ventas-cliente',
@@ -64,7 +65,11 @@ export class VentasClienteComponent {
   idCliente:number = 0;
   cliente:string = "";
   ventaSeleccionada:Venta = new Venta();
+  pagosRealizados: PagosFactura[] = [];
   desdeVenta: boolean = false;
+
+  cajaActiva: number;
+  sesion: any;
 
   filtros:FormGroup;
   primeraCarga = true;
@@ -91,7 +96,8 @@ export class VentasClienteComponent {
     private reporteService:CuentaCorrienteReporteService,
     private comprobanteService:ComprobanteService,
     private facturaService:FacturaService,
-    private reciboService:ReciboReporteService
+    private reciboService:ReciboReporteService,
+    private usuariosService:UsuariosService
   ){
     this.filtros = new FormGroup({
       estado: new FormControl(),
@@ -102,6 +108,8 @@ export class VentasClienteComponent {
 
   ngAfterViewInit(){
     //this.ObtenerProcesosVenta();
+    this.sesion = this.usuariosService.GetSesion().data;
+    this.cajaActiva = this.sesion.idCaja;
     
     setTimeout(() => {
       //Configuracion para la mascara decimal Imask
@@ -224,6 +232,7 @@ export class VentasClienteComponent {
         this.ventaSeleccionada = response;
         this.desdeVenta = true;
         this.entregaVisible = true;
+        this.pagosRealizados = this.ventaSeleccionada.pagos.filter(x => x.idMetodo != 9); //Excluimos el pago CUENTA CORRIENTE
     });
   }
   Entrega(){

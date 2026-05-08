@@ -104,7 +104,9 @@ export class NavegacionComponent {
     } else if (url.startsWith('/cuentas')) {
       this.activo = 'cuentas';
     } else if (url.startsWith('/ordenes-ingreso')) {
-      this.activo = 'ordenes';      
+      this.activo = 'ordenes';  
+    } else if (url.startsWith('/fondos')) {
+      this.activo = 'fondos';      
     } else {
       this.activo = '';
     }

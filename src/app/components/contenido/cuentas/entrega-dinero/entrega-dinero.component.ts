@@ -39,6 +39,8 @@ export class EntregaDineroComponent {
   @Input() deudaTotal: number = 0;
   @Input() desdeVenta: boolean = false;
   @Input() idCliente: number = 0;
+  @Input() idCaja:number = 0;
+  @Input() pagosRealizados: PagosFactura[] = [];
 
   decimal_mask:any;
   formPagos:FormGroup;
@@ -106,13 +108,13 @@ export class EntregaDineroComponent {
       };
       this.pagosNuevos.push(pago);
 
-    this.venta.pagos.push(nuevoPago);
+    this.pagosRealizados.push(nuevoPago);
     this.formPagos.reset();
     this.formPagos.get('metodo')?.setValue(this.metodosPago[0])
   }
 
   get montoRestante(): number {
-    const entregado = this.venta.pagos?.reduce(
+    const entregado = this.pagosRealizados?.reduce(
       (acc, item) => acc + (item.monto || 0),
       0
     ) || 0;
@@ -141,7 +143,7 @@ export class EntregaDineroComponent {
     nuevoPago.metodo = metodoSeleccionado.descripcion;
     nuevoPago.monto = montoFinal;
 
-    this.venta.pagos.push(nuevoPago);
+    this.pagosRealizados.push(nuevoPago);
 
     const pago:pagoDTO = {
       idMetodo: metodoSeleccionado.id,
@@ -153,7 +155,7 @@ export class EntregaDineroComponent {
   }
 
   EliminarPago(indice:number){
-    if(indice != -1) this.venta.pagos.splice(indice, 1);
+    if(indice != -1) this.pagosRealizados.splice(indice, 1);
   }
 
   Cerrar(recargar:boolean = false) {
@@ -190,7 +192,7 @@ export class EntregaDineroComponent {
           label: 'Aceptar',
         },
         accept: () => {
-          this.cuentasService.EntregaDineroVenta(this.venta.id!, this.venta.cliente?.id!, this.venta.deuda, this.pagosNuevos)
+          this.cuentasService.EntregaDineroVenta(this.venta.id!, this.idCaja, this.venta.cliente?.id!, this.venta.deuda, this.pagosNuevos)
           .subscribe(response => {
             if(response == "OK"){
               this.Notificaciones.Success("Pagos registrados correctamente");
@@ -239,12 +241,13 @@ export class EntregaDineroComponent {
           label: 'Aceptar',
         },
         accept: () => {
-          this.cuentasService.EntregaDinero(this.idCliente, this.metodoSeleccionado, this.montoEntregar, this.formPagos.get('observaciones')?.value)
+          this.cuentasService.EntregaDinero(this.idCaja, this.idCliente, this.metodoSeleccionado, this.montoEntregar, this.formPagos.get('observaciones')?.value)
           .subscribe(response => {
             if(response == "OK"){
               this.alerta = "";
               this.metodoSeleccionado = 0;
               this.montoEntregar = 0;
+              this.formPagos.reset();
 
               this.Notificaciones.Success("Entrega registrada correctamente");
               this.Cerrar(true);

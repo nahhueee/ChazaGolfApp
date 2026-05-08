@@ -1,0 +1,234 @@
+<div class="contenido">
+  <div class="header-fondos" [formGroup]="filtrosForm">
+      <div class="titulo-caja">
+          <p>{{ cajaSeleccionada.nombre | uppercase }}</p>
+          <span>Usuario: {{ sesion.nombre }} | cargo: {{ sesion.cargo }}</span>
+      </div>
+
+      <div class="filtros-header">
+
+          <p-floatlabel variant="in">
+              <p-select
+                  [options]="cajas"
+                  formControlName="caja"
+                  optionLabel="nombre"
+                  [appendTo]="'body'"
+                  (onChange)="onFiltrosChange()"/>
+              <label>Caja</label>
+          </p-floatlabel>
+
+          <p-floatlabel variant="in">
+              <p-select
+                  [options]="usuarios"
+                  formControlName="usuario"
+                  optionLabel="nombre"
+                  optionValue="usuario"
+                  [appendTo]="'body'"
+                  (onChange)="onFiltrosChange()"
+                  [disabled]="sesion.cargo != 'ADMINISTRADOR'"
+                  />
+              <label>Usuario</label>
+          </p-floatlabel>
+
+          <p-floatlabel variant="in">
+              <p-select
+                  [options]="periodos"
+                  formControlName="periodo"
+                  optionLabel="label"
+                  optionValue="value"
+                  [appendTo]="'body'"
+                  (onChange)="onPeriodoChange()"/>
+              <label>Periodo</label>
+          </p-floatlabel>
+
+          @if(filtrosForm.get('periodo')?.value === 'custom'){
+              <p-floatlabel variant="in">
+                  <p-datepicker
+                      formControlName="fechas"
+                      selectionMode="range"
+                      [showIcon]="true"
+                      dateFormat="dd/mm/yy"
+                      [appendTo]="'body'"
+                      (onSelect)="onFiltrosChange()"/>
+                  <label>Rango de Fecha</label>
+              </p-floatlabel>
+          }
+
+      </div>
+
+  </div>
+
+  <div class="acciones-header">
+    <p-button
+        label="Ingreso"
+        icon="pi pi-plus"
+        severity="success"
+        (onClick)="abrirMovimiento('INGRESO')"/>
+
+    <p-button
+        label="Egreso"
+        icon="pi pi-minus"
+        severity="danger"
+        outlined
+        (onClick)="abrirMovimiento('EGRESO')"/>
+
+    <p-button
+        label="Ajuste"
+        icon="pi pi-wrench"
+        outlined
+        (onClick)="abrirMovimiento('AJUSTE')"/>
+
+  </div>
+
+  <div class="resumen-grid" *ngIf="resumenCajaCargado">
+    <app-card-resumen
+      titulo="Saldo Total"
+      [valor]="resumenCaja.saldoTotal"
+      subtitulo="Consolidado"
+      tipo="neutral">
+    </app-card-resumen>
+
+    <app-card-resumen
+      titulo="Ingresos"
+      [valor]="resumenCaja.ingresosDia"
+      subtitulo="Operaciones positivas"
+      tipo="success">
+    </app-card-resumen>
+
+    <app-card-resumen
+      titulo="Egresos"
+      [valor]="resumenCaja.egresosDia"
+      subtitulo="Salidas registradas"
+      tipo="danger">
+    </app-card-resumen>
+
+    <app-card-resumen
+      titulo="Neto"
+      [valor]="resumenCaja.netoDia"
+      subtitulo="Balance"
+      tipo="success">
+    </app-card-resumen>
+
+    <app-card-resumen
+      titulo="CC Clientes"
+      [valor]="resumenCaja.cuentaCorrienteClientes"
+      subtitulo="Pendiente"
+      tipo="warning">
+    </app-card-resumen>
+
+    <app-card-resumen
+      titulo="Saldo a Favor"
+      [valor]="resumenCaja.saldoFavorClientes"
+      subtitulo="Notas de crédito"
+      tipo="info">
+    </app-card-resumen>
+
+  </div>
+
+  <div class="fondos-grid" *ngIf="resumenFondoCargado">
+    @for(fondo of resumenFondo; track fondo.id){
+
+      <app-card-resumen-fondo
+        [nombre]="fondo.nombre"
+        [saldo]="fondo.saldo"
+        [movimientos]="fondo.movimientos"
+        [icono]="obtenerIconoFondo(fondo.nombre)"
+        [seleccionado]="fondoSeleccionado.id === fondo.id"
+        (seleccionar)="seleccionarFondo(fondo)">
+      </app-card-resumen-fondo>
+    }
+  </div>
+
+  <!-- <p-card class="grafico-card">
+        <div class="grafico-header">
+          Distribución de Fondos
+        </div>
+        <div class="chart-wrapper">
+          <p-chart
+            type="doughnut"
+            [data]="chartData"
+            [options]="chartOptions">
+          </p-chart>
+        </div>
+      </p-card> -->
+    
+
+    <!-- <div class="grafico-container">
+      <p-card class="grafico-card">
+
+      <div class="grafico-header">
+        Distribución de Fondos
+      </div>
+
+      <div class="chart-wrapper">
+
+        <p-chart
+          type="doughnut"
+          [data]="chartData"
+          [options]="chartOptions">
+        </p-chart>
+
+      </div>
+
+    </p-card>
+    </div> -->
+
+  <p-table
+    class="movimientos"
+    [value]="movimientos"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="10"
+    [totalRecords]="totalRecords"
+    (onLazyLoad)="cargarMovimientos($event)"
+    [loading]="loading"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Fecha</th>
+        <th>Fondo</th>
+        <th>Tipo</th>
+        <th>Origen</th>
+        <th>Descripción</th>
+        <th>Monto</th>
+        @if(sesion.cargo == 'ADMINISTRADOR'){
+          <th>Usuario</th>
+        }
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-mov>
+      <tr>
+        <td>{{ mov.fecha | date:'dd/MM HH:mm' }}</td>
+        <td>{{ mov.fondo }}</td>
+        <td>
+          <p-tag
+            [value]="mov.tipo"
+            [severity]="obtenerSeverityTipo(mov.tipo)">
+          </p-tag>
+        </td>
+        <td>{{ mov.origen }}</td>
+        <td>{{ mov.descripcion }}</td>
+        <td
+          [class.ingreso]="mov.tipo === 'INGRESO'"
+          [class.egreso]="mov.tipo === 'EGRESO'">
+          ${{ mov.monto | decimalFormat }}
+        </td>
+        @if(sesion.cargo == 'ADMINISTRADOR'){
+          <td>{{ mov.usuario }}</td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+
+<app-addmod-movimiento-manual
+    [(visible)]="mostrarMovimientoModal"
+    [tipoMovimiento]="tipoMovimientoModal"
+    [fondos]="resumenFondo"
+    (guardar)="insertarMovimientoManual($event)"
+    (cerrar)="mostrarMovimientoModal = false">
+</app-addmod-movimiento-manual>

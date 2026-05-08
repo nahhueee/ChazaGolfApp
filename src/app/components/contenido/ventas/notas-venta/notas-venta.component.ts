@@ -221,6 +221,7 @@ export class NotasVentaComponent {
     this.nuevaVenta.descuento = this.venta.descuento;
     this.nuevaVenta.tipoDescuento = this.venta.tipoDescuento;
     this.nuevaVenta.codPromocion = this.venta.codPromocion;
+    this.nuevaVenta.idCaja = this.venta.idCaja;
 
     let cliente:Cliente = new Cliente();
     cliente.id = this.venta.cliente?.id!;
@@ -230,6 +231,7 @@ export class NotasVentaComponent {
     this.nuevaVenta.nroRelacionado = this.venta.nroProceso;
     this.nuevaVenta.tipoRelacionado = this.venta.proceso;
     this.nuevaVenta.idListaPrecio = this.venta.idListaPrecio;
+    this.nuevaVenta.pagos = this.venta.pagos;
             
     this.nuevaVenta.idEmpresa = this.venta.idEmpresa;
     this.nuevaVenta.total = this.totalGeneral;

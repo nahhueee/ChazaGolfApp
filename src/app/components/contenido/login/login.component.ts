@@ -7,6 +7,7 @@ import { NotificacionesService } from '../../../services/notificaciones.service'
 import { UsuariosService } from '../../../services/usuarios.service';
 import { ParametrosService } from '../../../services/parametros.service';
 import { FORMS_IMPORTS } from '../../../imports/forms.import';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-login.component',
@@ -78,7 +79,7 @@ export class LoginComponent {
     if(this.formulario.invalid) return;
 
     this.usuariosService.ObtenerUsuarioxUsername(this.formulario.get("usuario")?.value)
-    .subscribe(response=> {
+    .subscribe(async response=> {
       if (response) {
         this.usuario = response;
         const sesion = {
@@ -86,7 +87,8 @@ export class LoginComponent {
             idUsuario: this.usuario.id?.toString()!,
             nombre: this.usuario.nombre!,
             cargo: this.usuario.cargo!,
-            usuario: this.usuario.usuario
+            usuario: this.usuario.usuario,
+            idCaja: this.usuario.idCaja
           },
           timestamp: new Date().getTime(), 
         };
@@ -94,6 +96,8 @@ export class LoginComponent {
         this.spinner.show("welcomeSpinner");
         
         this.nombre = this.usuario.nombre!;
+        await firstValueFrom(this.usuariosService.GrabarSesion(this.usuario));
+
 
         setTimeout(() => {
           this.spinner.hide("welcomeSpinner");

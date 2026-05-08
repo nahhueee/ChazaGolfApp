@@ -42,6 +42,7 @@ import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
 import { Empresa } from '../../../../models/Empresa';
 import { firstValueFrom } from 'rxjs';
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
+import { UsuariosService } from '../../../../services/usuarios.service';
 
 @Component({
   selector: 'app-addmod-ventas',
@@ -69,6 +70,8 @@ import { CuentasCorrientesService } from '../../../../services/cuentas-corriente
   styleUrl: './addmod-ventas.component.scss',
 })
 export class AddModVentasComponent {
+  sesion:any;
+
   tipo: 'factura' | 'pre' = 'factura';
   icono: string = "pi pi-plus-circle";
   titulo: string = "";
@@ -170,7 +173,8 @@ export class AddModVentasComponent {
     private ventasService:VentasService,
     private rutaActiva:ActivatedRoute,
     private serviciosService:ServiciosService,
-    private cuentasService:CuentasCorrientesService
+    private cuentasService:CuentasCorrientesService,
+    private usuariosService:UsuariosService
   ){
     this.ArmarFormularios();
   }
@@ -228,6 +232,8 @@ export class AddModVentasComponent {
   }
 
   ngOnInit(): void {
+    this.sesion = this.usuariosService.GetSesion().data;
+
     this.rutaActiva.queryParams.subscribe(params => {
       this.tipo = params['tipo'] ?? 'factura';
 
@@ -1555,6 +1561,7 @@ export class AddModVentasComponent {
   }
 
   ArmarObjetoVenta(){
+    this.venta.idCaja = this.sesion.idCaja; 
     this.venta.idProceso = this.formGenerales.get('proceso')?.value.id;
     this.venta.proceso = this.formGenerales.get('proceso')?.value.descripcion;
     this.venta.idPunto = this.formGenerales.get('punto')?.value.id;
@@ -1562,9 +1569,6 @@ export class AddModVentasComponent {
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
 
     this.venta.cliente = this.clienteSeleccionado;
-    // this.venta.idCliente = this.formGenerales.get('cliente')?.value.id;
-    // this.venta.cliente = this.clienteSeleccionado?.nombre;
-    // this.venta.condCliente = this.clienteSeleccionado?.condicionIva!;
     this.venta.nroRelacionado = this.nroRelacionado;
     this.venta.tipoRelacionado = this.tipoRelacionado;
 

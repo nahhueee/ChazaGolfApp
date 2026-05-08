@@ -28,6 +28,10 @@ export class UsuariosService {
   }
 
   //#region OBTENER
+  GrabarSesion(usr:Usuario): Observable<any>{
+    return this.apiService.put('usuarios/guardar-sesion', usr)
+  }
+  
   ObtenerUsuarios(filtro:FiltroGral): Observable<any> {
     return this.apiService.post('usuarios/obtener', filtro)
   }

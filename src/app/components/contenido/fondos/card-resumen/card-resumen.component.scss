@@ -1,0 +1,86 @@
+:host {
+  display: block;
+}
+
+.resumen-card {
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  cursor: default;
+
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  color: var(--text-color);
+
+  &:hover {
+    transform: translateY(-3px);
+    background: var(--surface-hover);
+  }
+
+  .p-card-body {
+    padding: 1rem;
+  }
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.titulo {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-color-secondary);
+  font-weight: 600;
+}
+
+.valor {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.subtitulo {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
+
+
+.success {
+  border-left: 4px solid #22c55e;
+}
+
+.success .valor {
+  color: #22c55e;
+}
+
+.danger {
+  border-left: 4px solid #ef4444;
+}
+
+.danger .valor {
+  color: #ef4444;
+}
+
+.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.warning .valor {
+  color: #f59e0b;
+}
+
+.info {
+  border-left: 4px solid #3b82f6;
+}
+
+.info .valor {
+  color: #3b82f6;
+}
+
+.neutral {
+  border-left: 4px solid #64748b;
+}

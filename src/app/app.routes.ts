@@ -14,6 +14,7 @@ import { VentasClienteComponent } from './components/contenido/cuentas/ventas-cl
 import { EstadisticaClientes } from './components/contenido/clientes/estadistica-clientes/estadistica-clientes.component';
 import { ListadoOrdenesComponent } from './components/contenido/ordenes/listado-ordenes/listado-ordenes.component';
 import { AddmodOrdenesComponent } from './components/contenido/ordenes/addmod-ordenes/addmod-ordenes.component';
+import { MainFondosComponent } from './components/contenido/fondos/main-fondos/main-fondos.component';
 
 export const routes: Routes = [
     {
@@ -81,5 +82,8 @@ export const routes: Routes = [
         path: 'ordenes-ingreso/adm/:idOrden',
         component:AddmodOrdenesComponent
     },
-
+    {
+        path: 'fondos',
+        component:MainFondosComponent
+    },
 ];

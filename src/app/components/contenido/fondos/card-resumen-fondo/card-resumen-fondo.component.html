@@ -1,0 +1,34 @@
+<p-card
+  class="card-fondo"
+  [class.selected]="seleccionado"
+  (click)="seleccionar.emit()">
+
+  <div class="contenido-card">
+
+    <div class="header">
+
+      <div class="icono">
+        <i [class]="icono"></i>
+      </div>
+
+    </div>
+
+    <div class="nombre">
+      {{ nombre }}
+    </div>
+
+    <div class="saldo">
+      {{ formatearMonto(saldo) }}
+    </div>
+
+    <div class="footer">
+
+      <span class="movimientos">
+        {{ movimientos }} movimientos
+      </span>
+
+    </div>
+
+  </div>
+
+</p-card>
