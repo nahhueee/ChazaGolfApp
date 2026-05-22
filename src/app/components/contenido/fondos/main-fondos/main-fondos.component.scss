@@ -108,9 +108,129 @@ p-floatlabel {
 }
 
 .p-chart{
-    height: 180px;
+  height: 180px;
 }
 
 .movimientos{
-    margin-top: 20px;
+  margin-top: 20px;
+}
+
+.resumen-bancos-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: .8rem;
+  margin: .8rem 0 1rem;
+
+  &.single {
+    grid-template-columns: 1fr;
+  }
+}
+
+.resumen-banco-container {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  padding: .85rem 1rem;
+  transition: all .15s ease;
+
+  &:hover {
+    border-color: var(--primary-color);
+  }
+}
+
+.banco-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+.banco-info {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+}
+.banco-titulo {
+  font-size: .95rem;
+  font-weight: 600;
+
+  color: var(--text-color);
+}
+
+.banco-total {
+  font-size: 1rem;
+  font-weight: 500;
+
+  color: var(--text-color-secondary);
+}
+
+.mini-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.mini-card {
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: .55rem .7rem;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all .15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    background: rgba(255,255,255,.03);
+  }
+}
+
+.mini-label {
+  font-size: .72rem;
+  color: var(--text-color-secondary);
+  margin-bottom: .2rem;
+  white-space: nowrap;
+}
+
+.mini-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.porcentaje {
+  .mini-valor {
+    color: var(--p-primary-color);
+  }
+}
+
+.credito {
+  .mini-valor {
+    color: #22c55e;
+  }
+}
+
+.debito {
+  .mini-valor {
+    color: #60a5fa;
+  }
+}
+
+.transferencia {
+  .mini-valor {
+    color: #fbbf24;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .resumen-bancos-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
 }

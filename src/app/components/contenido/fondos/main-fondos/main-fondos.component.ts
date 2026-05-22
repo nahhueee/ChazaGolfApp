@@ -19,6 +19,7 @@ import { AddmodMovimientoManualComponent } from '../addmod-movimiento-manual/mov
 import { Button } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Usuario } from '../../../../models/Usuario';
+import { TooltipModule } from 'primeng/tooltip';
 
 class CajaDashboard {
   id: number;
@@ -60,7 +61,8 @@ class ResumenFondos {
     DatePipe,
     DecimalFormatPipe,
     AddmodMovimientoManualComponent,
-    Button
+    Button,
+    TooltipModule
   ],
   templateUrl: './main-fondos.component.html',
   styleUrls: ['./main-fondos.component.scss']
@@ -76,6 +78,7 @@ export class MainFondosComponent implements OnInit {
   resumenFondo:ResumenFondos[] = [];
   resumenFondoCargado:boolean = false;
   fondoSeleccionado:ResumenFondos = new ResumenFondos();
+  resumenBancos: any[] = [];
 
   cajas: CajaDashboard[] = [];
   cajaSeleccionada: CajaDashboard = new CajaDashboard();
@@ -122,6 +125,16 @@ export class MainFondosComponent implements OnInit {
     this.usuarioService.SelectorUsuarios()
       .subscribe(response => {
         this.usuarios = response;
+        console.log(this.usuarios)
+
+        this.usuarios = [
+          {
+            id: null,
+            nombre: 'TODOS'
+          },
+          ...response
+        ];
+
 
         if (this.sesion.cargo !== 'ADMINISTRADOR') {
           this.filtrosForm.patchValue({
@@ -145,6 +158,14 @@ export class MainFondosComponent implements OnInit {
     this.cargarMovimientos();
   }
 
+  private formatearFechaLocal(fecha: Date): string {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
   inicializarFiltros() {
     const rango = this.obtenerRangoFechas();
 
@@ -152,8 +173,12 @@ export class MainFondosComponent implements OnInit {
       pagina: 1,
       tamanioPagina: 10,
       idCaja: this.filtrosForm.value.caja?.id,
-      fechaDesde: rango?.desde,
-      fechaHasta: rango?.hasta,
+      fechaDesde: rango?.desde
+        ? this.formatearFechaLocal(rango.desde)
+        : null,
+      fechaHasta: rango?.hasta
+        ? this.formatearFechaLocal(rango.hasta)
+        : null,
       usuario: this.filtrosForm.value.usuario || null
     };
   }
@@ -248,7 +273,21 @@ export class MainFondosComponent implements OnInit {
       this.filtros.idFondo = fondo.id;
     }
 
+    this.obtenerResumenBancos();
     this.cargarMovimientos();
+  }
+
+  obtenerResumenBancos() {
+    // solo aplica para fondo bancos
+    if (this.filtros.idFondo !== 2) {
+      this.resumenBancos = [];
+      return;
+    }
+
+    this.fondosService.ObtenerResumenFondoBancos(this.filtros)
+      .subscribe(response => {
+        this.resumenBancos = response;
+      });
   }
 
   async cargarMovimientos(event?: TableLazyLoadEvent) {

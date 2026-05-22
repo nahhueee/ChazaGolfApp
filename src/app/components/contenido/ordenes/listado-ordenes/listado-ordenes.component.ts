@@ -14,6 +14,9 @@ import { EtiquetasService } from '../../../../services/etiquetas.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { AddIngresoComponent } from "../add-ingreso/add-ingreso.component";
 import { OrdenIngresoReporteService } from '../../../../services/orden-ingreso-reporte.service';
+import { ConfirmationService } from 'primeng/api';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
 
 @Component({
   selector: 'app-listado-ordenes',
@@ -24,10 +27,12 @@ import { OrdenIngresoReporteService } from '../../../../services/orden-ingreso-r
     Button,
     TooltipModule,
     TagModule,
+    ConfirmPopupModule,
     AddIngresoComponent
 ],
   templateUrl: './listado-ordenes.component.html',
-  styleUrls: ['./listado-ordenes.component.scss']
+  styleUrls: ['./listado-ordenes.component.scss'],
+  providers: [ConfirmationService],
 })
 export class ListadoOrdenesComponent implements OnInit {
   ordenes: OrdenIngreso[] = [];
@@ -48,6 +53,8 @@ export class ListadoOrdenesComponent implements OnInit {
     private ordenIngresoService:OrdenIngresoService,
     private etiquetasService:EtiquetasService,
     private ordenesIngresoReporteService:OrdenIngresoReporteService,
+    private confirmationService: ConfirmationService,
+    private Notificaciones: NotificacionesService,
     private router:Router
   ) { 
     this.filtros = new FormGroup({
@@ -60,7 +67,7 @@ export class ListadoOrdenesComponent implements OnInit {
   ngOnInit() {
   }
 
-  GetSeverity(estado: string): 'info' | 'warn' | 'success' {
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' | 'danger' {
     if (!estado) return 'info';
 
     const value = estado.toLowerCase();
@@ -75,6 +82,10 @@ export class ListadoOrdenesComponent implements OnInit {
 
     if (value === 'finalizada' || value === 'incompleta') {
       return 'success';
+    }
+
+    if (value === 'anulada') {
+      return 'danger';
     }
 
     return 'info';
@@ -114,6 +125,30 @@ export class ListadoOrdenesComponent implements OnInit {
   NuevaRecepcion(orden:OrdenIngreso){
     this.ordenSeleccionada = orden;
     this.recepcionesVisible = true;
+  }
+
+  AnularRecepcion(event: Event, idOrden:number){
+    this.confirmationService.confirm({
+      target: event.target as EventTarget, 
+      message: '¿Anular esta orden de ingreso?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectButtonProps: {
+          severity: 'secondary',
+          outlined: true
+      },
+      accept: () => {
+        this.ordenIngresoService.Eliminar(idOrden).subscribe(response => {
+          if(response == "OK"){
+            this.Notificaciones.Success("Orden de ingreso anulada correctamente");
+            this.Buscar();
+          }else{
+            this.Notificaciones.Error("No se pudo anular la orden de ingreso");
+          }
+        });
+      }
+    });
   }
 
   Actualizar(actualiza){

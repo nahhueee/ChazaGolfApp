@@ -33,13 +33,16 @@ export class AddModClientesComponent {
   cliente:Cliente;
   desdeRouting:boolean;
   decimal_mask: any;
-
+  
   condicionesIVAReceptor: CondicionesIva[] = [];
   tiposDocumento = [
-    {id: 80, descripcion: 'CUIT'},
-    {id: 86, descripcion: 'CUIL'},
-    {id: 96, descripcion: 'DNI'}
+    { id: 80, descripcion: 'CUIT' },
+    { id: 86, descripcion: 'CUIL' },
+    { id: 96, descripcion: 'DNI' }
   ];
+
+  tiposDocumentoFiltrados = [...this.tiposDocumento];
+
   condicionesPago = [
     {id: 1, descripcion: 'CONTADO'},
     {id: 2, descripcion: 'CUENTA CORRIENTE'},
@@ -55,8 +58,10 @@ export class AddModClientesComponent {
   listasPrecio = [
     {id: 1, descripcion: 'CONSUMIDOR FINAL'},
     {id: 2, descripcion: 'LISTA 3'},
-    {id: 3, descripcion: 'LISTA 4'},
-    {id: 4, descripcion: 'LISTA 5'},
+    {id: 3, descripcion: 'LISTA 3.5'},
+    {id: 4, descripcion: 'LISTA 4'},
+    {id: 5, descripcion: 'LISTA 4.5'},
+    {id: 6, descripcion: 'LISTA 5'},
   ];
 
   provincias : any[] = [];
@@ -108,12 +113,12 @@ export class AddModClientesComponent {
     return this.formulario.get('documento');
   }
 
-  get tiposDocumentoFiltrados() {
-    if (this.formulario.get('tFactura')?.value == 1) {
-      return this.tiposDocumento.filter(doc => doc.id === 80); // Solo CUIT
-    }
-    return this.tiposDocumento;
-  }
+  // get tiposDocumentoFiltrados() {
+  //   if (this.formulario.get('tFactura')?.value == 1) {
+  //     return this.tiposDocumento.filter(doc => doc.id === 80); // Solo CUIT
+  //   }
+  //   return this.tiposDocumento;
+  // }
 
   get calleControl() {return this.formulario.get('calle');}
   get ciudadControl() {return this.formulario.get('ciudad');}
@@ -237,10 +242,33 @@ export class AddModClientesComponent {
     }
   }
 
-  CambioCondicion(){
-    const condicion = this.formulario.get('condIva')?.value.id;
-    if(condicion == 1 || condicion == 6 || condicion == 13){
-      this.formulario.get('tDocumento')?.setValue(this.tiposDocumento[0]);
+  CambioCondicion() {
+    const condIva = this.formulario.get('condIva')?.value.id;
+    if (!condIva) return;
+
+    // Consumidor Final
+    if (condIva === 5) {
+
+      this.tiposDocumentoFiltrados = this.tiposDocumento.filter(t =>
+        [96].includes(t.id)
+      );
+
+      // Auto seleccionar DNI
+      this.formulario.get('tDocumento')?.setValue(
+        this.tiposDocumentoFiltrados[0]
+      );
+
+    } else {
+
+      // Solo CUIT
+      this.tiposDocumentoFiltrados = this.tiposDocumento.filter(t =>
+        t.id === 80
+      );
+
+      // Auto seleccionar CUIT
+      this.formulario.get('tDocumento')?.setValue(
+        this.tiposDocumentoFiltrados[0]
+      );
     }
   }
 
@@ -256,6 +284,7 @@ export class AddModClientesComponent {
       .subscribe(response => {
         this.condicionesIVAReceptor = response;
         this.formulario.get('condIva')?.setValue(this.condicionesIVAReceptor[0]);
+        this.CambioCondicion();
       });
   }
 

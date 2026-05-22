@@ -289,7 +289,7 @@
                     
 
                 </ng-template>
-                <ng-template #body let-producto let-editing="editing">
+                <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
                     <tr>
                         <td>{{ producto.codProducto }}</td>
                         <td>{{ producto.nomProducto }}</td>
@@ -390,7 +390,7 @@
 
                         <td>{{ producto.total | decimalFormat }}</td>
                         <td class="acciones-tabla">
-                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarProducto($event, producto.idProducto)" />
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
                         </td>
                     </tr>
                 </ng-template>
@@ -459,7 +459,7 @@
                     <th>Quitar</th>
                 </tr>
             </ng-template>
-            <ng-template #body let-servicio>
+            <ng-template #body let-servicio let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ servicio.codServicio }}</td>
                     <td>{{ servicio.nomServicio }}</td>
@@ -467,7 +467,7 @@
                     <td>{{ servicio.unitario | decimalFormat}}</td>
                     <td>{{ servicio.total | decimalFormat }}</td>
                     <td class="acciones-tabla">
-                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.idServicio)" />
+                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
                     </td>
                 </tr>
             </ng-template>
@@ -521,6 +521,16 @@
                         </p-floatlabel>
                     }
                 </div>
+                <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1">
+                    <p-checkbox 
+                        inputId="check1"
+                        formControlName="ajuste"
+                        [binary]="true"
+                        (onChange)="CalcularTotalGeneral()">
+                    </p-checkbox>
+
+                    <label for="check1">Ajuste de transferencia de 10%</label>
+                </div>
             </form>
 
             <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'" (keyup.enter)='AgregarPago()'>
@@ -548,12 +558,12 @@
                             <th>Quitar</th>
                         </tr>
                     </ng-template>
-                    <ng-template #body let-pago>
+                    <ng-template #body let-pago let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ pago.metodo }}</td>
                             <td>{{ pago.monto | decimalFormat}}</td>
                             <td class="acciones-tabla">
-                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago($event, pago.idMetodo)" />
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'pagos', rowIndex)" />
                             </td>
                         </tr>
                     </ng-template>
@@ -567,16 +577,22 @@
                                         No se registraron métodos de pago.
                                     </span>
 
-                                    <p-button
-                                        label="Agregar pago al contado"
-                                        icon="pi pi-check"
-                                        severity="warn"
-                                        variant="outlined"
-                                        styleClass="p-button-sm"
-                                        (onClick)="AgregarPagoContado()"
-                                    />
+                                    <!-- Solo SUCEDE tiene el metodo de pago contado -->
+                                    @if(EmpresaControl == 1){ 
+                                        <p-button
+                                            label="Agregar pago al contado"
+                                            icon="pi pi-check"
+                                            severity="warn"
+                                            variant="outlined"
+                                            styleClass="p-button-sm"
+                                            (onClick)="AgregarPagoContado()"
+                                        />
+                                    }
+                                    
                                 </div>
-                                @if (saldoAFavor > 0) {
+
+                                <!-- Solo SUCEDE tiene el metodo de pago Saldo a Favor -->
+                                @if (saldoAFavor > 0 && EmpresaControl == 1) {
                                 <div class="saldoFavor">
                                     <i class="pi pi-wallet text-3xl text-500"></i>
 
@@ -605,32 +621,30 @@
                 
                 <div class="fila">
                     <span>Subtotal:</span>
-                    <span class="monto">${{subtotal | decimalFormat}}</span>
+                    <span class="monto">${{totales.subtotal| decimalFormat}}</span>
                 </div>
 
                 @if(tipo == 'factura'){
                     <div class="fila">
                         <span>Descuento:</span>
-                        <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                        <span class="monto">${{totales.descuento| decimalFormat}}</span>
                     </div>
 
-                    <div class="fila" *ngIf="mostrarIva">
+                    <div class="fila" *ngIf="totales.mostrarIva">
                         <span>IVA 21%:</span>
-                        <span class="monto">${{totalIva | decimalFormat}}</span>
+                        <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
 
                     <br>
 
                     <div class="fila">
                         <span>Total General:</span>
-                        <span class="monto">${{totalGeneral | decimalFormat}}</span>
+                        <span class="monto">${{totales.general | decimalFormat}}</span>
                     </div> 
-                    <!-- @if(aplicaSaldoAFavor){
-                        <div class="fila">
-                            <span>Saldo:</span>
-                            <span class="monto">- ${{saldoAplicado | decimalFormat}}</span>
-                        </div> 
-                    } -->
+                    <div class="fila" *ngIf="totales.ajusteTransferencia">
+                        <span>Ajuste 10%:</span>
+                        <span class="monto">${{totales.ajusteTransferencia| decimalFormat}}</span>
+                    </div> 
                     <div class="fila">
                         <span>Redondeo:</span>
                         <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>
@@ -639,7 +653,7 @@
                 
                 <div class="fila total-final">
                     <span>Total A Pagar:</span>
-                    <span class="monto">${{totalAPagar | decimalFormat}}</span>
+                    <span class="monto">${{totales.aPagar| decimalFormat}}</span>
                 </div>
             </div>
         </div>
@@ -656,7 +670,6 @@
     @if(tipo == 'factura'){
         <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada')" />
     }
-    <!-- <p-splitbutton label="Finalizar" [model]="itemsMenu" (onClick)="Guardar()" raised  icon="pi pi-check"/> -->
 </div>
 
 

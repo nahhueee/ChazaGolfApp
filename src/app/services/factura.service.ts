@@ -76,7 +76,13 @@ export class FacturaService {
         }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
       };
 
+      //Sumamos ajuste si corresponde a los productos
+      const ajusteTransferencia = venta.total! * 0.10;
+      const totalAjuste = venta.ajuste == 1 ? ajusteTransferencia : 0;
+
       const productos = procesarItems(venta.productos);
+      productos.total += totalAjuste;
+      
       const servicios = procesarItems(venta.servicios);
 
       const comprobante:ObjComprobante = this.GenerarDatosComunes(venta);
@@ -201,6 +207,7 @@ export class FacturaService {
       comprobante.totalIva = totalIva;
       comprobante.totalFinal = totalGeneral;
       comprobante.redondeo = venta.redondeo;
+      
       comprobante.totalAPagar = totalGeneral + comprobante.redondeo;
       
       
@@ -277,6 +284,19 @@ export class FacturaService {
           { text: item.totalMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
         ]);
       });
+
+      const ajusteTransferencia = venta.total! * 0.10;
+      const ajusteTransferenciaFormateado = ajusteTransferencia.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+      if(venta.ajuste == 1){
+        comprobante.filasProducto.push([
+          { text: 'AJUSTE DE TRANSFERENCIA', style: 'tableHeader', alignment: 'left' },
+          { text: '1', style: 'tableHeader', alignment: 'left' },
+          { text: ajusteTransferenciaFormateado, style: 'tableHeader', alignment: 'right' },
+          { text: '0%', style: 'tableHeader', alignment: 'right' },
+          { text: ajusteTransferenciaFormateado, style: 'tableHeader', alignment: 'right' },
+        ]);
+      }
   
       //Servicios
       comprobante.filasServicio = [

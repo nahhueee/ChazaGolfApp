@@ -86,9 +86,10 @@ export class EntregaDineroComponent {
   get montoControl() {return this.formPagos.get('monto')?.value;}
 
   ObtenerMetodosPago(){
-    this.miscService.ObtenerMetodosPago()
+    this.miscService.ObtenerMetodosPago(this.venta.idEmpresa!)
       .subscribe(response => {
         this.metodosPago = response;
+        this.metodosPago = this.metodosPago.filter(m => m.id != 9);
         this.formPagos.get('metodo')?.setValue(this.metodosPago[0]);
       });
   }

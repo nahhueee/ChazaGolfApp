@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, input, Input, Output, SimpleChanges } from '@angular/core';
 import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { MessageModule } from 'primeng/message';
@@ -55,30 +55,6 @@ export class FacturarVentaComponent {
           TipoComprobante.NC_X
       ].includes(this.datosFacturar.tipoComprobante!);
     }
-  }
-
-  get pagoCompleto(): boolean {
-    if(this.datosFacturar.pagos.length > 0){
-      const totalPagos = this.datosFacturar.pagos.reduce(
-        (acc, p) => acc + (p.monto || 0),
-        0
-      );
-      return totalPagos >= this.datosFacturar.total!;
-    }
-
-    return false;
-  }
-
-  get saldoPendiente(): number {
-    if(this.datosFacturar.pagos.length > 0){
-      const totalPagos = this.datosFacturar.pagos.reduce(
-        (acc, p) => acc + (p.monto || 0),
-        0
-      );
-      return Math.max(this.datosFacturar.total! - totalPagos, 0);
-    }
-    
-    return this.datosFacturar.total!;
   }
 
   Facturar(){

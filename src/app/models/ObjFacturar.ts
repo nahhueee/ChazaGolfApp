@@ -16,6 +16,7 @@ export class ObjFacturar {
     empresa?:string;
     idEmpresa?:number;
     pagos:PagosFactura[] = [];
+    saldoPendiente:number = 0;
 
     // SOLO para Notas
     comprobanteAsociado?: {

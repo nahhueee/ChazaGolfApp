@@ -86,6 +86,28 @@
                         <td style="width: 150px;">{{ producto.descuentoAplicado ?? 0 }}%</td>
                         <td style="width: 150px;">${{ producto.totalMostrar | decimalFormat }}</td>
                     </tr>
+
+                    @if(venta.ajuste === 1){
+                        <tr>
+                            <td>AJUSTE</td>
+                            <td>AJUSTE DE TRANSFERENCIA</td>
+                            <td></td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td style="width: 150px;">1</td>
+                            <td style="width: 150px;">${{ totalAjuste | decimalFormat}}</td>
+                            <td style="width: 150px;">0%</td>
+                            <td style="width: 150px;">${{ totalAjuste | decimalFormat }}</td>
+                        </tr>
+                    }
                 </ng-template>
             </p-table>
         </div>

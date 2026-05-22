@@ -64,7 +64,7 @@
             <div class="horizontal">
                 <!-- Tipo Documento -->
                 <p-floatlabel variant="in">
-                    <p-select [options]="tiposDocumento" formControlName="tDocumento" optionLabel="descripcion" />
+                    <p-select [options]="tiposDocumentoFiltrados" formControlName="tDocumento" optionLabel="descripcion" />
                     <label>Tipo Documento</label>
                     @if(campoInvalido('tDocumento')){
                         <small class="error">El campo es requerido.</small>

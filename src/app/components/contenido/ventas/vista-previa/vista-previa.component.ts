@@ -40,6 +40,7 @@ export class VistaPreviaComponent {
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   totalIva:number = 0;
+  totalAjuste:number = 0;
 
   mostrarIva:boolean = false;
   saldoAplicado:number = 0;
@@ -60,7 +61,7 @@ export class VistaPreviaComponent {
       //   this.aplicaSaldoAFavor = false;
       // }
       this.CalcularTotalGeneral();
-    }
+  }
   }
 
   CalcularTotalGeneral() {
@@ -81,11 +82,15 @@ export class VistaPreviaComponent {
     const productos = procesarItems(this.venta.productos);
     const servicios = procesarItems(this.venta.servicios);
 
-    this.totalProductos = productos.total;
+    //Sumamos ajuste si corresponde a los productos
+    this.totalAjuste = this.venta.total! * 0.10;
+    const totalAjuste = this.venta.ajuste == 1 ? this.totalAjuste : 0;
+
+    this.totalProductos = productos.total + totalAjuste;
     this.totalServicios = servicios.total;
     
     //Importes base
-    const subtotalBruto = productos.total + servicios.total;
+    const subtotalBruto = this.totalProductos + servicios.total;
     const totalDescuento = productos.descuento + servicios.descuento;
 
     //Neto sin IVA

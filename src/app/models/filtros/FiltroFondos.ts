@@ -1,6 +1,6 @@
 export class FiltrosFondos {
-    fechaDesde?: string;
-    fechaHasta?: string;
+    fechaDesde?: string | null;
+    fechaHasta?: string | null;
     usuario?: string;
     idCaja?: number;
     idFondo?: number;

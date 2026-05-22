@@ -134,10 +134,69 @@
         [movimientos]="fondo.movimientos"
         [icono]="obtenerIconoFondo(fondo.nombre)"
         [seleccionado]="fondoSeleccionado.id === fondo.id"
-        (seleccionar)="seleccionarFondo(fondo)">
+        (seleccionar)="seleccionarFondo(fondo)"
+        pTooltip="Click para filtrar movimientos" tooltipPosition="bottom"
+        >
       </app-card-resumen-fondo>
     }
   </div>
+
+  <div class="resumen-bancos-wrapper" [class.single]="resumenBancos.length === 1">
+    <div class="resumen-banco-container" *ngFor="let banco of resumenBancos">
+
+      <!-- Nombre banco -->
+      <div class="banco-header">
+        <div class="banco-info">
+          <div class="banco-titulo">
+            {{ banco.banco }}
+          </div>
+          <div class="banco-total">
+            $ {{ banco.total_general | number:'1.2-2' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini cards -->
+      <div class="mini-cards-grid">
+
+        <!-- porcentaje -->
+        <div class="mini-card porcentaje">
+          <div class="mini-label">% del total</div>
+          <div class="mini-valor">
+            {{ (banco.total_general / fondoSeleccionado.saldo * 100) | number:'1.0-0' }}%
+          </div>
+        </div>
+
+        <!-- credito -->
+        <div class="mini-card credito">
+          <div class="mini-label">Crédito</div>
+          <div class="mini-valor">
+            $ {{ banco.total_credito | number:'1.0-0' }}
+          </div>
+        </div>
+
+        <!-- debito -->
+        <div class="mini-card debito">
+          <div class="mini-label">Débito</div>
+          <div class="mini-valor">
+            $ {{ banco.total_debito | number:'1.0-0' }}
+          </div>
+        </div>
+
+        <!-- transferencia -->
+        <div class="mini-card transferencia">
+          <div class="mini-label">Transferencia</div>
+          <div class="mini-valor">
+            $ {{ banco.total_transferencia | number:'1.0-0' }}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  
 
   <!-- <p-card class="grafico-card">
         <div class="grafico-header">

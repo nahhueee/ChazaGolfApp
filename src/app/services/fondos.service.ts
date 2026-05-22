@@ -19,6 +19,9 @@ export class FondosService {
   ObtenerResumenFondos(filtro:FiltrosFondos): Observable<any> {
     return this.apiService.post('fondos/resumen-fondos', filtro)
   }
+  ObtenerResumenFondoBancos(filtro:FiltrosFondos): Observable<any> {
+    return this.apiService.post('fondos/resumen-fondo-bancos', filtro)
+  }
   ObtenerMovimientos(filtro:FiltrosFondos): Observable<any> {
     return this.apiService.post('fondos/movimientos', filtro)
   }

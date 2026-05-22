@@ -75,12 +75,12 @@
                     </ng-template>
                 </p-table>
 
-                @if(!pagoCompleto){
+                @if(datosFacturar && datosFacturar.saldoPendiente > 0){
                     <div class="alerta alerta-info">
                         <span class="alerta-icon">ℹ️</span>
                         <div class="alerta-texto">
                             El saldo restante de
-                            <strong>{{ saldoPendiente | decimalFormat }}</strong>
+                            <strong>{{ datosFacturar.saldoPendiente| decimalFormat }}</strong>
                             se registrará en la cuenta corriente del cliente.
                         </div>
                     </div>

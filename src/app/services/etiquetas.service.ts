@@ -81,52 +81,70 @@ export class EtiquetasService {
           {
             text: producto.nombre!.toUpperCase(),
             bold: true,
-            fontSize: 9,
+            fontSize: 8,
             alignment: 'center',
-            lineHeight: 0.9,
-            margin: [2, 2, 2, 1]
+            lineHeight: 0.85,
+            margin: [2, 2, 2, 0]
           },
           {
             text: producto.color!.toUpperCase() + " | " + producto.talle!.toUpperCase(),
             bold: true,
-            fontSize: 9,
-            alignment: 'center',
-            lineHeight: 0.9,
-            margin: [2, 0, 2, 1]
-          },
-
-          // Código de barras
-          codigoBarra
-            ? {
-                image: codigoBarra,
-                height: 20,
-                width: 100, 
-                alignment: 'center',
-                margin: [0, 1, 0, 0]
-              }
-            : 
-            {},
-          {
-            text: producto.codigo!.toUpperCase(),
-            bold: false,
             fontSize: 8,
             alignment: 'center',
             lineHeight: 0.9,
             margin: [2, 0, 2, 0]
           },
+
+          // Código de barras
+          codigoBarra
+          ? {
+              image: codigoBarra,
+              width: 95,
+              height: 28,        // altura fija, evita que pdfMake recalcule proporción
+              alignment: 'center',
+              margin: [0, 1, 0, 0]
+            }
+          : {},
+          {
+            text: producto.codigo!.toUpperCase(),
+            bold: false,
+            fontSize: 6,
+            alignment: 'center',
+            lineHeight: 0.9,
+            margin: [1, 0, 2, 0]
+          },
         ]
       };
     }
 
-    private GenerarCodigoBarras(texto: string) {
+    private GenerarCodigoBarras(texto: string): string {
       const canvas = document.createElement('canvas');
+
+      // Ancho del código en pdfMake = 95pt
+      // Escala 4x sobre el ancho real para mantener nitidez sin oversizing
+      // 95pt @ 96dpi = ~127px → × 4 = 508px
+      const SCALE = 4;
+      const TARGET_WIDTH_PT = 95;
+      const PX_PER_PT = 96 / 72; // ~1.333
+      
+      const canvasWidth = Math.round(TARGET_WIDTH_PT * PX_PER_PT * SCALE); // ~508px
+      const canvasHeight = Math.round(canvasWidth * 0.3); // proporción barcode estándar
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
       JsBarcode(canvas, texto, {
-        format: 'CODE39',
+        format: 'CODE128',
         displayValue: false,
-        height: 50,     
-        width: 2,
+        width: 2,           // barras más gruesas → más tolerancia al escalar
+        height: Math.round(canvasHeight * 0.75), // deja quiet zone vertical
+        margin: Math.round(canvasWidth * 0.04),  // quiet zone proporcional (~4%)
+        background: '#FFFFFF',
+        lineColor: '#000000',
       });
-      return canvas.toDataURL('image/png');
+
+      // PNG con máxima calidad
+      return canvas.toDataURL('image/png', 1.0);
     }
 
     async GenerarImagen(url: string) {
