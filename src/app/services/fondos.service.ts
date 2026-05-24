@@ -10,8 +10,11 @@ import { MovimientoFondo } from '../models/Movimiento';
 export class FondosService {
   constructor(private apiService:ApiService) {}
   
-  ObtenerCajas(): Observable<any> {
+  SelectorCajas(): Observable<any> {
     return this.apiService.get('fondos/cajas')
+  }
+  ObtenerCajas(): Observable<any> {
+    return this.apiService.get('fondos/obtener-cajas')
   }
   ObtenerResumen(filtro:FiltrosFondos): Observable<any> {
     return this.apiService.post('fondos/resumen', filtro)
@@ -27,5 +30,8 @@ export class FondosService {
   }
   RegistrarMovimiento(movimiento:MovimientoFondo): Observable<any> {
     return this.apiService.post('fondos/registrar-movimiento', movimiento)
+  }
+  RegistrarTransferencia(transferencia:any): Observable<any> {
+    return this.apiService.post('fondos/registrar-transferencia', transferencia)
   }
 }

@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CardModule } from 'primeng/card';
+import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 
 @Component({
   selector: 'app-card-resumen-fondo',
   standalone: true,
   imports: [
     CommonModule,
-    CardModule
+    CardModule,
+    DecimalFormatPipe
   ],
   templateUrl: './card-resumen-fondo.component.html',
   styleUrls: ['./card-resumen-fondo.component.scss']

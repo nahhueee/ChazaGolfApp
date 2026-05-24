@@ -1,0 +1,205 @@
+<p-dialog
+  header="Transferencia entre fondos"
+  [(visible)]="visible"
+  (onHide)="onHide()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '750px' }"
+  [closable]="!guardando">
+
+  <div class="tf-container">
+
+    <!-- ══════════════════════════════════════════
+         PASO 1 — Selección de cajas
+    ══════════════════════════════════════════ -->
+    <ng-container *ngIf="paso === 'cajas'">
+
+      <span class="step-label">Seleccioná las cajas</span>
+
+      <div class="selector-grid">
+
+        <!-- Origen -->
+        <div class="selector-col">
+          <span class="col-label">Origen</span>
+          <div
+            *ngFor="let caja of cajas"
+            class="caja-opt"
+            [class.caja-opt--origen]="cajaOrigen?.id === caja.id"
+            (click)="seleccionarCajaOrigen(caja)">
+            <span class="caja-nombre">{{ caja.nombre }}</span>
+           </div>
+        </div>
+
+        <div class="arrow-col">
+          <i class="pi pi-arrow-right"></i>
+        </div>
+
+        <!-- Destino -->
+        <div class="selector-col">
+          <span class="col-label">Destino</span>
+          <div
+            *ngFor="let caja of cajas"
+            class="caja-opt"
+            [class.caja-opt--destino]="cajaDestino?.id === caja.id"
+            (click)="seleccionarCajaDestino(caja)">
+            <span class="caja-nombre">{{ caja.nombre }}</span>
+          </div>
+        </div>
+
+      </div>
+
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════
+         PASO 2 — Selección de fondos
+    ══════════════════════════════════════════ -->
+    <ng-container *ngIf="paso === 'fondos'">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb" (click)="volverACajas()">
+        <i class="pi pi-arrow-left"></i>
+        <span class="breadcrumb-lado">Origen:</span>
+        <strong class="breadcrumb-origen">{{ cajaOrigen?.nombre }}</strong>
+        <i class="pi pi-arrow-right breadcrumb-sep"></i>
+        <span class="breadcrumb-lado">Destino:</span>
+        <strong class="breadcrumb-destino">{{ cajaDestino?.nombre }}</strong>
+        <span class="breadcrumb-hint">(cambiar)</span>
+      </div>
+
+      <!-- Fondos -->
+      <div class="selector-grid">
+
+        <!-- Fondos origen -->
+        <div class="selector-col">
+          <span class="col-label">Fondo origen</span>
+          <div
+            *ngFor="let fondo of cajaOrigen!.fondos"
+            class="fondo-opt"
+            [class.fondo-opt--origen]="esOrigen(fondo.idFondo)"
+            [class.fondo-opt--disabled]="esBloqueadoEnOrigen(fondo.idFondo)"
+            (click)="seleccionarOrigen(fondo)">
+            <div class="fondo-info">
+              <i [class]="fondo.icono" class="fondo-icon"></i>
+              <span class="fondo-nombre">{{ fondo.nombre }}</span>
+            </div>
+            <span class="fondo-saldo">{{ fondo.saldo | decimalFormat }}</span>
+          </div>
+        </div>
+
+        <div class="arrow-col">
+          <i class="pi pi-arrow-right"></i>
+        </div>
+
+        <!-- Fondos destino -->
+        <div class="selector-col">
+          <span class="col-label">Fondo destino</span>
+          <div
+            *ngFor="let fondo of cajaDestino!.fondos"
+            class="fondo-opt"
+            [class.fondo-opt--destino]="esDestino(fondo.idFondo)"
+            [class.fondo-opt--disabled]="esBloqueadoEnDestino(fondo.idFondo)"
+            (click)="seleccionarDestino(fondo)">
+            <div class="fondo-info">
+              <i [class]="fondo.icono" class="fondo-icon"></i>
+              <span class="fondo-nombre">{{ fondo.nombre }}</span>
+            </div>
+            <span class="fondo-saldo">{{ fondo.saldo | decimalFormat }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Resumen selección -->
+      <div class="resumen" *ngIf="origen || destino">
+        <i class="pi pi-info-circle resumen-icon"></i>
+        <span class="resumen-texto">
+          <ng-container *ngIf="origen">
+            <strong>{{ origen.fondoNombre }}</strong>
+            <span class="resumen-caja">· {{ origen.cajaNombre }}</span>
+          </ng-container>
+          <span *ngIf="!origen" class="resumen-placeholder">Seleccioná fondo origen</span>
+          <i class="pi pi-arrow-right resumen-sep"></i>
+          <ng-container *ngIf="destino">
+            <strong>{{ destino.fondoNombre }}</strong>
+            <span class="resumen-caja">· {{ destino.cajaNombre }}</span>
+          </ng-container>
+          <span *ngIf="!destino" class="resumen-placeholder">Seleccioná fondo destino</span>
+        </span>
+      </div>
+
+      <!-- Monto -->
+      <div class="campo-grupo">
+        <label class="campo-label">Monto</label>
+        <p-inputNumber
+          [formControl]="formulario.controls.monto"
+          mode="currency"
+          currency="ARS"
+          locale="es-AR"
+          [minFractionDigits]="2"
+          [fluid]="true"
+          [ngClass]="{ 'ng-invalid ng-dirty': formulario.controls.monto.invalid && formulario.controls.monto.touched }">
+        </p-inputNumber>
+        <small class="campo-error"
+          *ngIf="formulario.controls.monto.invalid && formulario.controls.monto.touched">
+          El monto debe ser mayor a cero
+        </small>
+        <small class="campo-error" *ngIf="saldoInsuficiente">
+          Saldo insuficiente. Disponible:
+          <strong>{{ origen?.saldo | currency:'ARS':'symbol':'1.2-2' }}</strong>
+        </small>
+      </div>
+
+      <!-- Descripción -->
+      <div class="campo-grupo">
+        <label class="campo-label">
+          Descripción
+          <span class="campo-label--opcional">(opcional)</span>
+        </label>
+        <input
+          pInputText
+          [formControl]="formulario.controls.descripcion"
+          maxlength="255"
+          placeholder="Ej: Depósito bancario del día"
+          class="w-full">
+      </div>
+
+    </ng-container>
+
+  </div>
+
+  <!-- Footer -->
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Cancelar"
+      icon="pi pi-times"
+      severity="secondary"
+      [text]="true"
+      [disabled]="guardando"
+      (click)="onHide()">
+    </button>
+
+    <!-- Paso 1: botón continuar -->
+    <button
+      *ngIf="paso === 'cajas'"
+      pButton
+      label="Continuar"
+      icon="pi pi-arrow-right"
+      iconPos="right"
+      [disabled]="!puedeContinuar"
+      (click)="irAFondos()">
+    </button>
+
+    <!-- Paso 2: botón confirmar -->
+    <button
+      *ngIf="paso === 'fondos'"
+      pButton
+      label="Confirmar transferencia"
+      icon="pi pi-check"
+      [loading]="guardando"
+      [disabled]="!puedeGuardar"
+      (click)="guardarTransferencia()">
+    </button>
+  </ng-template>
+
+</p-dialog>

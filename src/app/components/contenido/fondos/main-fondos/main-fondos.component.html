@@ -78,6 +78,12 @@
         outlined
         (onClick)="abrirMovimiento('AJUSTE')"/>
 
+    <p-button
+        label="Transferencia"
+        icon="pi pi-arrow-right-arrow-left"
+        outlined
+        (onClick)="abrirTransferencia()"/>
+
   </div>
 
   <div class="resumen-grid" *ngIf="resumenCajaCargado">
@@ -132,7 +138,7 @@
         [nombre]="fondo.nombre"
         [saldo]="fondo.saldo"
         [movimientos]="fondo.movimientos"
-        [icono]="obtenerIconoFondo(fondo.nombre)"
+        [icono]="fondo.icono"
         [seleccionado]="fondoSeleccionado.id === fondo.id"
         (seleccionar)="seleccionarFondo(fondo)"
         pTooltip="Click para filtrar movimientos" tooltipPosition="bottom"
@@ -291,3 +297,11 @@
     (guardar)="insertarMovimientoManual($event)"
     (cerrar)="mostrarMovimientoModal = false">
 </app-addmod-movimiento-manual>
+
+<app-add-transferencia
+    [(visible)]="mostrarTransferenciaModal"
+    (cerrar)="mostrarTransferenciaModal = false"
+    (transferido)="transferenciaRealizada()"
+    [usuario]="sesion.usuario"
+    >
+</app-add-transferencia>

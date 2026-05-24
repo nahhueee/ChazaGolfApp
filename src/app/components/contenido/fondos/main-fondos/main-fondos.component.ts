@@ -20,6 +20,7 @@ import { Button } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Usuario } from '../../../../models/Usuario';
 import { TooltipModule } from 'primeng/tooltip';
+import { AddTransferencia } from "../add-transferencia/add-transferencia.component";
 
 class CajaDashboard {
   id: number;
@@ -39,6 +40,7 @@ class ResumenFondos {
   id: number;
   nombre: string;
   saldo: number;
+  icono: string;
   movimientos: number;
 }
 
@@ -62,8 +64,9 @@ class ResumenFondos {
     DecimalFormatPipe,
     AddmodMovimientoManualComponent,
     Button,
-    TooltipModule
-  ],
+    TooltipModule,
+    AddTransferencia
+],
   templateUrl: './main-fondos.component.html',
   styleUrls: ['./main-fondos.component.scss']
 })
@@ -103,6 +106,7 @@ export class MainFondosComponent implements OnInit {
 
   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
   mostrarMovimientoModal = false;
+  mostrarTransferenciaModal = false;
 
   constructor(
     private fondosService:FondosService,
@@ -125,8 +129,6 @@ export class MainFondosComponent implements OnInit {
     this.usuarioService.SelectorUsuarios()
       .subscribe(response => {
         this.usuarios = response;
-        console.log(this.usuarios)
-
         this.usuarios = [
           {
             id: null,
@@ -146,13 +148,20 @@ export class MainFondosComponent implements OnInit {
           });
         }
 
-        this.inicializarFiltros();
-        this.cargarDatos();
+        this.fondosService.SelectorCajas()
+        .subscribe(response => {
+          this.cajas = response;
+          this.cajaSeleccionada = this.cajas[0];
+          this.filtrosForm.get('caja')?.setValue(this.cajaSeleccionada);
+
+          this.inicializarFiltros();
+          this.cargarDatos();
+        });
+       
       });
   }
 
   cargarDatos() {
-    this.obtenerCajas();
     this.obtenerResumen();
     this.obtenerResumenFondos();
     this.cargarMovimientos();
@@ -236,14 +245,7 @@ export class MainFondosComponent implements OnInit {
     await this.cargarMovimientos();
     this.obtenerResumenFondos();
   }
-  obtenerCajas(){
-    this.fondosService.ObtenerCajas()
-    .subscribe(response => {
-      this.cajas = response;
-      this.cajaSeleccionada = this.cajas[0];
-      this.filtrosForm.get('caja')?.setValue(this.cajaSeleccionada);
-    });
-  }
+
   obtenerResumen(){
     this.fondosService.ObtenerResumen(this.filtros)
     .subscribe(response => {
@@ -257,7 +259,7 @@ export class MainFondosComponent implements OnInit {
       this.resumenFondo = response;
       this.resumenFondoCargado = true;
       
-      this.generarGraficoFondos();
+      //this.generarGraficoFondos();
     });
   }
 
@@ -404,6 +406,16 @@ export class MainFondosComponent implements OnInit {
   abrirMovimiento(tipo: 'INGRESO' | 'EGRESO' | 'AJUSTE') {
     this.tipoMovimientoModal = tipo;
     this.mostrarMovimientoModal = true;
+  }
+  abrirTransferencia() {
+    this.mostrarTransferenciaModal = true;
+  }
+
+  transferenciaRealizada(): void {
+    this.notificaciones.Success("Transferencia realizada correctamente");
+    this.obtenerResumen();
+    this.cargarMovimientos();
+    this.obtenerResumenFondos();
   }
 
   insertarMovimientoManual(movimiento:MovimientoFondo){

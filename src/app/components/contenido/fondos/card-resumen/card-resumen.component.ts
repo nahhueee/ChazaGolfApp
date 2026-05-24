@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit } from '@angular/core';
 import { CardModule } from 'primeng/card';
+import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 
 @Component({
   selector: 'app-card-resumen',
@@ -9,7 +10,8 @@ import { CardModule } from 'primeng/card';
   standalone: true,
   imports: [
     CommonModule,
-    CardModule
+    CardModule,
+    DecimalFormatPipe
   ]
 })
 export class CardResumenComponent implements OnInit {

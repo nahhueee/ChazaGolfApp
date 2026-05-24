@@ -1,0 +1,284 @@
+.tf-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 0.5rem;
+}
+
+// ── labels de paso ────────────────────────────────────────────────────────────
+.step-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+}
+
+// ── grid compartido ───────────────────────────────────────────────────────────
+.selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 2rem 1fr;
+  align-items: start;
+}
+
+.selector-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.col-label {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  padding-left: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+
+.arrow-col {
+  display: flex;
+  justify-content: center;
+  padding-top: 2.25rem;
+  color: var(--p-text-muted-color);
+  font-size: 1rem;
+}
+
+// ── caja option ───────────────────────────────────────────────────────────────
+.caja-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--p-border-radius-md, 8px);
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover:not(&--origen):not(&--destino) {
+    border-color: var(--p-primary-color);
+  }
+
+   &--origen {
+    border: 2px solid var(--p-primary-color);
+    background: var(--surface-ground);  // antes: --p-primary-50
+
+    .caja-nombre { 
+      font-weight: 500; 
+      color: var(--p-primary-color);   // antes: --p-primary-700
+    }
+    i:first-child { color: var(--p-primary-color); }
+  }
+
+  &--destino {
+    border: 2px solid var(--p-green-500);
+    background: var(--surface-ground);    // antes: --p-green-50
+
+    .caja-nombre { 
+      font-weight: 500; 
+      color: var(--p-green-400);       // antes: --p-green-700
+    }
+    i:first-child { color: var(--p-green-400); }
+  }
+
+  i:first-child {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.caja-nombre {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--p-content-color);
+}
+
+.caja-check {
+  font-size: 0.75rem;
+  color: inherit;
+}
+
+// ── breadcrumb ────────────────────────────────────────────────────────────────
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--p-border-radius-md, 8px);
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  width: fit-content;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--p-primary-color);
+  }
+
+  i:first-child {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.breadcrumb-lado {
+  color: var(--p-text-muted-color);
+}
+
+.breadcrumb-origen {
+  color: var(--p-primary-700, var(--p-primary-color));
+}
+
+.breadcrumb-destino {
+  color: var(--p-green-700, var(--p-green-500));
+}
+
+.breadcrumb-sep {
+  font-size: 0.6875rem;
+  color: var(--p-text-muted-color);
+}
+
+.breadcrumb-hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  margin-left: 0.125rem;
+}
+
+// ── fondo option ──────────────────────────────────────────────────────────────
+.fondo-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--p-border-radius-md, 8px);
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover:not(&--origen):not(&--destino):not(&--disabled) {
+    border-color: var(--p-primary-color);
+  }
+
+  &--origen {
+    border: 2px solid var(--p-primary-color);
+    background: var(--surface-ground);  // antes: --p-primary-50
+
+    .fondo-nombre { 
+      font-weight: 500; 
+      color: var(--p-primary-color);   // antes: --p-primary-700
+    }
+    .fondo-icon  { color: var(--p-primary-color); }
+    .fondo-saldo { color: var(--p-primary-color); }
+  }
+
+  &--destino {
+    border: 2px solid var(--p-green-500);
+    background: var(--surface-ground);    // antes: --p-green-50
+
+    .fondo-nombre { 
+      font-weight: 500; 
+      color: var(--p-green-400);       // antes: --p-green-700
+    }
+    .fondo-icon  { color: var(--p-green-400); }
+    .fondo-saldo { color: var(--p-green-400); }
+  }
+
+  &--disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.fondo-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fondo-icon {
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+}
+
+.fondo-nombre {
+  font-size: 0.8125rem;
+  color: var(--p-content-color);
+}
+
+.fondo-tipo {
+  font-size: 0.6875rem;
+  color: var(--p-text-muted-color);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--p-content-border-color);
+  line-height: 1.4;
+}
+
+.fondo-saldo {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  white-space: nowrap;
+}
+
+// ── resumen ───────────────────────────────────────────────────────────────────
+.resumen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--p-border-radius-md, 8px);
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+  font-size: 0.8125rem;
+}
+
+.resumen-icon {
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
+}
+
+.resumen-texto {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  color: var(--p-content-color);
+}
+
+.resumen-caja {
+  color: var(--p-text-muted-color);
+  font-weight: 400;
+}
+
+.resumen-sep {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.resumen-placeholder {
+  color: var(--p-text-muted-color);
+}
+
+// ── campos ────────────────────────────────────────────────────────────────────
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.campo-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-content-color);
+}
+
+.campo-label--opcional {
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+  margin-left: 0.25rem;
+}
+
+.campo-error {
+  color: var(--p-red-500);
+  font-size: 0.75rem;
+}
