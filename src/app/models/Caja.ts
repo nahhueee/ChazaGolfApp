@@ -3,7 +3,7 @@ export interface FondoConSaldo {
   nombre:  string;
   tipo:    string;
   saldo:   number;
-  icono:       string;
+  icono:   string;
 }
 
 export interface Caja {
@@ -17,5 +17,10 @@ export interface SeleccionFondo {
   idFondo: number;
   cajaNombre:  string;
   fondoNombre: string;
+  tipo:        string; 
+  icono:       string;  
   saldo:       number;
+  idBanco?:    number | null;
+  bancoNombre?: string | null;
 }
+

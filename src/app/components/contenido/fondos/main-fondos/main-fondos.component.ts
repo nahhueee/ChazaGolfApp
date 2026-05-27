@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { FondosService } from '../../../../services/fondos.service';
-import { FiltrosFondos } from '../../../../models/filtros/FiltroFondos';
 import { CardResumenComponent } from '../card-resumen/card-resumen.component';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
@@ -21,28 +20,7 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { Usuario } from '../../../../models/Usuario';
 import { TooltipModule } from 'primeng/tooltip';
 import { AddTransferencia } from "../add-transferencia/add-transferencia.component";
-
-class CajaDashboard {
-  id: number;
-  nombre: string;
-}
-
-interface ResumenCaja {
-  saldoTotal: number;
-  ingresosDia: number;
-  egresosDia: number;
-  netoDia: number;
-  cuentaCorrienteClientes: number;
-  saldoFavorClientes: number;
-}
-
-class ResumenFondos {
-  id: number;
-  nombre: string;
-  saldo: number;
-  icono: string;
-  movimientos: number;
-}
+import { Caja, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo } from '../../../../models/Fondos';
 
 @Component({
   selector: 'app-main-fondos',
@@ -71,368 +49,585 @@ class ResumenFondos {
   styleUrls: ['./main-fondos.component.scss']
 })
 export class MainFondosComponent implements OnInit {
-  sesion:any;
-  filtrosForm:FormGroup;
-  filtros:FiltrosFondos = new FiltrosFondos();
+  sesion: any;
+  filtrosForm: FormGroup;
+  filtros: FiltrosFondos = new FiltrosFondos();
 
-  resumenCaja:ResumenCaja;
-  resumenCajaCargado:boolean = false;
+  resumenCaja: ResumenCaja;
+  resumenCajaCargado = false;
 
-  resumenFondo:ResumenFondos[] = [];
-  resumenFondoCargado:boolean = false;
-  fondoSeleccionado:ResumenFondos = new ResumenFondos();
-  resumenBancos: any[] = [];
+  resumenFondos: ResumenFondo[] = [];          
+  resumenFondosCargado = false;                
+  fondoSeleccionado: ResumenFondo | null = null;
 
-  cajas: CajaDashboard[] = [];
-  cajaSeleccionada: CajaDashboard = new CajaDashboard();
+  detalleMetodos: DetalleMetodoPago[] = [];    
+  detalleMetodosCargado = false;
+
+  cajas: Caja[] = [];
+  cajaSeleccionada: Caja = new Caja();
 
   periodos = [
-    { label: 'Hoy', value: 'hoy' },
-    { label: 'Ayer', value: 'ayer' },
+    { label: 'Hoy',           value: 'hoy'    },
+    { label: 'Ayer',          value: 'ayer'   },
     { label: 'Últimos 7 días', value: '7dias' },
-    { label: 'Últimos 30 días', value: '30dias' },
+    { label: 'Últimos 30 días', value: '30dias'},
     { label: 'Personalizado', value: 'custom' }
   ];
 
-  usuarios:Usuario[] = [];
-
-  chartData: any;
-  chartOptions: any;
-
-  movimientos:MovimientoFondo[] = [];
-  totalRecords: number = 0;
-  loading: boolean = false;
+  usuarios: Usuario[] = [];
+  movimientos: MovimientoFondo[] = [];
+  totalRecords = 0;
+  loading = false;
   primeraCarga = true;
 
   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
-  mostrarMovimientoModal = false;
+  mostrarMovimientoModal   = false;
   mostrarTransferenciaModal = false;
 
   constructor(
-    private fondosService:FondosService,
-    private usuariosService:UsuariosService,
-    private notificaciones:NotificacionesService,
-    private usuarioService:UsuariosService
-  ) { 
+    private fondosService:    FondosService,
+    private usuariosService:  UsuariosService,
+    private notificaciones:   NotificacionesService
+  ) {
     this.filtrosForm = new FormGroup({
-      caja: new FormControl(),
+      caja:    new FormControl(),
       usuario: new FormControl(),
       periodo: new FormControl(),
-      fechas: new FormControl()
-    })
-    this.filtrosForm.get('periodo')?.setValue(this.periodos[0].value);
+      fechas:  new FormControl()
+    });
+    this.filtrosForm.get('periodo')?.setValue('hoy');
   }
 
   ngOnInit() {
     this.sesion = this.usuariosService.GetSesion().data;
 
-    this.usuarioService.SelectorUsuarios()
-      .subscribe(response => {
-        this.usuarios = response;
-        this.usuarios = [
-          {
-            id: null,
-            nombre: 'TODOS'
-          },
-          ...response
-        ];
+    this.usuariosService.SelectorUsuarios().subscribe(response => {
+      this.usuarios = [{ id: null, nombre: 'TODOS' }, ...response];
 
-
-        if (this.sesion.cargo !== 'ADMINISTRADOR') {
-          this.filtrosForm.patchValue({
-            usuario: this.sesion.usuario
-          });
-        } else {
-          this.filtrosForm.patchValue({
-            usuario: null
-          });
-        }
-
-        this.fondosService.SelectorCajas()
-        .subscribe(response => {
-          this.cajas = response;
-          this.cajaSeleccionada = this.cajas[0];
-          this.filtrosForm.get('caja')?.setValue(this.cajaSeleccionada);
-
-          this.inicializarFiltros();
-          this.cargarDatos();
-        });
-       
+      this.filtrosForm.patchValue({
+        usuario: this.sesion.cargo !== 'ADMINISTRADOR'
+          ? this.sesion.usuario
+          : null
       });
+
+      this.fondosService.SelectorCajas().subscribe(response => {
+        this.cajas = response;
+        this.cajaSeleccionada = this.cajas[0];
+        this.filtrosForm.get('caja')?.setValue(this.cajaSeleccionada);
+        this.inicializarFiltros();
+        this.cargarDatos();
+      });
+    });
   }
+
+  // ── carga ────────────────────────────────────────────────────────────────────
 
   cargarDatos() {
     this.obtenerResumen();
     this.obtenerResumenFondos();
-    this.cargarMovimientos();
   }
 
-  private formatearFechaLocal(fecha: Date): string {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
+  obtenerResumen() {
+    this.fondosService.ObtenerResumen(this.filtros)
+      .subscribe(r => {
+        this.resumenCaja = r;
+        this.resumenCajaCargado = true;
+      });
   }
+
+  obtenerResumenFondos() {
+    this.resumenFondosCargado = false;
+    this.fondosService.ObtenerResumenFondosPorCaja(this.filtros)
+      .subscribe(r => {
+        this.resumenFondos = r;
+        this.resumenFondosCargado = true;
+
+        // si había un fondo seleccionado, actualizamos su referencia
+        if (this.fondoSeleccionado) {
+          const actualizado = r.find(f => f.id === this.fondoSeleccionado!.id);
+          this.fondoSeleccionado = actualizado ?? null;
+        }
+      });
+  }
+
+  // ── filtros ──────────────────────────────────────────────────────────────────
 
   inicializarFiltros() {
     const rango = this.obtenerRangoFechas();
-
     this.filtros = {
-      pagina: 1,
+      pagina:        1,
       tamanioPagina: 10,
-      idCaja: this.filtrosForm.value.caja?.id,
-      fechaDesde: rango?.desde
-        ? this.formatearFechaLocal(rango.desde)
-        : null,
-      fechaHasta: rango?.hasta
-        ? this.formatearFechaLocal(rango.hasta)
-        : null,
-      usuario: this.filtrosForm.value.usuario || null
+      idCaja:        this.filtrosForm.value.caja?.id,
+      fechaDesde:    rango?.desde ? this.formatearFechaLocal(rango.desde) : null,
+      fechaHasta:    rango?.hasta ? this.formatearFechaLocal(rango.hasta) : null,
+      usuario:       this.filtrosForm.value.usuario || null
     };
   }
 
+  async onFiltrosChange() {
+    this.fondoSeleccionado  = null;
+    this.detalleMetodos     = [];
+    this.inicializarFiltros();
+    this.cargarDatos();
+    await this.cargarMovimientos();
+  }
+
   onPeriodoChange() {
-    const periodo = this.filtrosForm.get('periodo')?.value;
-
-    if (periodo !== 'custom') {
-      this.filtrosForm.patchValue({
-        fechas: null
-      });
-
+    if (this.filtrosForm.get('periodo')?.value !== 'custom') {
+      this.filtrosForm.patchValue({ fechas: null });
       this.onFiltrosChange();
     }
   }
 
-  private obtenerRangoFechas() {
-    const periodo = this.filtrosForm.value.periodo;
-    const hoy = new Date();
+  // ── selección de fondo ───────────────────────────────────────────────────────
 
-    switch (periodo) {
-      case 'hoy':
-        return { desde: hoy, hasta: hoy };
-
-      case 'ayer':
-        const ayer = new Date();
-        ayer.setDate(hoy.getDate() - 1);
-        return { desde: ayer, hasta: ayer };
-
-      case '7dias':
-        const siete = new Date();
-        siete.setDate(hoy.getDate() - 7);
-        return { desde: siete, hasta: hoy };
-
-      case '30dias':
-        const treinta = new Date();
-        treinta.setDate(hoy.getDate() - 30);
-        return { desde: treinta, hasta: hoy };
-
-      case 'custom':
-        const fechas = this.filtrosForm.value.fechas;
-        return {
-          desde: fechas?.[0],
-          hasta: fechas?.[1]
-        };
-
-      default:
-        return null;
-    }
-  }
-
-  async onFiltrosChange() {
-    this.inicializarFiltros();
-    await this.obtenerResumen();
-    await this.cargarMovimientos();
-    this.obtenerResumenFondos();
-  }
-
-  obtenerResumen(){
-    this.fondosService.ObtenerResumen(this.filtros)
-    .subscribe(response => {
-      this.resumenCaja = response;
-      this.resumenCajaCargado = true;
-    });
-  }
-  obtenerResumenFondos(){
-    this.fondosService.ObtenerResumenFondos(this.filtros)
-    .subscribe(response => {
-      this.resumenFondo = response;
-      this.resumenFondoCargado = true;
-      
-      //this.generarGraficoFondos();
-    });
-  }
-
-  seleccionarFondo(fondo: any) {
+  seleccionarFondo(fondo: ResumenFondo) {
     if (this.fondoSeleccionado?.id === fondo.id) {
-
-      this.fondoSeleccionado = new ResumenFondos();
-      this.filtros.idFondo = undefined;
-
+      // deseleccionar
+      this.fondoSeleccionado = null;
+      this.filtros.idFondo   = undefined;
+      this.detalleMetodos    = [];
     } else {
-
       this.fondoSeleccionado = fondo;
-      this.filtros.idFondo = fondo.id;
-    }
+      this.filtros.idFondo   = fondo.id;
 
-    this.obtenerResumenBancos();
+      // detalle de métodos solo para fondos bancarios y digitales
+      if (fondo.tipo === 'BANCARIO' || fondo.tipo === 'DIGITAL') {
+        this.detalleMetodosCargado = false;
+        this.fondosService.ObtenerDetalleMetodosPago(this.filtros)
+          .subscribe(r => {
+            this.detalleMetodos = r;
+            this.detalleMetodosCargado = true;
+          });
+      } else {
+        this.detalleMetodos = [];
+      }
+    }
     this.cargarMovimientos();
   }
 
-  obtenerResumenBancos() {
-    // solo aplica para fondo bancos
-    if (this.filtros.idFondo !== 2) {
-      this.resumenBancos = [];
-      return;
-    }
-
-    this.fondosService.ObtenerResumenFondoBancos(this.filtros)
-      .subscribe(response => {
-        this.resumenBancos = response;
-      });
-  }
+  // ── movimientos ──────────────────────────────────────────────────────────────
 
   async cargarMovimientos(event?: TableLazyLoadEvent) {
     if (this.primeraCarga) {
       this.primeraCarga = false;
-      return; // ignora la carga automática
+      return;
     }
-
     this.loading = true;
-    const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
-    const pageSize = event?.rows ?? 10;
+    this.filtros.pagina        = ((event?.first ?? 0) / (event?.rows ?? 10)) + 1;
+    this.filtros.tamanioPagina = event?.rows ?? 10;
 
-    this.filtros.pagina = pageIndex + 1;
-    this.filtros.tamanioPagina = pageSize;
-
-    this.fondosService.ObtenerMovimientos(this.filtros)
-    .subscribe(response => {
-      this.movimientos = response.registros;
-      this.totalRecords = response.total;
-      this.loading = false;
+    this.fondosService.ObtenerMovimientos(this.filtros).subscribe(r => {
+      this.movimientos  = r.registros;
+      this.totalRecords = r.total;
+      this.loading      = false;
     });
   }
 
-  generarGraficoFondos() {
+  // ── modales ──────────────────────────────────────────────────────────────────
 
-  const fondosValidos = this.resumenFondo
-    .filter(f => f.saldo > 0);
-
-    this.chartData = {
-      labels: fondosValidos.map(f => f.nombre),
-      datasets: [
-        {
-          data: fondosValidos.map(f => f.saldo),
-
-          backgroundColor: [
-            '#22c55e',
-            '#3b82f6',
-            '#f59e0b',
-            '#6366f1',
-            '#14b8a6'
-          ],
-
-          borderWidth: 0,
-          hoverOffset: 6
-        }
-      ]
-    };
-
-    this.chartOptions = {
-
-      cutout: '60%',
-      responsive: true,
-      maintainAspectRatio: false,
-
-
-      plugins: {
-
-        legend: {
-          position: 'right',
-
-          labels: {
-            color: getComputedStyle(document.documentElement)
-              .getPropertyValue('--text-color'),
-
-            usePointStyle: true,
-            pointStyle: 'circle',
-            padding: 18,
-
-            font: {
-              size: 13
-            }
-          }
-        }
-      }
-    };
-  }
-
-  obtenerIconoFondo(nombre: string): string {
-    if(nombre.includes('Efectivo')){
-      return 'pi pi-wallet';
-    }
-
-    if(nombre.includes('Banco')){
-      return 'pi pi-building-columns';
-    }
-
-    if(nombre.includes('Digital')){
-      return 'pi pi-qrcode';
-    }
-
-    if(nombre.includes('Corriente')){
-      return 'pi pi-user';
-    }
-
-    if(nombre.includes('Favor')){
-      return 'pi pi-receipt';
-    }
-
-    return 'pi pi-money-bill';
-  }
-
-  obtenerSeverityTipo(tipo:string){
-    switch(tipo){
-      case 'INGRESO':
-        return 'success';
-      case 'EGRESO':
-        return 'danger';
-      default:
-        return 'info';
-    }
-
-  }
-  
   abrirMovimiento(tipo: 'INGRESO' | 'EGRESO' | 'AJUSTE') {
-    this.tipoMovimientoModal = tipo;
+    this.tipoMovimientoModal  = tipo;
     this.mostrarMovimientoModal = true;
   }
+
   abrirTransferencia() {
     this.mostrarTransferenciaModal = true;
   }
 
-  transferenciaRealizada(): void {
-    this.notificaciones.Success("Transferencia realizada correctamente");
+  transferenciaRealizada() {
+    this.notificaciones.Success('Transferencia realizada correctamente');
     this.obtenerResumen();
-    this.cargarMovimientos();
     this.obtenerResumenFondos();
+    this.cargarMovimientos();
   }
 
-  insertarMovimientoManual(movimiento:MovimientoFondo){
+  insertarMovimientoManual(movimiento: MovimientoFondo) {
     this.mostrarMovimientoModal = false;
     movimiento.usuario = this.sesion.usuario;
-    movimiento.idCaja = this.cajaSeleccionada.id;
+    movimiento.idCaja  = this.cajaSeleccionada.id;
 
-    this.fondosService.RegistrarMovimiento(movimiento)
-    .subscribe(response => {
-      if(response){
-        this.notificaciones.Success("Movimiento registrado correctamente");
+    this.fondosService.RegistrarMovimiento(movimiento).subscribe(r => {
+      if (r) {
+        this.notificaciones.Success('Movimiento registrado correctamente');
         this.obtenerResumen();
-        this.cargarMovimientos();
         this.obtenerResumenFondos();
-      }else{
-        this.notificaciones.Error("Error al registrar el movimiento");
+        this.cargarMovimientos();
+      } else {
+        this.notificaciones.Error('Error al registrar el movimiento');
       }
     });
   }
+
+  // ── helpers ──────────────────────────────────────────────────────────────────
+
+  obtenerSeverityTipo(tipo: string) {
+    switch (tipo) {
+      case 'INGRESO': return 'success';
+      case 'EGRESO':  return 'danger';
+      default:        return 'info';
+    }
+  }
+
+  private formatearFechaLocal(fecha: Date): string {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private obtenerRangoFechas() {
+    const periodo = this.filtrosForm.value.periodo;
+    const hoy     = new Date();
+    switch (periodo) {
+      case 'hoy':    return { desde: hoy, hasta: hoy };
+      case 'ayer':   const a = new Date(); a.setDate(hoy.getDate()-1); return { desde: a, hasta: a };
+      case '7dias':  const s = new Date(); s.setDate(hoy.getDate()-7); return { desde: s, hasta: hoy };
+      case '30dias': const t = new Date(); t.setDate(hoy.getDate()-30); return { desde: t, hasta: hoy };
+      case 'custom': const f = this.filtrosForm.value.fechas; return { desde: f?.[0], hasta: f?.[1] };
+      default:       return null;
+    }
+  }
 }
+// export class MainFondosComponent implements OnInit {
+//   sesion:any;
+//   filtrosForm:FormGroup;
+//   filtros:FiltrosFondos = new FiltrosFondos();
+
+//   resumenCaja:ResumenCaja;
+//   resumenCajaCargado:boolean = false;
+
+//   resumenFondo:ResumenFondo[] = [];
+//   resumenFondoCargado:boolean = false;
+//   fondoSeleccionado:ResumenFondo = new ResumenFondo();
+//   resumenBancos: any[] = [];
+
+//   cajas: Caja[] = [];
+//   cajaSeleccionada: Caja = new Caja();
+
+//   periodos = [
+//     { label: 'Hoy', value: 'hoy' },
+//     { label: 'Ayer', value: 'ayer' },
+//     { label: 'Últimos 7 días', value: '7dias' },
+//     { label: 'Últimos 30 días', value: '30dias' },
+//     { label: 'Personalizado', value: 'custom' }
+//   ];
+
+//   usuarios:Usuario[] = [];
+
+//   chartData: any;
+//   chartOptions: any;
+
+//   movimientos:MovimientoFondo[] = [];
+//   totalRecords: number = 0;
+//   loading: boolean = false;
+//   primeraCarga = true;
+
+//   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
+//   mostrarMovimientoModal = false;
+//   mostrarTransferenciaModal = false;
+
+//   constructor(
+//     private fondosService:FondosService,
+//     private usuariosService:UsuariosService,
+//     private notificaciones:NotificacionesService,
+//     private usuarioService:UsuariosService
+//   ) { 
+//     this.filtrosForm = new FormGroup({
+//       caja: new FormControl(),
+//       usuario: new FormControl(),
+//       periodo: new FormControl(),
+//       fechas: new FormControl()
+//     })
+//     this.filtrosForm.get('periodo')?.setValue(this.periodos[0].value);
+//   }
+
+//   ngOnInit() {
+//     this.sesion = this.usuariosService.GetSesion().data;
+
+//     this.usuarioService.SelectorUsuarios()
+//       .subscribe(response => {
+//         this.usuarios = response;
+//         this.usuarios = [
+//           {
+//             id: null,
+//             nombre: 'TODOS'
+//           },
+//           ...response
+//         ];
+
+
+//         if (this.sesion.cargo !== 'ADMINISTRADOR') {
+//           this.filtrosForm.patchValue({
+//             usuario: this.sesion.usuario
+//           });
+//         } else {
+//           this.filtrosForm.patchValue({
+//             usuario: null
+//           });
+//         }
+
+//         this.fondosService.SelectorCajas()
+//         .subscribe(response => {
+//           this.cajas = response;
+//           this.cajaSeleccionada = this.cajas[0];
+//           this.filtrosForm.get('caja')?.setValue(this.cajaSeleccionada);
+
+//           this.inicializarFiltros();
+//           this.cargarDatos();
+//         });
+       
+//       });
+//   }
+
+//   cargarDatos() {
+//     this.obtenerResumen();
+//     this.obtenerResumenFondos();
+//     this.cargarMovimientos();
+//   }
+
+//   private formatearFechaLocal(fecha: Date): string {
+//     const year = fecha.getFullYear();
+//     const month = String(fecha.getMonth() + 1).padStart(2, '0');
+//     const day = String(fecha.getDate()).padStart(2, '0');
+
+//     return `${year}-${month}-${day}`;
+//   }
+
+//   inicializarFiltros() {
+//     const rango = this.obtenerRangoFechas();
+
+//     this.filtros = {
+//       pagina: 1,
+//       tamanioPagina: 10,
+//       idCaja: this.filtrosForm.value.caja?.id,
+//       fechaDesde: rango?.desde
+//         ? this.formatearFechaLocal(rango.desde)
+//         : null,
+//       fechaHasta: rango?.hasta
+//         ? this.formatearFechaLocal(rango.hasta)
+//         : null,
+//       usuario: this.filtrosForm.value.usuario || null
+//     };
+//   }
+
+//   onPeriodoChange() {
+//     const periodo = this.filtrosForm.get('periodo')?.value;
+
+//     if (periodo !== 'custom') {
+//       this.filtrosForm.patchValue({
+//         fechas: null
+//       });
+
+//       this.onFiltrosChange();
+//     }
+//   }
+
+//   private obtenerRangoFechas() {
+//     const periodo = this.filtrosForm.value.periodo;
+//     const hoy = new Date();
+
+//     switch (periodo) {
+//       case 'hoy':
+//         return { desde: hoy, hasta: hoy };
+
+//       case 'ayer':
+//         const ayer = new Date();
+//         ayer.setDate(hoy.getDate() - 1);
+//         return { desde: ayer, hasta: ayer };
+
+//       case '7dias':
+//         const siete = new Date();
+//         siete.setDate(hoy.getDate() - 7);
+//         return { desde: siete, hasta: hoy };
+
+//       case '30dias':
+//         const treinta = new Date();
+//         treinta.setDate(hoy.getDate() - 30);
+//         return { desde: treinta, hasta: hoy };
+
+//       case 'custom':
+//         const fechas = this.filtrosForm.value.fechas;
+//         return {
+//           desde: fechas?.[0],
+//           hasta: fechas?.[1]
+//         };
+
+//       default:
+//         return null;
+//     }
+//   }
+
+//   async onFiltrosChange() {
+//     this.inicializarFiltros();
+//     await this.obtenerResumen();
+//     await this.cargarMovimientos();
+//     this.obtenerResumenFondos();
+//   }
+
+//   obtenerResumen(){
+//     this.fondosService.ObtenerResumen(this.filtros)
+//     .subscribe(response => {
+//       this.resumenCaja = response;
+//       this.resumenCajaCargado = true;
+//     });
+//   }
+//   obtenerResumenFondos(){
+//     this.fondosService.ObtenerResumenFondos(this.filtros)
+//     .subscribe(response => {
+//       this.resumenFondo = response;
+//       this.resumenFondoCargado = true;
+      
+//       //this.generarGraficoFondos();
+//     });
+//   }
+
+//   seleccionarFondo(fondo: any) {
+//     if (this.fondoSeleccionado?.id === fondo.id) {
+
+//       this.fondoSeleccionado = new ResumenFondos();
+//       this.filtros.idFondo = undefined;
+
+//     } else {
+
+//       this.fondoSeleccionado = fondo;
+//       this.filtros.idFondo = fondo.id;
+//     }
+
+//     this.obtenerResumenBancos();
+//     this.cargarMovimientos();
+//   }
+
+//   obtenerResumenBancos() {
+//     // solo aplica para fondo bancos
+//     if (this.filtros.idFondo !== 2) {
+//       this.resumenBancos = [];
+//       return;
+//     }
+
+//     this.fondosService.ObtenerResumenFondoBancos(this.filtros)
+//       .subscribe(response => {
+//         this.resumenBancos = response;
+//       });
+//   }
+
+//   async cargarMovimientos(event?: TableLazyLoadEvent) {
+//     if (this.primeraCarga) {
+//       this.primeraCarga = false;
+//       return; // ignora la carga automática
+//     }
+
+//     this.loading = true;
+//     const pageIndex = (event?.first ?? 0) / (event?.rows ?? 10); 
+//     const pageSize = event?.rows ?? 10;
+
+//     this.filtros.pagina = pageIndex + 1;
+//     this.filtros.tamanioPagina = pageSize;
+
+//     this.fondosService.ObtenerMovimientos(this.filtros)
+//     .subscribe(response => {
+//       this.movimientos = response.registros;
+//       this.totalRecords = response.total;
+//       this.loading = false;
+//     });
+//   }
+
+//   generarGraficoFondos() {
+
+//   const fondosValidos = this.resumenFondo
+//     .filter(f => f.saldo > 0);
+
+//     this.chartData = {
+//       labels: fondosValidos.map(f => f.nombre),
+//       datasets: [
+//         {
+//           data: fondosValidos.map(f => f.saldo),
+
+//           backgroundColor: [
+//             '#22c55e',
+//             '#3b82f6',
+//             '#f59e0b',
+//             '#6366f1',
+//             '#14b8a6'
+//           ],
+
+//           borderWidth: 0,
+//           hoverOffset: 6
+//         }
+//       ]
+//     };
+
+//     this.chartOptions = {
+
+//       cutout: '60%',
+//       responsive: true,
+//       maintainAspectRatio: false,
+
+
+//       plugins: {
+
+//         legend: {
+//           position: 'right',
+
+//           labels: {
+//             color: getComputedStyle(document.documentElement)
+//               .getPropertyValue('--text-color'),
+
+//             usePointStyle: true,
+//             pointStyle: 'circle',
+//             padding: 18,
+
+//             font: {
+//               size: 13
+//             }
+//           }
+//         }
+//       }
+//     };
+//   }
+
+//   obtenerSeverityTipo(tipo:string){
+//     switch(tipo){
+//       case 'INGRESO':
+//         return 'success';
+//       case 'EGRESO':
+//         return 'danger';
+//       default:
+//         return 'info';
+//     }
+
+//   }
+  
+//   abrirMovimiento(tipo: 'INGRESO' | 'EGRESO' | 'AJUSTE') {
+//     this.tipoMovimientoModal = tipo;
+//     this.mostrarMovimientoModal = true;
+//   }
+//   abrirTransferencia() {
+//     this.mostrarTransferenciaModal = true;
+//   }
+
+//   transferenciaRealizada(): void {
+//     this.notificaciones.Success("Transferencia realizada correctamente");
+//     this.obtenerResumen();
+//     this.cargarMovimientos();
+//     this.obtenerResumenFondos();
+//   }
+
+//   insertarMovimientoManual(movimiento:MovimientoFondo){
+//     this.mostrarMovimientoModal = false;
+//     movimiento.usuario = this.sesion.usuario;
+//     movimiento.idCaja = this.cajaSeleccionada.id;
+
+//     this.fondosService.RegistrarMovimiento(movimiento)
+//     .subscribe(response => {
+//       if(response){
+//         this.notificaciones.Success("Movimiento registrado correctamente");
+//         this.obtenerResumen();
+//         this.cargarMovimientos();
+//         this.obtenerResumenFondos();
+//       }else{
+//         this.notificaciones.Error("Error al registrar el movimiento");
+//       }
+//     });
+//   }
+// }

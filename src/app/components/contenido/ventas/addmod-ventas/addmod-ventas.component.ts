@@ -1419,7 +1419,9 @@ export class AddModVentasComponent {
     }
 
     this.markFormTouched(this.formGenerales);
-    if(this.formGenerales.invalid){
+    this.markFormTouched(this.formFacturacion);
+
+    if(this.formGenerales.invalid || this.formFacturacion.invalid){
       this.Notificaciones.Warn("Falta completar datos obligatorios.")
       return;
     } 

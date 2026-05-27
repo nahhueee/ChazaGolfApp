@@ -60,7 +60,7 @@ export class AddTransferencia {
   // ── lifecycle ─────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible']?.currentValue === true) {
-      this.fondosService.ObtenerCajas().subscribe((c: Caja[]) => {
+      this.fondosService.ObtenerCajasConFondos().subscribe((c: Caja[]) => {
         this.cajas = c;
       });
     }
@@ -105,6 +105,8 @@ export class AddTransferencia {
       idFondo:     fondo.idFondo,
       cajaNombre:  this.cajaOrigen!.nombre,
       fondoNombre: fondo.nombre,
+      tipo:        fondo.tipo,
+      icono:       fondo.icono,
       saldo:       fondo.saldo
     };
   }
@@ -116,7 +118,9 @@ export class AddTransferencia {
       idFondo:     fondo.idFondo,
       cajaNombre:  this.cajaDestino!.nombre,
       fondoNombre: fondo.nombre,
-      saldo:       fondo.saldo
+      saldo:       fondo.saldo,
+      tipo:        fondo.tipo,
+      icono:       fondo.icono
     };
   }
 

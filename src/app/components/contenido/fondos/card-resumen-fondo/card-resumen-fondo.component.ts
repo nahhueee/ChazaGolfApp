@@ -15,12 +15,14 @@ import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
   styleUrls: ['./card-resumen-fondo.component.scss']
 })
 export class CardResumenFondoComponent implements OnInit {
-  @Input() nombre!: string;
-  @Input() saldo: number = 0;
-  @Input() movimientos: number = 0;
-  @Input() icono: string = 'pi pi-wallet';
-
-  @Input() seleccionado: boolean = false;
+  @Input() nombre:          string = '';
+  @Input() icono:           string = '';
+  @Input() saldoTotal:      number = 0;   
+  @Input() ingresosPeriodo: number = 0;   
+  @Input() egresosPeriodo:  number = 0;   
+  @Input() netoPeriodo:     number = 0;   
+  @Input() movimientos:     number = 0;
+  @Input() seleccionado:    boolean = false;
   @Output() seleccionar = new EventEmitter<void>();
 
   constructor() { }

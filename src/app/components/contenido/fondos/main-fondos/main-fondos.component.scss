@@ -115,122 +115,154 @@ p-floatlabel {
   margin-top: 20px;
 }
 
-.resumen-bancos-wrapper {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: .8rem;
-  margin: .8rem 0 1rem;
 
-  &.single {
-    grid-template-columns: 1fr;
-  }
-}
-
-.resumen-banco-container {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-  border-radius: 16px;
-  padding: .85rem 1rem;
-  transition: all .15s ease;
-
-  &:hover {
-    border-color: var(--primary-color);
-  }
-}
-
-.banco-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: .75rem;
-}
-.banco-info {
-  display: flex;
-  align-items: baseline;
-  gap: .65rem;
-}
-.banco-titulo {
-  font-size: .95rem;
-  font-weight: 600;
-
-  color: var(--text-color);
-}
-
-.banco-total {
-  font-size: 1rem;
-  font-weight: 500;
-
-  color: var(--text-color-secondary);
-}
-
-.mini-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .55rem;
-}
-
-.mini-card {
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  padding: .55rem .7rem;
-  min-height: 58px;
+// ── contenedor principal ──────────────────────────────────────────────────────
+.fondo-detalle {
+  margin: 20px 0px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  transition: all .15s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    background: rgba(255,255,255,.03);
-  }
+  gap: 0.5rem;
 }
 
-.mini-label {
-  font-size: .72rem;
-  color: var(--text-color-secondary);
-  margin-bottom: .2rem;
+// ── cabecera ──────────────────────────────────────────────────────────────────
+.fondo-detalle__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.fondo-detalle__icono {
+  font-size: 14px;
+  color: var(--p-text-muted-color);
+}
+
+.fondo-detalle__nombre {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--p-content-color);
+}
+
+.fondo-detalle__subtitulo {
+  font-size: 12px;
+  color: var(--p-text-muted-color);
+}
+
+// ── métricas ──────────────────────────────────────────────────────────────────
+.fondo-detalle__metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.metrica-item {
+  background: var(--surface-ground);
+  border: 0.5px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md, 8px);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.metrica-item__label {
+  font-size: 11px;
+  color: var(--p-text-muted-color);
   white-space: nowrap;
 }
 
-.mini-valor {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.1;
+.metrica-item__valor {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--p-content-color);
+  line-height: 1.2;
+
+  &--ingreso { color: var(--p-green-500); }
+  &--egreso  { color: var(--p-red-500);   }
 }
 
-.porcentaje {
-  .mini-valor {
-    color: var(--p-primary-color);
+// ── desglose por método ───────────────────────────────────────────────────────
+.fondo-detalle__desglose {
+  border: 0.5px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md, 8px);
+  overflow: hidden;
+}
+
+.desglose__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  border-bottom: 0.5px solid var(--p-content-border-color);
+  background: var(--surface-ground);
+}
+
+.desglose__titulo {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.desglose__total {
+  font-size: 11px;
+  color: var(--p-text-muted-color);
+}
+
+.desglose__metodos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  background: var(--p-content-background);
+}
+
+.metodo-col {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 0.5px solid var(--p-content-border-color);
+  transition: opacity 0.15s ease;
+
+  &:last-child { border-right: none; }
+
+  &--inactivo {
+    opacity: 0.35;
   }
 }
 
-.credito {
-  .mini-valor {
-    color: #22c55e;
-  }
+.metodo-col__label {
+  font-size: 11px;
+  color: var(--p-text-muted-color);
 }
 
-.debito {
-  .mini-valor {
-    color: #60a5fa;
-  }
+.metodo-col__valor {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--p-content-color);
 }
 
-.transferencia {
-  .mini-valor {
-    color: #fbbf24;
-  }
+.metodo-col__pct {
+  font-size: 11px;
+  color: var(--p-text-muted-color);
 }
 
+// ── responsive ────────────────────────────────────────────────────────────────
 @media (max-width: 768px) {
-
-  .resumen-bancos-wrapper {
-    grid-template-columns: 1fr;
-  }
-
-  .mini-cards-grid {
+  .fondo-detalle__metricas {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .desglose__metodos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metodo-col:nth-child(2) {
+    border-right: none;
+  }
+
+  .metodo-col:nth-child(1),
+  .metodo-col:nth-child(2) {
+    border-bottom: 0.5px solid var(--p-content-border-color);
+  }
 }

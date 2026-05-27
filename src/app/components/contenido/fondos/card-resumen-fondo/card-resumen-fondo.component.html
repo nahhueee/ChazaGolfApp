@@ -4,31 +4,26 @@
   (click)="seleccionar.emit()">
 
   <div class="contenido-card">
-
     <div class="header">
-
-      <div class="icono">
-        <i [class]="icono"></i>
-      </div>
-
+      <i [class]="icono"></i>
     </div>
 
-    <div class="nombre">
-      {{ nombre }}
-    </div>
+    <div class="nombre">{{ nombre }}</div>
 
     <div class="saldo">
-      {{ saldo | decimalFormat }}
+      {{ netoPeriodo | decimalFormat }}
+    </div>
+
+    <!-- subtotales del período — solo si hay movimientos -->
+    <div class="periodo-detalle" *ngIf="movimientos > 0">
+      <span class="ingreso-periodo">+{{ ingresosPeriodo | decimalFormat }}</span>
+      <span class="separador">/</span>
+      <span class="egreso-periodo">-{{ egresosPeriodo | decimalFormat }}</span>
     </div>
 
     <div class="footer">
-
-      <span class="movimientos">
-        {{ movimientos }} movimientos
-      </span>
-
+      <span class="movimientos">{{ movimientos }} movimientos</span>
     </div>
 
   </div>
-
 </p-card>

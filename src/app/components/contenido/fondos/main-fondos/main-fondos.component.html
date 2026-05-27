@@ -131,112 +131,131 @@
 
   </div>
 
-  <div class="fondos-grid" *ngIf="resumenFondoCargado">
-    @for(fondo of resumenFondo; track fondo.id){
-
+  <div class="fondos-grid" *ngIf="resumenFondosCargado">
+    @for(fondo of resumenFondos; track fondo.id) {
       <app-card-resumen-fondo
         [nombre]="fondo.nombre"
-        [saldo]="fondo.saldo"
+        [saldoTotal]="fondo.saldoTotal"
+        [ingresosPeriodo]="fondo.ingresosPeriodo"
+        [egresosPeriodo]="fondo.egresosPeriodo"
+        [netoPeriodo]="fondo.netoPeriodo"
         [movimientos]="fondo.movimientos"
         [icono]="fondo.icono"
-        [seleccionado]="fondoSeleccionado.id === fondo.id"
+        [seleccionado]="fondoSeleccionado?.id === fondo.id"
         (seleccionar)="seleccionarFondo(fondo)"
-        pTooltip="Click para filtrar movimientos" tooltipPosition="bottom"
-        >
+        pTooltip="Click para ver detalle" tooltipPosition="bottom">
       </app-card-resumen-fondo>
     }
   </div>
 
-  <div class="resumen-bancos-wrapper" [class.single]="resumenBancos.length === 1">
-    <div class="resumen-banco-container" *ngFor="let banco of resumenBancos">
+  <div class="fondo-detalle" *ngIf="fondoSeleccionado">
+    <!-- cabecera -->
+    <div class="fondo-detalle__header">
+      <i [class]="fondoSeleccionado.icono + ' fondo-detalle__icono'"></i>
+      <span class="fondo-detalle__nombre">{{ fondoSeleccionado.nombre }}</span>
+      <span class="fondo-detalle__subtitulo">· detalle del período</span>
+    </div>
 
-      <!-- Nombre banco -->
-      <div class="banco-header">
-        <div class="banco-info">
-          <div class="banco-titulo">
-            {{ banco.banco }}
-          </div>
-          <div class="banco-total">
-            $ {{ banco.total_general | number:'1.2-2' }}
-          </div>
-        </div>
+    <!-- métricas principales -->
+    <div class="fondo-detalle__metricas">
+
+      <div class="metrica-item">
+        <span class="metrica-item__label">Histórico total</span>
+        <span class="metrica-item__valor">
+          {{ fondoSeleccionado.saldoTotal | decimalFormat }}
+        </span>
       </div>
 
-      <!-- Mini cards -->
-      <div class="mini-cards-grid">
+      <div class="metrica-item">
+        <span class="metrica-item__label">Ingresos período</span>
+        <span class="metrica-item__valor metrica-item__valor--ingreso">
+          + {{ fondoSeleccionado.ingresosPeriodo | decimalFormat }}
+        </span>
+      </div>
 
-        <!-- porcentaje -->
-        <div class="mini-card porcentaje">
-          <div class="mini-label">% del total</div>
-          <div class="mini-valor">
-            {{ (banco.total_general / fondoSeleccionado.saldo * 100) | number:'1.0-0' }}%
-          </div>
-        </div>
+      <div class="metrica-item">
+        <span class="metrica-item__label">Egresos período</span>
+        <span class="metrica-item__valor metrica-item__valor--egreso">
+          - {{ fondoSeleccionado.egresosPeriodo | decimalFormat }}
+        </span>
+      </div>
 
-        <!-- credito -->
-        <div class="mini-card credito">
-          <div class="mini-label">Crédito</div>
-          <div class="mini-valor">
-            $ {{ banco.total_credito | number:'1.0-0' }}
-          </div>
-        </div>
-
-        <!-- debito -->
-        <div class="mini-card debito">
-          <div class="mini-label">Débito</div>
-          <div class="mini-valor">
-            $ {{ banco.total_debito | number:'1.0-0' }}
-          </div>
-        </div>
-
-        <!-- transferencia -->
-        <div class="mini-card transferencia">
-          <div class="mini-label">Transferencia</div>
-          <div class="mini-valor">
-            $ {{ banco.total_transferencia | number:'1.0-0' }}
-          </div>
-        </div>
-
+      <div class="metrica-item">
+        <span class="metrica-item__label">Neto período</span>
+        <span class="metrica-item__valor"
+          [class.metrica-item__valor--ingreso]="fondoSeleccionado.netoPeriodo > 0"
+          [class.metrica-item__valor--egreso]="fondoSeleccionado.netoPeriodo < 0">
+          {{ fondoSeleccionado.netoPeriodo | decimalFormat }}
+        </span>
       </div>
 
     </div>
+
+    <!-- desglose por método — solo para BANCARIO y DIGITAL -->
+    <ng-container *ngIf="detalleMetodos.length > 0">
+      <div class="fondo-detalle__desglose"
+        *ngFor="let item of detalleMetodos">
+
+        <div class="desglose__header">
+          <span class="desglose__titulo">Desglose por método</span>
+          <span class="desglose__total">
+            Total ventas: {{ item.total_general | decimalFormat }}
+          </span>
+        </div>
+
+        <div class="desglose__metodos">
+
+          <div class="metodo-col"
+            [class.metodo-col--inactivo]="item.total_debito === 0">
+            <span class="metodo-col__label">Débito</span>
+            <span class="metodo-col__valor">{{ item.total_debito | decimalFormat }}</span>
+            <span class="metodo-col__pct">
+              {{ item.total_general > 0
+                  ? (item.total_debito / item.total_general * 100 | number:'1.0-0')
+                  : 0 }}%
+            </span>
+          </div>
+
+          <div class="metodo-col"
+            [class.metodo-col--inactivo]="item.total_credito === 0">
+            <span class="metodo-col__label">Crédito</span>
+            <span class="metodo-col__valor">{{ item.total_credito | decimalFormat }}</span>
+            <span class="metodo-col__pct">
+              {{ item.total_general > 0
+                  ? (item.total_credito / item.total_general * 100 | number:'1.0-0')
+                  : 0 }}%
+            </span>
+          </div>
+
+          <div class="metodo-col"
+            [class.metodo-col--inactivo]="item.total_transferencia === 0">
+            <span class="metodo-col__label">Transferencia</span>
+            <span class="metodo-col__valor">{{ item.total_transferencia | decimalFormat }}</span>
+            <span class="metodo-col__pct">
+              {{ item.total_general > 0
+                  ? (item.total_transferencia / item.total_general * 100 | number:'1.0-0')
+                  : 0 }}%
+            </span>
+          </div>
+
+          <div class="metodo-col"
+            *ngIf="item.total_digital > 0"
+            [class.metodo-col--inactivo]="item.total_digital === 0">
+            <span class="metodo-col__label">Digital</span>
+            <span class="metodo-col__valor">{{ item.total_digital | decimalFormat }}</span>
+            <span class="metodo-col__pct">
+              {{ item.total_general > 0
+                  ? (item.total_digital / item.total_general * 100 | number:'1.0-0')
+                  : 0 }}%
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+    </ng-container>
+
   </div>
-
-  
-
-  <!-- <p-card class="grafico-card">
-        <div class="grafico-header">
-          Distribución de Fondos
-        </div>
-        <div class="chart-wrapper">
-          <p-chart
-            type="doughnut"
-            [data]="chartData"
-            [options]="chartOptions">
-          </p-chart>
-        </div>
-      </p-card> -->
-    
-
-    <!-- <div class="grafico-container">
-      <p-card class="grafico-card">
-
-      <div class="grafico-header">
-        Distribución de Fondos
-      </div>
-
-      <div class="chart-wrapper">
-
-        <p-chart
-          type="doughnut"
-          [data]="chartData"
-          [options]="chartOptions">
-        </p-chart>
-
-      </div>
-
-    </p-card>
-    </div> -->
 
   <p-table
     class="movimientos"
@@ -293,15 +312,14 @@
 <app-addmod-movimiento-manual
     [(visible)]="mostrarMovimientoModal"
     [tipoMovimiento]="tipoMovimientoModal"
-    [fondos]="resumenFondo"
+    [fondos]="resumenFondos"
     (guardar)="insertarMovimientoManual($event)"
     (cerrar)="mostrarMovimientoModal = false">
 </app-addmod-movimiento-manual>
 
 <app-add-transferencia
-    [(visible)]="mostrarTransferenciaModal"
-    (cerrar)="mostrarTransferenciaModal = false"
-    (transferido)="transferenciaRealizada()"
-    [usuario]="sesion.usuario"
-    >
+  [(visible)]="mostrarTransferenciaModal"
+  (cerrar)="mostrarTransferenciaModal = false"
+  (transferido)="transferenciaRealizada()"
+  [usuario]="sesion.usuario">
 </app-add-transferencia>
