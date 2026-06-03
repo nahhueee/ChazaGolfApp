@@ -233,3 +233,20 @@ export const estadoVenta = {
     estado === ESTADO_VENTA.PENDIENTE,
 
 } as const;
+
+/**
+ * Tipos de método de pago (string, tal como viene del backend).
+ * Usado para detectar comportamientos especiales (ej: abrir diálogo cheque).
+ */
+export const TIPO_METODO_PAGO = {
+  CHEQUE:          'CHEQUE',
+  CREDITO:         'CREDITO',
+  DEBITO:          'DEBITO',
+  TRANSFERENCIA:   'TRANSFERENCIA',
+  EFECTIVO:        'EFECTIVO',
+  DIGITAL:         'DIGITAL',
+  CUENTA_CORRIENTE:'CUENTA_CORRIENTE',
+  SALDO_FAVOR:     'SALDO_FAVOR',
+} as const;
+
+export type TipoMetodoPago = keyof typeof TIPO_METODO_PAGO;

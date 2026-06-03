@@ -631,3 +631,9 @@ p-divider {
 ::ng-deep input[type="number"]#editable::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }
+
+.acciones-tabla {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}

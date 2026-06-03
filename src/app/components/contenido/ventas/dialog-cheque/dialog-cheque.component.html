@@ -1,0 +1,75 @@
+<p-dialog
+  [header]="modoEdicion ? 'Editar Datos del Cheque' : 'Datos del Cheque'"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [(visible)]="visible"
+  (onHide)="onCancelar()"
+>
+  <form [formGroup]="form" class="cheque-form">
+
+    <p-floatlabel variant="in">
+      <label>Número de cheque <span class="req">*</span></label>
+      <input pInputText formControlName="numero" placeholder="Ej: 00012345" />
+      @if (campoInvalido('numero')) {
+        <small class="error">Requerido.</small>
+      }
+    </p-floatlabel>
+
+    <p-floatlabel variant="in">
+      <label>Banco <span class="req">*</span></label>
+      <input pInputText formControlName="banco" placeholder="Ej: Santander" />
+      @if (campoInvalido('banco')) {
+        <small class="error">Requerido.</small>
+      }
+    </p-floatlabel>
+
+    <div class="field-row-inline">
+
+      <p-floatlabel variant="in">
+        <label>Importe <span class="req">*</span></label>
+        <input pInputText type="number" formControlName="importe" min="0.01" step="0.01" />
+        @if (campoInvalido('importe') && campo('importe').hasError('required')) {
+          <small class="error">Requerido.</small>
+        }
+        @if (campoInvalido('importe') && campo('importe').hasError('min')) {
+          <small class="error">El importe debe ser mayor a cero.</small>
+        }
+      </p-floatlabel>
+
+      <p-floatlabel variant="in">
+        <label>Fecha de cobro <span class="req">*</span></label>
+        <p-datepicker
+          formControlName="fechaCobro"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          appendTo="body"
+        />
+        @if (campoInvalido('fechaCobro')) {
+          <small class="error">Requerido.</small>
+        }
+      </p-floatlabel>
+
+    </div>
+
+    <p-divider />
+
+    <p-floatlabel variant="in">
+      <label>Librador / Titular</label>
+      <input pInputText formControlName="libradorNombre" placeholder="Nombre completo" />
+    </p-floatlabel>
+
+    <p-floatlabel variant="in">
+      <label>CUIT</label>
+      <input pInputText formControlName="libradorCuit" placeholder="11 dígitos sin guiones" />
+      @if (campoInvalido('libradorCuit')) {
+        <small class="error">CUIT/CUIL inválido (11 dígitos sin guiones).</small>
+      }
+    </p-floatlabel>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="onCancelar()" />
+    <p-button [label]="modoEdicion ? 'Guardar' : 'Confirmar'" (onClick)="onConfirmar()" />
+  </ng-template>
+</p-dialog>

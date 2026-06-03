@@ -139,13 +139,17 @@ import { TallesProducto } from "./Producto";
     id:number = 0;
     idMetodo? : number;
     metodo?: string;
+    tipo?: string;
     monto?: number;
-  
+    cheque?: any;   // datos del cheque cuando tipo === 'CHEQUE'
+
     constructor(data?: any) {
       if (data) {
         this.idMetodo = data.idMetodo;
         this.metodo = data.metodo;
-        this.monto = data
+        this.tipo = data.tipo;
+        this.monto = data.monto;
+        this.cheque = data.cheque;
       }
     }
   }

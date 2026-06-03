@@ -266,3 +266,79 @@ p-floatlabel {
     border-bottom: 0.5px solid var(--p-content-border-color);
   }
 }
+
+// ── Valores a Recepcionar ──────────────────────────────────────────
+.seccion-valores {
+  margin-top: 20px;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-card);
+
+  .valores-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+
+    h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: 1rem;
+    }
+  }
+
+  .valores-totales {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+
+  .valores-loading,
+  .valores-vacio {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1.5rem;
+    color: var(--text-color-secondary);
+    justify-content: center;
+  }
+}
+
+// ── Dialog Acreditar ───────────────────────────────────────────────
+.acreditar-info {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  padding: .25rem 0;
+
+  .acreditar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+
+    span { color: var(--text-color-secondary); font-size: .875rem; }
+  }
+
+  .fondo-select {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .4rem;
+
+    label { font-weight: 600; font-size: .875rem; }
+    p-select { width: 100%; }
+  }
+}
+
+.req { color: var(--red-500); }
+
+.acciones-tabla {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}

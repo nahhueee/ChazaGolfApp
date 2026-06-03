@@ -17,10 +17,13 @@ import { MovimientoFondo } from '../../../../models/Movimiento';
 import { AddmodMovimientoManualComponent } from '../addmod-movimiento-manual/movimiento-manual-dialog.component';
 import { Button } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Usuario } from '../../../../models/Usuario';
 import { TooltipModule } from 'primeng/tooltip';
 import { AddTransferencia } from "../add-transferencia/add-transferencia.component";
-import { Caja, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo } from '../../../../models/Fondos';
+import { Caja, DesglosePorEmpresa, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo, TotalesValores, ValorPendiente } from '../../../../models/Fondos';
+import { Dialog } from 'primeng/dialog';
 
 @Component({
   selector: 'app-main-fondos',
@@ -43,7 +46,9 @@ import { Caja, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo } fro
     AddmodMovimientoManualComponent,
     Button,
     TooltipModule,
-    AddTransferencia
+    AddTransferencia,
+    ConfirmDialogModule,
+    Dialog
 ],
   templateUrl: './main-fondos.component.html',
   styleUrls: ['./main-fondos.component.scss']
@@ -62,6 +67,7 @@ export class MainFondosComponent implements OnInit {
 
   detalleMetodos: DetalleMetodoPago[] = [];    
   detalleMetodosCargado = false;
+  desglosePorEmpresa: DesglosePorEmpresa[] = [];
 
   cajas: Caja[] = [];
   cajaSeleccionada: Caja = new Caja();
@@ -83,6 +89,15 @@ export class MainFondosComponent implements OnInit {
   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
   mostrarMovimientoModal   = false;
   mostrarTransferenciaModal = false;
+
+  // Valores a Recepcionar
+  valoresPendientes: ValorPendiente[] = [];
+  totalesValores: TotalesValores = {};
+  valoresCargado = false;
+  dialogAcreditarVisible = false;
+  valorSeleccionado: ValorPendiente | null = null;
+  fondoDestinoSeleccionado: ResumenFondo | null = null;
+  fondosDisponibles: ResumenFondo[] = [];
 
   constructor(
     private fondosService:    FondosService,
@@ -125,6 +140,7 @@ export class MainFondosComponent implements OnInit {
   cargarDatos() {
     this.obtenerResumen();
     this.obtenerResumenFondos();
+    this.cargarValoresPendientes();
   }
 
   obtenerResumen() {
@@ -139,8 +155,10 @@ export class MainFondosComponent implements OnInit {
     this.resumenFondosCargado = false;
     this.fondosService.ObtenerResumenFondosPorCaja(this.filtros)
       .subscribe(r => {
-        this.resumenFondos = r;
+        this.resumenFondos      = r;
         this.resumenFondosCargado = true;
+        // Fondos disponibles para acreditar (excluir el fondo VA)
+        this.fondosDisponibles = r.filter((f: any) => f.tipo !== 'VALOR_PENDIENTE');
 
         // si había un fondo seleccionado, actualizamos su referencia
         if (this.fondoSeleccionado) {
@@ -184,9 +202,10 @@ export class MainFondosComponent implements OnInit {
   seleccionarFondo(fondo: ResumenFondo) {
     if (this.fondoSeleccionado?.id === fondo.id) {
       // deseleccionar
-      this.fondoSeleccionado = null;
-      this.filtros.idFondo   = undefined;
-      this.detalleMetodos    = [];
+      this.fondoSeleccionado  = null;
+      this.filtros.idFondo    = undefined;
+      this.detalleMetodos     = [];
+      this.desglosePorEmpresa = [];
     } else {
       this.fondoSeleccionado = fondo;
       this.filtros.idFondo   = fondo.id;
@@ -199,8 +218,17 @@ export class MainFondosComponent implements OnInit {
             this.detalleMetodos = r;
             this.detalleMetodosCargado = true;
           });
+        // desglose por empresa para arqueo
+        this.fondosService.ObtenerDesglosePorEmpresa(this.filtros)
+          .subscribe(r => this.desglosePorEmpresa = r);
       } else {
-        this.detalleMetodos = [];
+        this.detalleMetodos     = [];
+        this.desglosePorEmpresa = [];
+      }
+
+      // Valores pendientes: recargar al seleccionar el fondo VA
+      if (fondo.tipo === 'VALOR_PENDIENTE') {
+        this.cargarValoresPendientes();
       }
     }
     this.cargarMovimientos();
@@ -287,6 +315,75 @@ export class MainFondosComponent implements OnInit {
       case 'custom': const f = this.filtrosForm.value.fechas; return { desde: f?.[0], hasta: f?.[1] };
       default:       return null;
     }
+  }
+
+  // ── Valores a Recepcionar ────────────────────────────────────────────────────
+
+  cargarValoresPendientes(): void {
+    this.valoresCargado = false;
+    this.fondosService.ObtenerValoresPendientes(1) // TODO: obtener de sesion cuando esté disponible
+      .subscribe({
+        next: (r) => {
+          this.valoresPendientes = r.pendientes;
+          this.totalesValores    = r.totales;
+          this.valoresCargado    = true;
+        },
+        error: () => this.notificaciones.Error('Error al cargar valores pendientes.')
+      });
+  }
+
+  abrirAcreditar(valor: ValorPendiente): void {
+    this.valorSeleccionado        = valor;
+    this.fondoDestinoSeleccionado = null;
+    // Para CREDITO el fondo destino ya está definido; para CHEQUE el usuario lo elige
+    if (valor.tipo === 'TARJETA_CREDITO' && valor.idFondoDestino) {
+      // Buscar el objeto ResumenFondo correspondiente
+      this.fondoDestinoSeleccionado = this.fondosDisponibles.find(f => f.id === valor.idFondoDestino) ?? null;
+    }
+    this.dialogAcreditarVisible = true;
+  }
+
+  confirmarAcreditar(): void {
+    if (!this.valorSeleccionado) return;
+    if (!this.fondoDestinoSeleccionado) {
+      this.notificaciones.Warn('Seleccioná el fondo destino.');
+      return;
+    }
+    this.fondosService.AcreditarValor({
+      idValor:         this.valorSeleccionado.id,
+      idCaja:          this.cajaSeleccionada.id,
+      usuario:         this.sesion.usuario,
+      idFondoDestino:  this.fondoDestinoSeleccionado.id,
+    }).subscribe({
+      next: () => {
+        this.notificaciones.Success('Valor acreditado correctamente.');
+        this.dialogAcreditarVisible = false;
+        this.valorSeleccionado      = null;
+        this.cargarValoresPendientes();
+        this.cargarDatos();
+      },
+      error: (e) => this.notificaciones.Error(e?.error ?? 'Error al acreditar.')
+    });
+  }
+
+  rechazarValor(valor: ValorPendiente): void {
+    this.fondosService.RechazarValor({
+      idValor:      valor.id,
+      idCaja:       this.cajaSeleccionada.id,
+      usuario:      this.sesion.usuario,
+      observaciones: 'Rechazado manualmente',
+    }).subscribe({
+      next: () => {
+        this.notificaciones.Success('Valor rechazado.');
+        this.cargarValoresPendientes();
+        this.cargarDatos();
+      },
+      error: (e) => this.notificaciones.Error(e?.error ?? 'Error al rechazar.')
+    });
+  }
+
+  get totalValoresPendientes(): number {
+    return (this.totalesValores.CHEQUE ?? 0) + (this.totalesValores.TARJETA_CREDITO ?? 0);
   }
 }
 // export class MainFondosComponent implements OnInit {
@@ -626,8 +723,4 @@ export class MainFondosComponent implements OnInit {
 //         this.cargarMovimientos();
 //         this.obtenerResumenFondos();
 //       }else{
-//         this.notificaciones.Error("Error al registrar el movimiento");
-//       }
-//     });
-//   }
-// }
+//         this.notificaciones.Error("Error al registra

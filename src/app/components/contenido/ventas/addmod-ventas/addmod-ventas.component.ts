@@ -61,8 +61,10 @@ import {
   ESTADO_FACTURA,
   ID_CONDICION_PAGO,
   MAX_TALLES,
+  TIPO_METODO_PAGO,
 } from '../models/venta.constants';   
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
+import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
 
 interface SubtotalAcumulado {
@@ -90,7 +92,8 @@ interface SubtotalAcumulado {
     TooltipModule,
     ConfirmDialogModule,
     VistaPreviaComponent,
-    CheckboxModule
+    CheckboxModule,
+    DialogChequeComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './addmod-ventas.component.html',
@@ -165,6 +168,13 @@ export class AddModVentasComponent {
   comprobantes:TipoComprobante[]=[];
   metodosPago: MetodoPago[] = [];
   metodosPagoOriginal: MetodoPago[] = [];
+
+  // Dialog cheque
+  dialogChequeVisible: boolean = false;
+  dialogChequeImporte: number = 0;
+  dialogChequeDatos: any = null;          // null = alta, objeto = edición
+  private _pagoAgregarPendiente: PagosFactura | null = null;
+  private _editarChequeIndex: number = -1;
 
   objFacturar:ObjFacturar = new ObjFacturar();
 
@@ -1393,15 +1403,55 @@ export class AddModVentasComponent {
       return;
     }
 
-    const seleccionado = this.formPagos.get('metodo')?.value;
+    const seleccionado: MetodoPago = this.formPagos.get('metodo')?.value;
 
     const nuevoPago = new PagosFactura();
     nuevoPago.idMetodo = seleccionado.id;
-    nuevoPago.metodo = seleccionado.descripcion;
-    nuevoPago.monto = montoFinal;
+    nuevoPago.metodo   = seleccionado.descripcion;
+    nuevoPago.tipo     = seleccionado.tipo;
+    nuevoPago.monto    = montoFinal;
+
+    // CHEQUE: abrir diálogo antes de confirmar el pago
+    if (seleccionado.tipo === TIPO_METODO_PAGO.CHEQUE) {
+      this._pagoAgregarPendiente = nuevoPago;
+      this.dialogChequeImporte   = montoFinal;
+      this.dialogChequeVisible   = true;
+      return; // espera confirmación del diálogo
+    }
 
     this.pagosFactura.push(nuevoPago);
     this.formPagos.reset();
+  }
+
+  onChequeConfirmado(datos: DatosCheque): void {
+    if (this._editarChequeIndex >= 0) {
+      // Modo edición: actualizar cheque existente
+      this.pagosFactura[this._editarChequeIndex].cheque = datos;
+      this._editarChequeIndex = -1;
+    } else if (this._pagoAgregarPendiente) {
+      // Modo alta: agregar nuevo pago
+      this._pagoAgregarPendiente.cheque = datos;
+      this.pagosFactura.push(this._pagoAgregarPendiente);
+      this._pagoAgregarPendiente = null;
+      this.formPagos.reset();
+    }
+    this.dialogChequeDatos = null;
+  }
+
+  onChequeCancelado(): void {
+    // El usuario canceló — no se agrega/edita el pago
+    this._pagoAgregarPendiente = null;
+    this._editarChequeIndex    = -1;
+    this.dialogChequeDatos     = null;
+  }
+
+  EditarCheque(rowIndex: number): void {
+    const pago = this.pagosFactura[rowIndex];
+    if (!pago?.cheque) return;
+    this._editarChequeIndex  = rowIndex;
+    this.dialogChequeDatos   = pago.cheque;
+    this.dialogChequeImporte = pago.monto ?? 0;
+    this.dialogChequeVisible = true;
   }
   //#endregion
 

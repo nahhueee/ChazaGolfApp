@@ -47,3 +47,34 @@ export class FiltrosFondos {
   fechaHasta?:  string | null;
   usuario?:     string | null;
 }
+
+export interface ValorPendiente {
+  id:                  number;
+  tipo:                'CHEQUE' | 'TARJETA_CREDITO';
+  monto:               number;
+  estado:              string;
+  fechaAlta:           string;
+  usuarioAlta:         string;
+  idFondoDestino:      number | null;
+  fondoDestino:        string | null;
+  idVenta:             number;
+  fechaVenta:          string;
+  cliente:             string;
+  // Solo cheque
+  chequeNumero?:       string;
+  chequeBanco?:        string;
+  chequeImporte?:      number;
+  chequeFechaCobro?:   string;
+  chequeLibradorNombre?: string;
+  chequeLibradorCuit?:   string;
+}
+
+export interface TotalesValores {
+  CHEQUE?:          number;
+  TARJETA_CREDITO?: number;
+}
+
+export interface DesglosePorEmpresa {
+  empresa: string;
+  total:   number;
+}

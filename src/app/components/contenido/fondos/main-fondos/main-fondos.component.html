@@ -255,8 +255,27 @@
       </div>
     </ng-container>
 
+    <!-- Desglose por empresa -->
+    @if (desglosePorEmpresa.length > 0) {
+      <div class="fondo-detalle__desglose">
+        <div class="desglose__header">
+          <span class="desglose__titulo">Desglose por empresa</span>
+          <span class="desglose__total">Período seleccionado</span>
+        </div>
+        <div class="desglose__metodos">
+          @for (item of desglosePorEmpresa; track item.empresa) {
+            <div class="metodo-col">
+              <span class="metodo-col__label">{{ item.empresa }}</span>
+              <span class="metodo-col__valor">{{ item.total | decimalFormat }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
   </div>
 
+  @if (fondoSeleccionado?.tipo !== 'VALOR_PENDIENTE') {
   <p-table
     class="movimientos"
     [value]="movimientos"
@@ -306,6 +325,96 @@
       </tr>
     </ng-template>
   </p-table>
+  }
+
+  @if (fondoSeleccionado?.tipo === 'VALOR_PENDIENTE') {
+<!-- ── Valores a Recepcionar ──────────────────────────────────────── -->
+<div class="seccion-valores">
+
+  <div class="valores-header">
+    <h3><i class="pi pi-clock"></i> Valores a Recepcionar</h3>
+    <div class="valores-totales">
+      @if (totalesValores.CHEQUE) {
+        <p-tag severity="warn" [value]="'Cheques: $' + (totalesValores.CHEQUE | decimalFormat)" />
+      }
+      @if (totalesValores.TARJETA_CREDITO) {
+        <p-tag severity="info" [value]="'Tarjetas: $' + (totalesValores.TARJETA_CREDITO | decimalFormat)" />
+      }
+      @if (totalValoresPendientes > 0) {
+        <p-tag severity="danger" [value]="'Total: $' + (totalValoresPendientes | decimalFormat)" />
+      }
+    </div>
+  </div>
+
+  @if (!valoresCargado) {
+    <div class="valores-loading"><i class="pi pi-spin pi-spinner"></i> Cargando...</div>
+  } @else if (valoresPendientes.length === 0) {
+    <div class="valores-vacio">
+      <i class="pi pi-check-circle text-3xl text-500"></i>
+      <span>No hay valores pendientes de acreditación.</span>
+    </div>
+  } @else {
+    <p-table [value]="valoresPendientes" [rowHover]="true">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Tipo</th>
+          <th>Venta</th>
+          <th>Cliente</th>
+          <th>Monto</th>
+          <th>Fondo destino</th>
+          <th>Detalle</th>
+          <th>Fecha alta</th>
+          <th>Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-valor>
+        <tr>
+          <td>
+            <p-tag
+              [value]="valor.tipo === 'CHEQUE' ? 'Cheque' : 'Tarjeta Crédito'"
+              [severity]="valor.tipo === 'CHEQUE' ? 'warn' : 'info'" />
+          </td>
+          <td>#{{ valor.idVenta }}</td>
+          <td>{{ valor.cliente }}</td>
+          <td class="ingreso">${{ valor.monto | decimalFormat }}</td>
+          <td>{{ valor.fondoDestino ?? '—' }}</td>
+          <td>
+            @if (valor.tipo === 'CHEQUE') {
+              <span pTooltip="Banco: {{ valor.chequeBanco }} | Nro: {{ valor.chequeNumero }} | Cobro: {{ valor.chequeFechaCobro | date:'dd/MM/yy' }}" tooltipPosition="top">
+                <i class="pi pi-info-circle" style="cursor:pointer"></i>
+                {{ valor.chequeLibradorNombre }}
+              </span>
+            } @else {
+              —
+            }
+          </td>
+          <td>{{ valor.fechaAlta | date:'dd/MM/yy HH:mm' }}</td>
+          <td class="acciones-tabla">
+            <p-button
+              severity="success"
+              [rounded]="true"
+              [outlined]="true"
+              icon="pi pi-check"
+              styleClass="p-button-sm"
+              pTooltip="Acreditar"
+              (onClick)="abrirAcreditar(valor)" />
+            <p-button
+              severity="danger"
+              [rounded]="true"
+              [outlined]="true"
+              icon="pi pi-times"
+              styleClass="p-button-sm"
+              pTooltip="Rechazar"
+              (onClick)="rechazarValor(valor)" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+
+</div>
+  }
+
 </div>
 
 
@@ -323,3 +432,50 @@
   (transferido)="transferenciaRealizada()"
   [usuario]="sesion.usuario">
 </app-add-transferencia>
+
+
+<!-- Dialog Acreditar -->
+<p-dialog
+  header="Acreditar Valor"
+  [modal]="true"
+  [style]="{ width: '420px' }"
+  [(visible)]="dialogAcreditarVisible">
+
+  @if (valorSeleccionado) {
+    <div class="acreditar-info">
+      <div class="acreditar-row">
+        <span>Tipo</span>
+        <strong>{{ valorSeleccionado.tipo === 'CHEQUE' ? 'Cheque' : 'Tarjeta Crédito' }}</strong>
+      </div>
+      <div class="acreditar-row">
+        <span>Monto</span>
+        <strong class="ingreso">${{ valorSeleccionado.monto | decimalFormat }}</strong>
+      </div>
+      @if (valorSeleccionado.tipo === 'CHEQUE') {
+        <div class="acreditar-row">
+          <span>Banco / Nro</span>
+          <strong>{{ valorSeleccionado.chequeBanco }} — {{ valorSeleccionado.chequeNumero }}</strong>
+        </div>
+        <div class="acreditar-row">
+          <span>Librador</span>
+          <strong>{{ valorSeleccionado.chequeLibradorNombre || '—' }}</strong>
+        </div>
+      }
+      <div class="acreditar-row fondo-select">
+        <label>Fondo destino <span class="req">*</span></label>
+        <p-select
+          [options]="fondosDisponibles"
+          [(ngModel)]="fondoDestinoSeleccionado"
+          optionLabel="nombre"
+          placeholder="Seleccioná el fondo"
+          [appendTo]="'body'"
+          [disabled]="valorSeleccionado.tipo === 'TARJETA_CREDITO' && !!valorSeleccionado.idFondoDestino" />
+      </div>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="dialogAcreditarVisible = false" />
+    <p-button label="Confirmar acreditación" severity="success" (onClick)="confirmarAcreditar()" />
+  </ng-template>
+</p-dialog>

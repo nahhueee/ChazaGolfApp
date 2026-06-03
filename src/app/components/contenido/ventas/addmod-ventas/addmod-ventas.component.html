@@ -555,7 +555,7 @@
                         <tr>
                             <th>Metodo</th>
                             <th>Monto</th>
-                            <th>Quitar</th>
+                            <th>Acciones</th>
                         </tr>
                     </ng-template>
                     <ng-template #body let-pago let-rowIndex="rowIndex">
@@ -563,6 +563,9 @@
                             <td>{{ pago.metodo }}</td>
                             <td>{{ pago.monto | decimalFormat}}</td>
                             <td class="acciones-tabla">
+                                @if (pago.tipo === 'CHEQUE') {
+                                    <p-button severity="info" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="EditarCheque(rowIndex)" pTooltip="Editar cheque" />
+                                }
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'pagos', rowIndex)" />
                             </td>
                         </tr>
@@ -727,3 +730,11 @@
 <!-- Modal Facturar -->
 <app-facturar-venta [objFacturar]="objFacturar" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" (cerrar)="GuardarFacturar($event)"/>
 
+<!-- Dialog Cheque -->
+<app-dialog-cheque
+  [(visible)]="dialogChequeVisible"
+  [importeDefault]="dialogChequeImporte"
+  [datosCheque]="dialogChequeDatos"
+  (confirmar)="onChequeConfirmado($event)"
+  (cancelar)="onChequeCancelado()"
+/>
