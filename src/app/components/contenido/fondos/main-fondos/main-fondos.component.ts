@@ -84,8 +84,6 @@ export class MainFondosComponent implements OnInit {
   movimientos: MovimientoFondo[] = [];
   totalRecords = 0;
   loading = false;
-  primeraCarga = true;
-
   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
   mostrarMovimientoModal   = false;
   mostrarTransferenciaModal = false;
@@ -141,6 +139,7 @@ export class MainFondosComponent implements OnInit {
     this.obtenerResumen();
     this.obtenerResumenFondos();
     this.cargarValoresPendientes();
+    this.cargarMovimientos();
   }
 
   obtenerResumen() {
@@ -237,10 +236,6 @@ export class MainFondosComponent implements OnInit {
   // ── movimientos ──────────────────────────────────────────────────────────────
 
   async cargarMovimientos(event?: TableLazyLoadEvent) {
-    if (this.primeraCarga) {
-      this.primeraCarga = false;
-      return;
-    }
     this.loading = true;
     this.filtros.pagina        = ((event?.first ?? 0) / (event?.rows ?? 10)) + 1;
     this.filtros.tamanioPagina = event?.rows ?? 10;
@@ -321,7 +316,7 @@ export class MainFondosComponent implements OnInit {
 
   cargarValoresPendientes(): void {
     this.valoresCargado = false;
-    this.fondosService.ObtenerValoresPendientes(1) // TODO: obtener de sesion cuando esté disponible
+    this.fondosService.ObtenerValoresPendientes()
       .subscribe({
         next: (r) => {
           this.valoresPendientes = r.pendientes;
@@ -418,9 +413,7 @@ export class MainFondosComponent implements OnInit {
 //   movimientos:MovimientoFondo[] = [];
 //   totalRecords: number = 0;
 //   loading: boolean = false;
-//   primeraCarga = true;
-
-//   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
+// //   tipoMovimientoModal: 'INGRESO' | 'EGRESO' | 'AJUSTE' = 'INGRESO';
 //   mostrarMovimientoModal = false;
 //   mostrarTransferenciaModal = false;
 

@@ -23,6 +23,7 @@ import { FiltroVentasCliente } from '../../../../models/filtros/FiltroClientes';
 import { TagModule } from 'primeng/tag';
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { CuentaCorrienteReporteService } from '../../../../services/cuenta-corriente.reporte.service';
+import { METODO_PAGO } from '../../ventas/models/venta.constants';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { ComprobanteService } from '../../../../services/comprobante.service';
 import { FacturaService } from '../../../../services/factura.service';
@@ -232,7 +233,8 @@ export class VentasClienteComponent {
         this.ventaSeleccionada = response;
         this.desdeVenta = true;
         this.entregaVisible = true;
-        this.pagosRealizados = this.ventaSeleccionada.pagos.filter(x => x.idMetodo != 9); //Excluimos el pago CUENTA CORRIENTE
+        // Ocultamos el pago de CUENTA CORRIENTE en $0: es la asignación interna al cargar una venta fiada y no aporta info al usuario
+        this.pagosRealizados = this.ventaSeleccionada.pagos.filter(x => !(x.idMetodo == METODO_PAGO.CUENTA_CORRIENTE && x.monto == 0));
     });
   }
   Entrega(){

@@ -247,6 +247,7 @@ export class AddmodProductosComponent {
     this.productosService.ObtenerProducto(idProducto)
     .subscribe(response => {
       this.producto = new Producto(response);
+      console.log(this.producto);
 
       this.formulario.get('empresa')?.setValue(this.producto.empresa);
       this.formulario.get('temporada')?.setValue(this.temporadas.find(t=> t.id == this.producto.temporada?.id) ?? new Temporada());
@@ -546,7 +547,7 @@ export class AddmodProductosComponent {
         const productoAInsertar = { ...this.producto };
 
         this.producto.talles!.forEach(elemento => {
-          const idTalle = this.talles.find(x => x.descripcion === elemento.talle)?.id;
+          const idTalle = this.talles.find(x => x.descripcion === elemento.talle && x.idLineaTalle === elemento.idLineaTalle)?.id;
           elemento.codigoBarra = this.GenerarCodigo(this.producto.empresa!, this.producto.codigo!, idTalle!, color.id);
         });
         productoAInsertar.color = color;

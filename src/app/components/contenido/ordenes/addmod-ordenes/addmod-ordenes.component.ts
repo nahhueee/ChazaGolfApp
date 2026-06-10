@@ -539,14 +539,10 @@ export class AddmodOrdenesComponent implements OnInit {
     }
 
     const resultado: ProductoImprimir[] = [];
+
     this.productosOrden.forEach((prod) => {
-      const cantidadesValidas = Array.from({ length: 10 }, (_, i) =>
-        prod[`t${i + 1}` as keyof ProductoOrden] as number | null
-      ).filter(v => v != null);
-
-      prod.codigosBarra.forEach((item: any, index: number) => {
-        const cantidad = cantidadesValidas[index];
-
+      prod.codigosBarra.forEach((item: any) => {
+        const cantidad = prod[`t${item.posicion}` as keyof ProductoOrden] as number;
         if (!cantidad || cantidad <= 0) return;
 
         resultado.push(

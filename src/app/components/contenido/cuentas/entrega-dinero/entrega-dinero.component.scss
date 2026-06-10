@@ -10,6 +10,22 @@
   gap: 10px;
 }
 
+// Evita que una razón social larga estire el selector y achique el resto de los campos
+.campo-empresa{
+  flex: 0 0 180px;
+  min-width: 0;
+
+  ::ng-deep .p-select{
+    width: 100%;
+  }
+
+  ::ng-deep .p-select-label{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 .botones{
     display: flex;
     justify-content: center;

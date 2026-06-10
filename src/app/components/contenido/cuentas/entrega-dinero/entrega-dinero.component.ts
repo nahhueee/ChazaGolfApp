@@ -3,6 +3,8 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { PagosFactura, Venta } from '../../../../models/Factura';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MetodoPago } from '../../../../models/MetodoPago';
+import { Empresa } from '../../../../models/Empresa';
+import { METODO_PAGO } from '../../ventas/models/venta.constants';
 import { MiscService } from '../../../../services/misc.service';
 import { TableModule } from 'primeng/table';
 import { GlobalesService } from '../../../../services/globales.service';
@@ -34,7 +36,17 @@ interface pagoDTO {
 export class EntregaDineroComponent {
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() recargar = new EventEmitter<boolean>();
-  @Input() visible = false; 
+
+  private _visible = false;
+  @Input()
+  set visible(value: boolean) {
+    this._visible = value;
+    if (value) this.CargarDatosEntrega();
+  }
+  get visible(): boolean {
+    return this._visible;
+  }
+
   @Input() venta: Venta = new Venta();
   @Input() deudaTotal: number = 0;
   @Input() desdeVenta: boolean = false;
@@ -45,6 +57,8 @@ export class EntregaDineroComponent {
   decimal_mask:any;
   formPagos:FormGroup;
   metodosPago:MetodoPago[]=[];
+  empresas:Empresa[]=[];
+  saldoAFavor:number = 0;
   pagosNuevos: pagoDTO[]=[];
 
   //Para entrega general
@@ -60,14 +74,31 @@ export class EntregaDineroComponent {
     private confirmationService: ConfirmationService,
   ){
     this.formPagos = new FormGroup({
+      empresa: new FormControl('', []),
       metodo: new FormControl('', [Validators.required]),
       monto: new FormControl('', [Validators.min(0)]),
       observaciones: new FormControl('', [Validators.maxLength(250)]),
     });
   }
 
-  ngOnInit(){
-    this.ObtenerMetodosPago();
+  CargarDatosEntrega(){
+    // Necesitamos saber si el cliente tiene saldo a favor antes de armar el listado de métodos
+    this.cuentasService.ObtenerSaldoTotalCliente(this.idCliente).subscribe(response => {
+      this.saldoAFavor = response * -1;
+
+      if (this.desdeVenta) {
+        // Pago de venta: empresa fija desde la venta, sin selector
+        this.ObtenerMetodosPago(this.venta.idEmpresa!);
+      } else {
+        // Entrega general: cargar empresas y métodos de la empresa por defecto
+        this.miscService.ObtenerEmpresas().subscribe(empresas => {
+          this.empresas = empresas;
+          const idEmpresaDefault = this.empresas[0]?.id;
+          this.formPagos.get('empresa')?.setValue(idEmpresaDefault);
+          if (idEmpresaDefault) this.ObtenerMetodosPago(idEmpresaDefault);
+        });
+      }
+    });
   }
 
   ngAfterViewInit(){
@@ -85,13 +116,22 @@ export class EntregaDineroComponent {
 
   get montoControl() {return this.formPagos.get('monto')?.value;}
 
-  ObtenerMetodosPago(){
-    this.miscService.ObtenerMetodosPago(this.venta.idEmpresa!)
+  ObtenerMetodosPago(idEmpresa: number){
+    this.miscService.ObtenerMetodosPago(idEmpresa)
       .subscribe(response => {
-        this.metodosPago = response;
-        this.metodosPago = this.metodosPago.filter(m => m.id != 9);
+        this.metodosPago = response.filter((m: MetodoPago) =>
+          m.id != METODO_PAGO.CUENTA_CORRIENTE &&
+          (m.id != METODO_PAGO.SALDO_A_FAVOR || this.saldoAFavor > 0)
+        );
         this.formPagos.get('metodo')?.setValue(this.metodosPago[0]);
       });
+  }
+
+  CambioEmpresa(){
+    const idEmpresa = this.formPagos.get('empresa')?.value;
+    if (!idEmpresa) return;
+    this.formPagos.get('metodo')?.reset();
+    this.ObtenerMetodosPago(idEmpresa);
   }
 
   AgregarPagoContado(){

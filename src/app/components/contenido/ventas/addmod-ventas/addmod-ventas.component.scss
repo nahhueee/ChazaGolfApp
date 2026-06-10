@@ -637,3 +637,19 @@ p-divider {
   gap: 5px;
   align-items: center;
 }
+
+.noSeleccionado--error {
+  border-color: var(--red-400) !important;
+  background-color: color-mix(in srgb, var(--red-400) 8%, transparent);
+
+  .icon {
+    border-color: var(--red-400) !important;
+    color: var(--red-400);
+  }
+}
+
+.error-cliente {
+  color: var(--red-400);
+  font-weight: 600;
+  font-size: 0.9rem !important;
+}

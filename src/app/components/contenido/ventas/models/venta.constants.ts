@@ -11,8 +11,8 @@ type ValueOf<T> = T[keyof T];
  * IDs de métodos de pago.
  */
 export const METODO_PAGO = {
-  SALDO_A_FAVOR: 8,
-  CUENTA_CORRIENTE: 9,
+  SALDO_A_FAVOR: 13,
+  CUENTA_CORRIENTE: 12,
 } as const;                             
 
 export type MetodoPagoId = ValueOf<typeof METODO_PAGO>;

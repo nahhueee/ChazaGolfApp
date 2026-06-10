@@ -77,11 +77,10 @@ export class EtiquetasService {
     private GenerarCuadrito(producto: ProductoImprimir, codigoBarra: string) {
       return {
         stack: [
-          // 🏷️ Nombre (protagonista)
           {
             text: producto.nombre!.toUpperCase(),
             bold: true,
-            fontSize: 8,
+            fontSize: 7,
             alignment: 'center',
             lineHeight: 0.85,
             margin: [2, 2, 2, 0]
@@ -89,9 +88,9 @@ export class EtiquetasService {
           {
             text: producto.color!.toUpperCase() + " | " + producto.talle!.toUpperCase(),
             bold: true,
-            fontSize: 8,
+            fontSize: 7,
             alignment: 'center',
-            lineHeight: 0.9,
+            lineHeight: 0.85,
             margin: [2, 0, 2, 0]
           },
 
@@ -100,18 +99,18 @@ export class EtiquetasService {
           ? {
               image: codigoBarra,
               width: 95,
-              height: 28,        // altura fija, evita que pdfMake recalcule proporción
+              height: 26,
               alignment: 'center',
               margin: [0, 1, 0, 0]
             }
           : {},
           {
             text: producto.codigo!.toUpperCase(),
-            bold: false,
-            fontSize: 6,
+            bold: true,
+            fontSize: 8,
+            characterSpacing: 1.5,
             alignment: 'center',
-            lineHeight: 0.9,
-            margin: [1, 0, 2, 0]
+            margin: [1, 1, 1, 0]
           },
         ]
       };
@@ -120,15 +119,13 @@ export class EtiquetasService {
     private GenerarCodigoBarras(texto: string): string {
       const canvas = document.createElement('canvas');
 
-      // Ancho del código en pdfMake = 95pt
-      // Escala 4x sobre el ancho real para mantener nitidez sin oversizing
-      // 95pt @ 96dpi = ~127px → × 4 = 508px
-      const SCALE = 4;
+      // SCALE 2x: canvas cercano al render → downsampling mínimo → barras nítidas
+      const SCALE = 2;
       const TARGET_WIDTH_PT = 95;
       const PX_PER_PT = 96 / 72; // ~1.333
-      
-      const canvasWidth = Math.round(TARGET_WIDTH_PT * PX_PER_PT * SCALE); // ~508px
-      const canvasHeight = Math.round(canvasWidth * 0.3); // proporción barcode estándar
+
+      const canvasWidth = Math.round(TARGET_WIDTH_PT * PX_PER_PT * SCALE); // ~254px
+      const canvasHeight = Math.round(canvasWidth * 0.38);                  // ~96px
 
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
@@ -136,14 +133,13 @@ export class EtiquetasService {
       JsBarcode(canvas, texto, {
         format: 'CODE128',
         displayValue: false,
-        width: 2,           // barras más gruesas → más tolerancia al escalar
-        height: Math.round(canvasHeight * 0.75), // deja quiet zone vertical
-        margin: Math.round(canvasWidth * 0.04),  // quiet zone proporcional (~4%)
+        width: 3,                                        // barras más gruesas
+        height: Math.round(canvasHeight * 0.85),         // usa casi todo el alto del canvas
+        margin: Math.round(canvasWidth * 0.025),         // quiet zone mínimo pero válido
         background: '#FFFFFF',
         lineColor: '#000000',
       });
 
-      // PNG con máxima calidad
       return canvas.toDataURL('image/png', 1.0);
     }
 

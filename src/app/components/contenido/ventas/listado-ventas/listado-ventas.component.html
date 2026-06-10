@@ -70,7 +70,7 @@
                     <th>Fecha</th>
                     <th>Cliente</th>
                     <th>Total</th>
-                    <th>Factura</th>
+                    @if(tipo == "factura"){<th>Factura</th>}
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -86,16 +86,17 @@
                     <td>{{ venta.cliente.nombre }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
                     
-                    @if(venta.factura){
-                        <td>
-                        {{ venta.factura.desComprobante }} |
-                        {{ venta.factura.ptoVenta.toString().padStart(4, '0') }}-
-                        {{ venta.factura.ticket.toString().padStart(8, '0') }}
-                        </td>                    
-                    }@else {
-                        <td>--</td>
+                    @if(tipo == "factura"){
+                        @if(venta.factura){
+                            <td>
+                            {{ venta.factura.desComprobante }} |
+                            {{ venta.factura.ptoVenta.toString().padStart(4, '0') }}-
+                            {{ venta.factura.ticket.toString().padStart(8, '0') }}
+                            </td>                    
+                        }@else {
+                            <td>--</td>
+                        }
                     }
-
                     <td>
                         <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
                     </td>

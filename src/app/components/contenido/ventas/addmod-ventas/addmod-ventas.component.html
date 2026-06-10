@@ -122,11 +122,15 @@
                         </div>
                     }
                 }@else {
-                    <div class="noSeleccionado">
+                    <div class="noSeleccionado" [class.noSeleccionado--error]="formGenerales.get('cliente')?.dirty && formGenerales.get('cliente')?.touched">
                         <div class="icon">
                             <i class="pi pi-user"></i>
                         </div>
-                        <p>Selecciona un cliente para ver sus datos</p>
+                        @if (formGenerales.get('cliente')?.dirty && formGenerales.get('cliente')?.touched) {
+                            <p class="error-cliente">Seleccioná un cliente para continuar.</p>
+                        } @else {
+                            <p>Selecciona un cliente para ver sus datos</p>
+                        }
                     </div>
                 }
             </div>
@@ -141,10 +145,14 @@
             <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
                 <div class="izq">
                     <div class="campos">
-                        <p-floatlabel variant="in">
-                            <input #inputCodigo pInputText formControlName="codigoBarras"/>
-                            <label>Codigo de Barras</label>
-                        </p-floatlabel>
+
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <p-floatlabel variant="in">
+                                <input #inputCodigo pInputText formControlName="codigoBarras"/>
+                                <label>Codigo de Barras</label>
+                            </p-floatlabel>
+                        }
+                        
 
                         <!-- Codigo - Nombre -->
                         <p-floatlabel variant="in">
@@ -278,16 +286,17 @@
                         <th rowspan="5">Quitar</th>
                         </tr>
 
-                        <!-- 4 filas visuales -->
-                        <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
+                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                            <!-- 4 filas visuales -->
+                            <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
 
-                        <th *ngFor="let col of columnasFijas; let i = index">
-                            {{ linea.talles![i] || '' }}
-                        </th>
+                            <th *ngFor="let col of columnasFijas; let i = index">
+                                {{ linea.talles![i] || '' }}
+                            </th>
 
-                    </tr>
-                    
-
+                            </tr>
+                        }
+                        
                 </ng-template>
                 <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
                     <tr>

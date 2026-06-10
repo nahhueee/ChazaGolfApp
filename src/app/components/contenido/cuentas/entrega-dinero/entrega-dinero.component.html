@@ -73,6 +73,14 @@
         }@else{
 
             <div class="horizontal">
+                <!-- Empresa (solo entrega general) -->
+                <p-floatlabel variant="in" class="campo-empresa">
+                    <p-select [options]="empresas" formControlName="empresa"
+                              optionValue="id" optionLabel="razonSocial"
+                              (onChange)="CambioEmpresa()" [appendTo]="'body'" />
+                    <label>Empresa</label>
+                </p-floatlabel>
+
                 <!-- Metodo pago -->
                 <p-floatlabel variant="in">
                     <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" [appendTo]="'body'" />

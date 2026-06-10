@@ -38,8 +38,8 @@ export class FondosService {
   ObtenerDesglosePorEmpresa(filtro: FiltrosFondos): Observable<DesglosePorEmpresa[] | any> {
     return this.apiService.post('fondos/desglose-por-empresa', filtro);
   }
-  ObtenerValoresPendientes(idEmpresa: number): Observable<any> {
-    return this.apiService.post('valores/pendientes', { idEmpresa });
+  ObtenerValoresPendientes(): Observable<any> {
+    return this.apiService.post('valores/pendientes', {});
   }
   AcreditarValor(params: { idValor: number; idCaja: number; usuario: string; idFondoDestino?: number; observaciones?: string }): Observable<any> {
     return this.apiService.post('valores/acreditar', params);

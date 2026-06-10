@@ -39,7 +39,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ProductoPresupuesto } from '../../../../models/ProductoPresupuesto';
 import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
 import { Empresa } from '../../../../models/Empresa';
-import { firstValueFrom, forkJoin, of, Subject, switchMap, take, takeUntil } from 'rxjs';
+import { combineLatest, firstValueFrom, forkJoin, of, Subject, switchMap, take, takeUntil } from 'rxjs';
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -172,9 +172,10 @@ export class AddModVentasComponent {
   // Dialog cheque
   dialogChequeVisible: boolean = false;
   dialogChequeImporte: number = 0;
-  dialogChequeDatos: any = null;          // null = alta, objeto = edición
+  dialogChequeDatos: any = null;
   private _pagoAgregarPendiente: PagosFactura | null = null;
   private _editarChequeIndex: number = -1;
+  private _pendingIdProceso: number | null = null;
 
   objFacturar:ObjFacturar = new ObjFacturar();
 
@@ -200,51 +201,120 @@ export class AddModVentasComponent {
   }
 
   //#region CICLO DE VIDA
+  // ngOnInit(): void {
+  //   this.sesion = this.usuariosService.GetSesion().data;
+
+  //   this.rutaActiva.queryParams
+  //   .pipe(takeUntil(this.destroy$)) 
+  //   .subscribe(params => {
+  //     this.tipo = params['tipo'] ?? 'factura';
+
+  //     this.ReiniciarTodo();
+  //     setTimeout(() => {
+  //       this.ObtenerProcesosVenta();
+  //     },10);
+  //   });
+  
+  // }
+
+  // ngAfterViewInit(): void {
+  //   // Configurar redondeo 
+  //   this.redondeo.valueChanges
+  //     .pipe(takeUntil(this.destroy$))
+  //     .subscribe(() => this.CalcularTotalGeneral());
+
+  //   // Cargar todos los datos maestros en paralelo,
+  //   // luego resolver si es edición o creación nueva
+  //   this.cargarDatosMaestros()
+  //   .pipe(
+  //     take(1),
+  //     takeUntil(this.destroy$)
+  //   )
+  //   .subscribe(datos => {
+  //     this.poblarDatosMaestros(datos);
+  //   });
+
+  //   // Reacción a cambios de ruta — continua durante toda la vida del componente
+  // this.rutaActiva.paramMap
+  //   .pipe(takeUntil(this.destroy$))
+  //   .subscribe(params => {
+  //     const id = Number(params.get('id'));
+
+  //     if (id && id !== 0) {
+  //       this.modificando = true;
+  //       this.ObtenerVenta(id);
+  //     } else {
+  //       this.ReiniciarTodo();
+  //       this.ObtenerProcesosVenta();
+  //     }
+  //   });
+  // }
+
+
   ngOnInit(): void {
     this.sesion = this.usuariosService.GetSesion().data;
-
-    this.rutaActiva.queryParams
-    .pipe(takeUntil(this.destroy$)) 
-    .subscribe(params => {
-      this.tipo = params['tipo'] ?? 'factura';
-
-      this.ReiniciarTodo();
-      setTimeout(() => {
-        this.ObtenerProcesosVenta();
-      },10);
-    });
-  
   }
 
   ngAfterViewInit(): void {
-    // Configurar redondeo 
+    // Configurar redondeo
     this.redondeo.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.CalcularTotalGeneral());
 
-    // Cargar todos los datos maestros en paralelo,
-    // luego resolver si es edición o creación nueva
-    this.cargarDatosMaestros()
+    combineLatest([
+      this.rutaActiva.paramMap,
+      this.rutaActiva.queryParams
+    ])
     .pipe(
-      take(1),
-      takeUntil(this.destroy$)
-    )
-    .subscribe(datos => {
-      this.poblarDatosMaestros(datos);
-    });
+      takeUntil(this.destroy$),
 
-    // Reacción a cambios de ruta — continua durante toda la vida del componente
-  this.rutaActiva.paramMap
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(params => {
-      const id = Number(params.get('id'));
+      switchMap(([params, query]) => {
 
-      if (id && id !== 0) {
-        this.modificando = true;
-        this.ObtenerVenta(id);
-      } else {
+        const id = Number(params.get('id'));
+        const tipo = query['tipo'] ?? 'factura';
+
+        this.tipo = tipo;
+
         this.ReiniciarTodo();
-        this.ObtenerProcesosVenta();
+
+        return forkJoin({
+          maestros: this.cargarDatosMaestros(),
+          procesos: this.miscService.ObtenerProcesosVenta(tipo),
+          venta: id > 0
+            ? this.ventasService.ObtenerVenta(id)
+            : of(null)
+        });
+      })
+    )
+    .subscribe({
+      next: ({ maestros, procesos, venta }) => {
+
+        // Datos maestros
+        this.poblarDatosMaestros(maestros);
+
+        // Procesos
+        this.procesos = procesos;
+
+        if (venta) {
+
+          this.modificando = true;
+          this.venta = venta;
+
+          this.CompletarCampos();
+
+        } else {
+
+          this.modificando = false;
+
+          if (this.procesos.length > 1) {
+            this.formGenerales
+              .get('proceso')
+              ?.setValue(this.procesos[1]);
+          }
+        }
+      },
+      error: err => {
+        console.error(err);
       }
     });
   }
@@ -402,6 +472,7 @@ export class AddModVentasComponent {
     }
 
     this.modificando = false;
+    this._pendingIdProceso = null;
     this.venta = new Venta();
     this.venta.id = 0;
 
@@ -495,6 +566,7 @@ export class AddModVentasComponent {
       .subscribe(response => {
         this.procesos = response;
         this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
+        console.log(this.procesos);
       });
   }
   ObtenerClientes(): void {
@@ -633,10 +705,12 @@ export class AddModVentasComponent {
       this.clienteSeleccionado?.idCondicionIva == CONDICION_IVA.RESPONSABLE_INSCRIPTO &&
       this.productosFactura.length > 0
     ) {
-      this.productosFactura.forEach(element => {
-        element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
-        element.total = element.unitario! * element.cantidad!;
-      });
+      if (!this.esPresupuesto) {
+        this.productosFactura.forEach(element => {
+          element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
+          element.total = element.unitario! * element.cantidad!;
+        });
+      }
     }
 
     if(this.TipoComprobanteControl == TIPO_COMPROBANTE.SIN_COMPROBANTE){
@@ -692,7 +766,7 @@ export class AddModVentasComponent {
           });
           
           if(!this.modificando){
-            if(this.productosFactura.length > 0){
+            if(this.productosFactura.length > 0 && !this.esPresupuesto){
               this.productosFactura.forEach(element => {
                 element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
                 element.total = element.unitario! * element.cantidad!;
@@ -727,7 +801,7 @@ export class AddModVentasComponent {
 
         this.formFacturacion.get('tComprobante')?.setValue(comprobanteFinal);
 
-        if (!this.modificando && this.productosFactura.length > 0) {
+        if (!this.modificando && this.productosFactura.length > 0 && !this.esPresupuesto) {
           this.productosFactura.forEach(element => {
             element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado!.idListaPrecio!);
             element.total    = element.unitario! * element.cantidad!;
@@ -766,6 +840,7 @@ export class AddModVentasComponent {
 
   CompletarCampos(){
     this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
+    console.log(this.venta.idProceso)
     this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
     this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
     this.formFacturacion.get('empresa')?.setValue(this.venta.idEmpresa);
@@ -1072,10 +1147,10 @@ export class AddModVentasComponent {
   async AgregarProducto() {
     if (this.tablaProductos) this.tablaProductos.editingCell = null;
 
-    if(this.ProcesoControl.id === ID_PROCESO.COTIZACION){
+    if(this.ProcesoControl.id === ID_PROCESO.PRESUPUESTO){
       if (!this.productoSeleccionado) return;
-      if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
-        this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
+      if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta)) {
+        this.Notificaciones.Warn("No puedes editar un presupuesto en estado asociado.");
         return;
       }
 
@@ -1470,6 +1545,13 @@ export class AddModVentasComponent {
 
     this.markFormTouched(this.formGenerales);
     this.markFormTouched(this.formFacturacion);
+
+    if (!this.clienteSeleccionado) {
+      this.Notificaciones.Warn("Seleccioná un cliente antes de guardar.");
+      this.formGenerales.get('cliente')?.markAsTouched();
+      this.formGenerales.get('cliente')?.markAsDirty();
+      return;
+    }
 
     if(this.formGenerales.invalid || this.formFacturacion.invalid){
       this.Notificaciones.Warn("Falta completar datos obligatorios.")
