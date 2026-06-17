@@ -276,10 +276,25 @@ export class MainFondosComponent implements OnInit {
         this.obtenerResumen();
         this.obtenerResumenFondos();
         this.cargarMovimientos();
+        this.recargarDetalleFondoSeleccionado();
       } else {
         this.notificaciones.Error('Error al registrar el movimiento');
       }
     });
+  }
+
+  recargarDetalleFondoSeleccionado(): void {
+    const fondo = this.fondoSeleccionado;
+    if (!fondo || (fondo.tipo !== 'BANCARIO' && fondo.tipo !== 'DIGITAL')) return;
+
+    this.detalleMetodosCargado = false;
+    this.fondosService.ObtenerDetalleMetodosPago(this.filtros)
+      .subscribe(r => {
+        this.detalleMetodos = r;
+        this.detalleMetodosCargado = true;
+      });
+    this.fondosService.ObtenerDesglosePorEmpresa(this.filtros)
+      .subscribe(r => this.desglosePorEmpresa = r ?? []);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 <div class="contenido">
     <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
         <div class="izq">
-            <!-- Nombre -->
+            <!-- Razon Social -->
             <p-floatlabel variant="on">
-                <input pInputText formControlName="nombre"  type="text"/>
-                <label>Nombre</label>
+                <input pInputText formControlName="razonSocial"  type="text"/>
+                <label>Razón Social</label>
             </p-floatlabel>
 
             <!-- Condicion -->
@@ -24,10 +24,10 @@
             <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
         </div>
     </form>
-        
+
     <div class="tabla">
-        <p-table 
-        [value]="clientes"
+        <p-table
+        [value]="proveedores"
         [lazy]="true"
         [paginator]="true"
         [rows]="10"
@@ -36,12 +36,12 @@
         [loading]="loading"
         [rowsPerPageOptions]="[10,20,50]"
         [tableStyle]="{ 'min-width': '60rem' }">
-        
+
             <ng-template #header>
                 <tr>
                     <th>Editar</th>
                     <th>Código</th>
-                    <th>Nombre</th>
+                    <th>Razón Social</th>
                     <th>Email</th>
                     <th>Telefono</th>
                     <th>Celular</th>
@@ -49,23 +49,18 @@
                     <th>Documento</th>
                 </tr>
             </ng-template>
-            <ng-template #body let-cliente>
+            <ng-template #body let-proveedor>
                 <tr>
                     <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(cliente.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(proveedor.id)" pTooltip="Editar" tooltipPosition="bottom"/>
                     </td>
-                    <td>{{ cliente.id }}</td>
-                    <td>{{ cliente.nombre }}</td>
-                    <td>{{ cliente.email }}</td>
-                    <td>{{ cliente.telefono }}</td>
-                    <td>{{ cliente.celular }}</td>
-                    <td>{{ cliente.condicionIva }}</td>
-                    <td>{{ cliente.documento }}</td>
-                    <!-- <td>
-                        <div class="acciones">
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cliente.id, cliente.nombre)" pTooltip="Estadisticas" tooltipPosition="bottom"/>
-                        </div>
-                    </td> -->
+                    <td>{{ proveedor.id }}</td>
+                    <td>{{ proveedor.razonSocial }}</td>
+                    <td>{{ proveedor.email }}</td>
+                    <td>{{ proveedor.telefono }}</td>
+                    <td>{{ proveedor.celular }}</td>
+                    <td>{{ proveedor.condicionIva }}</td>
+                    <td>{{ proveedor.documento }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -76,11 +71,11 @@
 <p-dialog [modal]="true" [(visible)]="mostrarmodalAddMod" [style]="{ width: '90vw' }">
    <ng-template #header>
         <div class="modal-header">
-            <i class="pi pi-user"></i>
+            <i class="pi pi-truck"></i>
             <span>
-                {{ clienteSeleccionado ? 'Editar Cliente' : 'Agregar Cliente' }}
+                {{ proveedorSeleccionado ? 'Editar Proveedor' : 'Agregar Proveedor' }}
             </span>
         </div>
     </ng-template>
-    <app-addmod-clientes [clienteEditar]="clienteSeleccionado" (cerrar)="Actualizar($event)"/>
+    <app-addmod-proveedores [proveedorEditar]="proveedorSeleccionado" (cerrar)="Actualizar($event)"/>
 </p-dialog>

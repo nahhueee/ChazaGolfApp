@@ -35,6 +35,9 @@ export class FondosService {
   RegistrarTransferencia(transferencia: any): Observable<any> {
     return this.apiService.post('fondos/registrar-transferencia', transferencia);
   }
+  ObtenerEmpresasPorFondo(idFondo: number): Observable<{ id: number; nombre: string }[] | null> {
+    return this.apiService.get(`fondos/empresas/${idFondo}`);
+  }
   ObtenerDesglosePorEmpresa(filtro: FiltrosFondos): Observable<DesglosePorEmpresa[] | any> {
     return this.apiService.post('fondos/desglose-por-empresa', filtro);
   }

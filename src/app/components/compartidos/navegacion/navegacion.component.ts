@@ -28,6 +28,7 @@ export class NavegacionComponent {
   itemsPreFacturacion: MenuItem[] | undefined;
   itemsProducto: MenuItem[] | undefined;
   itemsCliente: MenuItem[] | undefined;
+  itemsProveedor: MenuItem[] | undefined;
   itemsOrdenes: MenuItem[] | undefined;
   esDark: boolean = false;
   activo: string = 'inicio';
@@ -82,6 +83,11 @@ export class NavegacionComponent {
         { label: 'Listado', icon: 'pi pi-list', routerLink: '/clientes' }
     ];
 
+    this.itemsProveedor = [
+        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/proveedores/add' },
+        { label: 'Listado', icon: 'pi pi-list', routerLink: '/proveedores' }
+    ];
+
      this.itemsOrdenes = [
         { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ordenes-ingreso/adm', 0] },
         { label: 'Listado', icon: 'pi pi-list', routerLink: '/ordenes-ingreso' }
@@ -101,6 +107,8 @@ export class NavegacionComponent {
       this.activo = 'productos';
     } else if (url.startsWith('/clientes')) {
       this.activo = 'clientes';
+    } else if (url.startsWith('/proveedores')) {
+      this.activo = 'proveedores';
     } else if (url.startsWith('/cuentas')) {
       this.activo = 'cuentas';
     } else if (url.startsWith('/ordenes-ingreso')) {

@@ -41,6 +41,29 @@
           </p-floatlabel>
         </div>
 
+        @if (mostrarEmpresa) {
+          <div class="campo campo-full">
+            @if (sinEmpresasDisponibles) {
+              <small class="error">Este fondo no tiene empresas asociadas. Verificá los métodos de pago.</small>
+            } @else {
+              <p-floatlabel variant="in">
+                <p-select
+                  formControlName="empresa"
+                  [options]="empresas"
+                  optionLabel="nombre"
+                  [appendTo]="'body'"
+                  [disabled]="formularioBloqueado"
+                  [invalid]="campoInvalido('empresa')">
+                </p-select>
+                <label>Empresa</label>
+                @if (campoInvalido('empresa')) {
+                  <small class="error">{{ mensajeError('empresa') }}</small>
+                }
+              </p-floatlabel>
+            }
+          </div>
+        }
+
         <div class="campo">
           <p-floatlabel variant="in">
             <p-inputnumber

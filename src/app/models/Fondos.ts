@@ -36,6 +36,7 @@ export interface DetalleMetodoPago {
   total_digital:       number;
   total_efectivo:      number;
   total_general:       number;
+  total_manual:        number;
 }
 
 export class FiltrosFondos {

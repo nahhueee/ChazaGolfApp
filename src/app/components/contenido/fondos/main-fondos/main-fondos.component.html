@@ -199,7 +199,7 @@
         <div class="desglose__header">
           <span class="desglose__titulo">Desglose por método</span>
           <span class="desglose__total">
-            Total ventas: {{ item.total_general | decimalFormat }}
+            Ventas: {{ item.total_general | decimalFormat }}
           </span>
         </div>
 
@@ -248,6 +248,16 @@
                   ? (item.total_digital / item.total_general * 100 | number:'1.0-0')
                   : 0 }}%
             </span>
+          </div>
+
+          <div class="metodo-col"
+            *ngIf="item.total_manual !== 0"
+            [class.metodo-col--inactivo]="false">
+            <span class="metodo-col__label">Ajustes manuales</span>
+            <span class="metodo-col__valor" [class.metodo-col__valor--negativo]="item.total_manual < 0">
+              {{ item.total_manual | decimalFormat }}
+            </span>
+            <span class="metodo-col__pct">–</span>
           </div>
 
         </div>

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -16,11 +17,18 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { MovimientoFondo } from '../../../../models/Movimiento';
+import { FondosService } from '../../../../services/fondos.service';
 
 export type TipoMovimientoManual = 'INGRESO' | 'EGRESO' | 'AJUSTE';
 export type TipoMovimientoPayload = 'INGRESO' | 'EGRESO';
 
 export interface Fondo {
+  id: number;
+  nombre: string;
+  tipo: string;
+}
+
+export interface Empresa {
   id: number;
   nombre: string;
 }
@@ -33,11 +41,14 @@ interface OpcionTipoAjuste {
 type MovimientoManualForm = {
   tipoAjuste: FormControl<TipoMovimientoPayload>;
   fondo: FormControl<Fondo | null>;
+  empresa: FormControl<Empresa | null>;
   monto: FormControl<number | null>;
   descripcion: FormControl<string>;
   observaciones: FormControl<string>;
   usuario: FormControl<string>;
 };
+
+const FONDOS_CON_EMPRESA: string[] = ['BANCARIO', 'DIGITAL'];
 
 @Component({
   selector: 'app-addmod-movimiento-manual',
@@ -57,7 +68,7 @@ type MovimientoManualForm = {
   templateUrl: './movimiento-manual-dialog.component.html',
   styleUrl: './movimiento-manual-dialog.component.scss'
 })
-export class AddmodMovimientoManualComponent implements OnChanges {
+export class AddmodMovimientoManualComponent implements OnChanges, OnInit {
   @Input() tipoMovimiento: TipoMovimientoManual = 'INGRESO';
   @Input() fondos: Fondo[] = [];
 
@@ -66,6 +77,11 @@ export class AddmodMovimientoManualComponent implements OnChanges {
   @Output() guardar = new EventEmitter<MovimientoFondo>();
 
   guardando = false;
+  empresas: Empresa[] = [];
+  sinEmpresasDisponibles = false;
+
+  private fondosService = inject(FondosService);
+  private destroyRef = inject(DestroyRef);
 
   readonly tiposAjuste: OpcionTipoAjuste[] = [
     { label: 'Aumentar saldo', value: 'INGRESO' },
@@ -78,6 +94,7 @@ export class AddmodMovimientoManualComponent implements OnChanges {
       validators: [Validators.required]
     }),
     fondo: new FormControl<Fondo | null>(null, [Validators.required]),
+    empresa: new FormControl<Empresa | null>(null),
     monto: new FormControl<number | null>(null, [Validators.required, Validators.min(0.01)]),
     descripcion: new FormControl<string>('', {
       nonNullable: true,
@@ -89,6 +106,12 @@ export class AddmodMovimientoManualComponent implements OnChanges {
     }),
     usuario: new FormControl<string>('', { nonNullable: true })
   });
+
+  ngOnInit(): void {
+    this.formulario.controls.fondo.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(fondo => this.onFondoChange(fondo));
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['tipoMovimiento']) {
@@ -134,12 +157,17 @@ export class AddmodMovimientoManualComponent implements OnChanges {
     return this.tipoMovimiento === 'AJUSTE';
   }
 
+  get mostrarEmpresa(): boolean {
+    const fondo = this.formulario.controls.fondo.value;
+    return !!fondo && FONDOS_CON_EMPRESA.includes(fondo.tipo);
+  }
+
   get formularioBloqueado(): boolean {
     return this.guardando;
   }
 
   get puedeGuardar(): boolean {
-    return !this.guardando;
+    return !this.guardando && !this.sinEmpresasDisponibles;
   }
 
   guardarMovimiento(): void {
@@ -162,13 +190,14 @@ export class AddmodMovimientoManualComponent implements OnChanges {
     const movimiento: MovimientoFondo = new MovimientoFondo();
     movimiento.tipo = this.tipoPayload;
     movimiento.idFondo = fondo.id;
+    movimiento.idEmpresa = this.formulario.controls.empresa.value?.id ?? null;
     movimiento.monto = monto;
     movimiento.descripcion = this.formulario.controls.descripcion.value.trim();
     movimiento.observaciones = observaciones;
-    
-    if(this.tipoMovimiento === 'EGRESO')
+
+    if (this.tipoMovimiento === 'EGRESO')
       movimiento.origen = 'EGRESO_MANUAL';
-    else if(this.tipoMovimiento === 'INGRESO')
+    else if (this.tipoMovimiento === 'INGRESO')
       movimiento.origen = 'INGRESO_MANUAL';
     else
       movimiento.origen = 'AJUSTE';
@@ -197,6 +226,36 @@ export class AddmodMovimientoManualComponent implements OnChanges {
     }
 
     return 'Valor inválido';
+  }
+
+  private onFondoChange(fondo: Fondo | null): void {
+    const empresaCtrl = this.formulario.controls.empresa;
+
+    // Siempre resetear empresa al cambiar de fondo
+    empresaCtrl.setValue(null, { emitEvent: false });
+    this.empresas = [];
+    this.sinEmpresasDisponibles = false;
+
+    if (fondo && FONDOS_CON_EMPRESA.includes(fondo.tipo)) {
+      empresaCtrl.setValidators([Validators.required]);
+      empresaCtrl.updateValueAndValidity({ emitEvent: false });
+
+      this.fondosService.ObtenerEmpresasPorFondo(fondo.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (lista) => {
+            this.empresas = lista ?? [];
+            this.sinEmpresasDisponibles = this.empresas.length === 0;
+          },
+          error: () => {
+            this.empresas = [];
+            this.sinEmpresasDisponibles = true;
+          }
+        });
+    } else {
+      empresaCtrl.setValidators([]);
+      empresaCtrl.updateValueAndValidity({ emitEvent: false });
+    }
   }
 
   private get tipoPorDefecto(): TipoMovimientoPayload {

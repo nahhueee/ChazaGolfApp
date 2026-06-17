@@ -15,6 +15,8 @@ import { EstadisticaClientes } from './components/contenido/clientes/estadistica
 import { ListadoOrdenesComponent } from './components/contenido/ordenes/listado-ordenes/listado-ordenes.component';
 import { AddmodOrdenesComponent } from './components/contenido/ordenes/addmod-ordenes/addmod-ordenes.component';
 import { MainFondosComponent } from './components/contenido/fondos/main-fondos/main-fondos.component';
+import { ListadoProveedoresComponent } from './components/contenido/proveedores/listado-proveedores/listado-proveedores.component';
+import { AddModProveedoresComponent } from './components/contenido/proveedores/addmod-proveedores/addmod-proveedores.component';
 
 export const routes: Routes = [
     {
@@ -85,5 +87,13 @@ export const routes: Routes = [
     {
         path: 'fondos',
         component:MainFondosComponent
+    },
+    {
+        path: 'proveedores',
+        component:ListadoProveedoresComponent
+    },
+    {
+        path: 'proveedores/add',
+        component:AddModProveedoresComponent
     },
 ];

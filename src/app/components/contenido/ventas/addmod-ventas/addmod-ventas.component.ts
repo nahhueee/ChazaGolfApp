@@ -642,10 +642,13 @@ export class AddModVentasComponent {
     const ajusteTransferencia =
       this.formFacturacion.get('ajuste')?.value === true ? base * 0.10 : 0;
 
+    // IVA aplica solo cuando hay un comprobante fiscal real (A o B).
+    // No depende de ProcesoControl porque ese valor puede estar stale
+    // cuando valueChanges dispara antes que CambioTipoComprobante() del template.
     const esFacturaConIva =
-      this.ProcesoControl?.id !== ID_PROCESO.COTIZACION &&  
       this.tipo === 'factura' &&
-      this.productosFactura.length > 0;
+      this.productosFactura.length > 0 &&
+      this.TipoComprobanteControl !== TIPO_COMPROBANTE.SIN_COMPROBANTE;
 
     // Nota: usamos variable local para no depender del orden de evaluación
     const tipoComprobante = this.TipoComprobanteControl;
@@ -657,9 +660,10 @@ export class AddModVentasComponent {
 
     if (esFacturaConIva) {
       if (tipoComprobante === TIPO_COMPROBANTE.FACTURA_A) {
-        // Precio neto + IVA encima
-        iva        = base * 0.21;
-        general    = base + iva;
+        // Precios incluyen IVA → discriminar el IVA contenido (igual que B)
+        iva        = base * 21 / 121;
+        subtotal   = base - iva;
+        general    = base;
         mostrarIva = true;
 
       } else if (tipoComprobante === TIPO_COMPROBANTE.FACTURA_B) {
@@ -692,10 +696,13 @@ export class AddModVentasComponent {
   CambioEmpresa(){
     const idEmpresa = this.formFacturacion.get('empresa')?.value;
 
-    let condicion = this.clienteSeleccionado?.idCondicionIva ?? TIPO_COMPROBANTE.SIN_COMPROBANTE;
-    this.PrepararFacturacionCliente(condicion)
-    this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.SIN_COMPROBANTE);
+    const condicion = this.clienteSeleccionado?.idCondicionIva ?? CONDICION_IVA.SIN_CLIENTE;
+
+    // esCotizacion:false → re-evalúa empresa+cliente sin heredar el proceso previo
+    this.PrepararFacturacionCliente(condicion, undefined, false);
     this.ObtenerMetodosPago(idEmpresa);
+    // Cálculo inmediato (estado actual mientras la HTTP resuelve);
+    // PrepararFacturacionCliente recalcula de nuevo al terminar con el comprobante correcto
     this.CalcularTotalGeneral();
   }
 
@@ -718,7 +725,6 @@ export class AddModVentasComponent {
     }else{
       this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
     }
-
     this.CalcularTotalGeneral();
   }
   //#endregion
@@ -824,6 +830,10 @@ export class AddModVentasComponent {
         // Es cotización → siempre sin comprobante fiscal
         this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.SIN_COMPROBANTE);
       }
+
+      // Recalcular siempre al final: cubre cambio de empresa, de cliente
+      // y cualquier otro caller asíncrono de este método
+      this.CalcularTotalGeneral();
     });
   }
   //#endregion

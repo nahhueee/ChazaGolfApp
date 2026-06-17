@@ -17,6 +17,9 @@
             <button pButton label="Clientes" [ngClass]="{ 'activo': activo === 'clientes' }" icon="pi pi-users" class="p-button-text" (click)="activo = 'clientes'; menuClientes.toggle($event)"></button>
             <p-menu #menuClientes [model]="itemsCliente" [popup]="true" />
 
+            <button pButton label="Proveedores" [ngClass]="{ 'activo': activo === 'proveedores' }" icon="pi pi-truck" class="p-button-text" (click)="activo = 'proveedores'; menuProveedores.toggle($event)"></button>
+            <p-menu #menuProveedores [model]="itemsProveedor" [popup]="true" />
+
             <button pButton label="Cuentas Corriente" [ngClass]="{ 'activo': activo === 'cuentas' }" icon="pi pi-wallet" class="p-button-text" (click)="activo = 'cuentas'; Navegar('cuentas')" ></button>
 
             <button pButton label="Órdenes Ingreso" [ngClass]="{ 'activo': activo === 'ordenes' }" icon="pi pi-file-import" class="p-button-text" (click)="activo = 'ordenes'; menuOrdenes.toggle($event)"></button>

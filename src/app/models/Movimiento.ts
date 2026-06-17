@@ -2,8 +2,10 @@ export class MovimientoFondo {
   id: number;
   idCaja: number;
   idFondo: number;
+  idEmpresa: number | null;
   fecha: string;
   fondo: string;
+  empresa?: string;
   tipo: 'INGRESO' | 'EGRESO';
   origen:
       | 'VENTA'
