@@ -1,8 +1,12 @@
 <p-confirmpopup />
 
+<div class="encabezado-pagina">
+    <app-encabezado-seccion titulo="Servicios" icono="pi pi-verified" />
+</div>
+
 <div class="contenido">
     <div class="tabla">
-        <p-table 
+        <p-table
         [value]="servicios"
         [lazy]="true"
         [paginator]="true"
@@ -12,28 +16,27 @@
         [loading]="loading"
         [rowsPerPageOptions]="[10,20,50]"
         [tableStyle]="{ 'min-width': '60rem' }">
-        
+
             <ng-template #header>
                 <tr>
-                    <th>Editar</th>
                     <th>Código</th>
                     <th>Descripcion</th>
                     <th>Precio Sugerido</th>
                     <th>Tope Desc.</th>
-                    <th>Borrar</th>
+                    <th>Acciones</th>
                 </tr>
             </ng-template>
             <ng-template #body let-servicio>
                 <tr>
-                    <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(servicio)" pTooltip="Editar" tooltipPosition="bottom"/>
-                    </td>
                     <td>{{ servicio.codigo }}</td>
                     <td>{{ servicio.descripcion }}</td>
                     <td>${{ servicio.sugerido | decimalFormat}}</td>
                     <td>{{ servicio.topeDescuento}}%</td>
                     <td>
-                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.id)" />
+                        <div class="acciones">
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(servicio)" pTooltip="Editar" tooltipPosition="bottom"/>
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarServicio($event, servicio.id)" />
+                        </div>
                     </td>
                 </tr>
             </ng-template>

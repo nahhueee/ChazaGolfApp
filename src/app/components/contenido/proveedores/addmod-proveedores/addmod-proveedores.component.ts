@@ -8,12 +8,14 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { DireccionesService } from '../../../../services/direcciones.service';
 import { MiscService } from '../../../../services/misc.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-addmod-proveedores',
   standalone: true,
   imports: [
-    ...FORMS_IMPORTS
+    ...FORMS_IMPORTS,
+    EncabezadoSeccionComponent,
   ],
   templateUrl: './addmod-proveedores.component.html',
   styleUrl: './addmod-proveedores.component.scss',
@@ -123,7 +125,14 @@ export class AddModProveedoresComponent {
     this.formulario.get('documento')?.setValue(proveedor.documento);
 
     let condicionIva = this.condicionesIVAReceptor.find(c => c.id == proveedor.idCondicionIva);
-    if(condicionIva) this.formulario.get('condIva')?.setValue(condicionIva);
+    if(condicionIva){
+      this.formulario.get('condIva')?.setValue(condicionIva);
+      //Recalculamos las opciones de Tipo Documento segun la condicion IVA real del proveedor,
+      //sin esto, tiposDocumentoFiltrados queda con el valor que dejo la ultima vez que CambioCondicion()
+      //se disparo por interaccion del usuario (onChange no se dispara con setValue programatico),
+      //y el tipo de documento guardado puede no estar en esa lista filtrada.
+      this.tiposDocumentoFiltrados = this.CalcularTiposDocumentoFiltrados(condicionIva.id);
+    }
 
     let tipoDocumento = this.tiposDocumento.find(c => c.id == proveedor.idTipoDocumento);
     if(tipoDocumento) this.formulario.get('tDocumento')?.setValue(tipoDocumento);
@@ -168,23 +177,17 @@ export class AddModProveedoresComponent {
     const condIva = this.formulario.get('condIva')?.value.id;
     if (!condIva) return;
 
-    // Consumidor Final
-    if (condIva === 5) {
-      this.tiposDocumentoFiltrados = this.tiposDocumento.filter(t =>
-        [96].includes(t.id)
-      );
-      this.formulario.get('tDocumento')?.setValue(
-        this.tiposDocumentoFiltrados[0]
-      );
-    } else {
-      // Solo CUIT
-      this.tiposDocumentoFiltrados = this.tiposDocumento.filter(t =>
-        t.id === 80
-      );
-      this.formulario.get('tDocumento')?.setValue(
-        this.tiposDocumentoFiltrados[0]
-      );
-    }
+    this.tiposDocumentoFiltrados = this.CalcularTiposDocumentoFiltrados(condIva);
+    this.formulario.get('tDocumento')?.setValue(this.tiposDocumentoFiltrados[0]);
+  }
+
+  //Regla de negocio: Consumidor Final usa DNI, el resto de las condiciones IVA usan CUIT.
+  //Centralizado aca porque lo usan tanto CambioCondicion() (cuando el usuario cambia la condicion IVA)
+  //como CompletarCampos() (cuando se carga un proveedor existente para editar).
+  private CalcularTiposDocumentoFiltrados(idCondIva: number | undefined) {
+    return idCondIva === 5 //Consumidor Final
+      ? this.tiposDocumento.filter(t => [96].includes(t.id))
+      : this.tiposDocumento.filter(t => t.id === 80);
   }
 
   FiltrarProvincias(event: any) {
@@ -300,6 +303,12 @@ export class AddModProveedoresComponent {
 
   CerrarModal(actualizar:boolean) {
     this.cerrar.emit(actualizar);
+  }
+
+  //Volver: si se accedió por ruta, vuelve al listado; si es modal, lo cierra sin actualizar.
+  Volver() {
+    if (this.desdeRouting) this.router.navigateByUrl('/proveedores');
+    else this.CerrarModal(false);
   }
 
   //Marca los campos del formulario como tocados para validar

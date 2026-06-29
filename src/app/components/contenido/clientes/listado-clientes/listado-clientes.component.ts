@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { AddModClientesComponent } from '../addmod-clientes/addmod-clientes.component';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Cliente } from '../../../../models/Cliente';
@@ -20,7 +22,9 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
     TableModule,
     Button,
     Dialog,
+    RouterLink,
     AddModClientesComponent,
+    EncabezadoSeccionComponent,
     TooltipModule,
     AutoCompleteModule,
     ...FORMS_IMPORTS,

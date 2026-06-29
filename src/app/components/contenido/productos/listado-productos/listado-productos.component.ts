@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { ParametrosService } from '../../../../services/parametros.service';
 import { ProductosService } from '../../../../services/productos.service';
@@ -22,6 +22,8 @@ import { FormsModule } from '@angular/forms';
 import { FloatLabel } from 'primeng/floatlabel';
 import { ReactiveFormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
+import { TALLES_ESTANDAR } from '../../ventas/models/venta.constants';
 
 
 @Component({
@@ -31,7 +33,9 @@ import { SelectModule } from 'primeng/select';
     TableModule,
     Button,
     Dialog,
+    RouterLink,
     AddmodProductosComponent,
+    EncabezadoSeccionComponent,
     TooltipModule,
     InputTextModule,
     FormsModule,
@@ -48,6 +52,7 @@ export class ListadoProductosComponent {
   loading: boolean = false;
   filtroActual!: FiltroProducto;
   lineasTalles: LineasTalle[] = [];
+  talles = TALLES_ESTANDAR;
 
   productoSeleccionado: number;
   mostrarmodalAddMod: boolean = false;

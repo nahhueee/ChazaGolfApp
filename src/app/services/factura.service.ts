@@ -176,10 +176,6 @@ export class FacturaService {
       let totalIva = 0;
       let totalGeneral = 0;
 
-     const forzarFacturaB =
-      venta.cliente?.idCategoria === 1 &&
-      venta.cliente?.idCondicionIva === 1;
-
       const esTipoA = [
             TipoComprobante.FACTURA_A,
             TipoComprobante.NC_A,
@@ -187,8 +183,8 @@ export class FacturaService {
       ].includes(venta.idTipoComprobante!);
       const esTipoB = venta.idTipoComprobante === 6;
 
-      // FACTURA B (tipo 6 o forzada)
-      if (esTipoB || forzarFacturaB) {
+      // FACTURA B (tipo 6)
+      if (esTipoB) {
         totalIva = subtotalNeto * 21 / 121;
         totalGeneral = subtotalNeto; // ya incluye IVA
 

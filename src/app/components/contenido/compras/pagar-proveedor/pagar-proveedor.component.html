@@ -1,0 +1,88 @@
+
+<p-confirmdialog key="confirmarPagoProveedor"/>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '800px' }" (onHide)="Cerrar()">
+    <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-dollar"></i>
+            <span> Pagar a Proveedor{{ proveedor ? ': ' + proveedor : '' }}</span>
+        </div>
+    </ng-template>
+
+    <form class="metodo-pago" [formGroup]="formPago" (keyup.enter)="AgregarPago()">
+        <p>Deuda actual: <strong>${{ deuda | decimalFormat }}</strong></p>
+        <br>
+
+        <div class="horizontal">
+            <!-- Empresa -->
+            <p-floatlabel variant="in" class="campo-empresa">
+                <p-select [options]="empresas" formControlName="empresa"
+                          optionValue="id" optionLabel="razonSocial"
+                          (onChange)="CambioEmpresa()" [appendTo]="'body'" />
+                <label>Empresa</label>
+            </p-floatlabel>
+
+            <!-- Metodo pago -->
+            <p-floatlabel variant="in">
+                <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" [appendTo]="'body'" />
+                <label>Metodo Pago</label>
+            </p-floatlabel>
+
+            <!-- Monto -->
+            <p-floatlabel variant="in">
+                <input pInputText formControlName="monto" [imask]="decimal_mask" />
+                <label>Monto</label>
+            </p-floatlabel>
+
+            <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
+        </div>
+
+        <p-table [value]="pagosRealizados">
+            <ng-template #header>
+                <tr>
+                    <th>Metodo</th>
+                    <th>Monto</th>
+                    <th>Quitar</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-pago let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ pago.metodo }}</td>
+                    <td>${{ pago.monto | decimalFormat }}</td>
+                    <td class="acciones-tabla">
+                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago(rowIndex)" />
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="3">
+                        <div class="noPagos">
+                            <i class="pi pi-wallet text-3xl text-500"></i>
+                            <span class="text-600">No se agregaron métodos de pago.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #footer>
+                @if(pagosRealizados.length > 0){
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td><strong>${{ montoTotal | decimalFormat }}</strong></td>
+                        <td></td>
+                    </tr>
+                }
+            </ng-template>
+        </p-table>
+
+        <!-- Observaciones -->
+        <p-floatlabel variant="in">
+            <textarea pTextarea rows="3" cols="30" formControlName="observaciones" style="resize: none"></textarea>
+            <label>Observaciones</label>
+        </p-floatlabel>
+    </form>
+
+    <div class="botones">
+        <p-button label="Registrar Pago" severity="primary" [disabled]="pagosNuevos.length == 0" (onClick)="Pagar()" icon="pi pi-save" />
+    </div>
+</p-dialog>

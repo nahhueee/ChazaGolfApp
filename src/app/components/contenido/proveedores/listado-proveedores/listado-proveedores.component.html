@@ -1,5 +1,9 @@
 <div class="contenido">
-    <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
+    <app-encabezado-seccion titulo="Proveedores" icono="pi pi-truck">
+        <p-button label="Nuevo Proveedor" icon="pi pi-plus" routerLink="/proveedores/add" />
+    </app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
             <!-- Razon Social -->
             <p-floatlabel variant="on">
@@ -39,7 +43,6 @@
 
             <ng-template #header>
                 <tr>
-                    <th>Editar</th>
                     <th>Código</th>
                     <th>Razón Social</th>
                     <th>Email</th>
@@ -47,13 +50,11 @@
                     <th>Celular</th>
                     <th>Condición</th>
                     <th>Documento</th>
+                    <th>Acciones</th>
                 </tr>
             </ng-template>
             <ng-template #body let-proveedor>
                 <tr>
-                    <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(proveedor.id)" pTooltip="Editar" tooltipPosition="bottom"/>
-                    </td>
                     <td>{{ proveedor.id }}</td>
                     <td>{{ proveedor.razonSocial }}</td>
                     <td>{{ proveedor.email }}</td>
@@ -61,6 +62,11 @@
                     <td>{{ proveedor.celular }}</td>
                     <td>{{ proveedor.condicionIva }}</td>
                     <td>{{ proveedor.documento }}</td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(proveedor.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                        </div>
+                    </td>
                 </tr>
             </ng-template>
         </p-table>

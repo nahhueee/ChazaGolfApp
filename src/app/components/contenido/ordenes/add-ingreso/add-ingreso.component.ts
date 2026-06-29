@@ -13,6 +13,7 @@ import { DetalleRecepcion, Recepcion } from '../../../../models/Recepcion';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { ProductoOrden, ProductoOrdenBaja } from '../../../../models/ProductoOrden';
 import { TooltipModule } from 'primeng/tooltip';
+import { TALLES_ESTANDAR } from '../../ventas/models/venta.constants';
 
 @Component({
   selector: 'app-add-ingreso',
@@ -57,7 +58,7 @@ export class AddIngresoComponent {
     this.inicializarForm();
 
   }
-  talles = ["XS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL"];
+  talles = TALLES_ESTANDAR;
   form!: FormArray;
 
   constructor(

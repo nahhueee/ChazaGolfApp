@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
-import { ProductosFactura, Venta } from '../../../../models/Factura';
+import { ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
@@ -7,15 +7,14 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
-import { LineasTalle } from '../../../../models/Producto';
-import { MiscService } from '../../../../services/misc.service';
 import { VentasService } from '../../../../services/ventas.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { Cliente } from '../../../../models/Cliente';
-import { ObjFacturar } from '../../../../models/ObjFacturar';
+import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
+import { TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -41,8 +40,7 @@ export class NotasVentaComponent {
   @Output() cerrar = new EventEmitter<boolean>();
 
   objFacturar:ObjFacturar = new ObjFacturar();
-  lineasTalles: LineasTalle[] = [];
-  columnasFijas = Array(10).fill(0);
+  talles = TALLES_ESTANDAR;
 
   subTotal:number = 0;
   totalItems:number = 0;
@@ -53,6 +51,7 @@ export class NotasVentaComponent {
 
   mostrarIva:boolean = false;
   productosSeleccionados: ProductosFactura[] = [];
+  serviciosSeleccionados: ServiciosFactura[] = [];
   modalFacturarVisible: boolean = false;
 
   nuevaVenta:Venta = new Venta();
@@ -60,19 +59,14 @@ export class NotasVentaComponent {
 
   constructor(
     private Notificaciones: NotificacionesService,
-    private miscService: MiscService,
     private ventasService: VentasService,
     private confirmationService: ConfirmationService,
-  ){
-    this.miscService.ObtenerLineasTalle()
-    .subscribe(response => {
-      this.lineasTalles = response;
-    });
-  }
+  ){}
   
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
       this.productosSeleccionados = [];
+      this.serviciosSeleccionados = [];
       this.CalcularTotalGeneral()
     }
   }
@@ -87,7 +81,13 @@ export class NotasVentaComponent {
   }
 
   EstaSeleccionado(producto: any): boolean {
-    return this.productosSeleccionados?.some(p => p.codProducto === producto.codProducto);
+    // Comparación por referencia: codProducto no es único por fila (un mismo producto
+    // puede tener más de una línea con distinto color/precio dentro de la misma venta).
+    return this.productosSeleccionados?.some(p => p === producto);
+  }
+
+  EstaServicioSeleccionado(servicio: any): boolean {
+    return this.serviciosSeleccionados?.some(s => s === servicio);
   }
 
   CalcularTotalGeneral() {
@@ -106,42 +106,47 @@ export class NotasVentaComponent {
     };
 
     const productos = procesarItems(this.productosSeleccionados);
+    const servicios = procesarItems(this.serviciosSeleccionados);
 
-    this.totalItems = productos.total;
-    this.totalDescuento = productos.descuento;
+    this.totalItems = productos.total + servicios.total;
+    this.totalDescuento = productos.descuento + servicios.descuento;
 
     // Base inicial
-    this.subTotal = this.totalItems - productos.descuento;
+    this.subTotal = this.totalItems - this.totalDescuento;
     this.totalIva = 0;
     this.totalGeneral = this.subTotal;
     this.mostrarIva = false;
 
     if (this.venta.proceso !== 'COTIZACION') {
 
-      const forzarLogicaB =
-      this.venta.cliente?.idCategoria === 1 &&
-      this.venta.cliente?.idCondicionIva === 1;
+      const esTipoA = [
+        TipoComprobante.FACTURA_A,
+        TipoComprobante.NC_A,
+        TipoComprobante.ND_A
+      ].includes(this.venta.idTipoComprobante!);
 
-      const usarLogicaB =
-      this.venta.idTipoComprobante === 6 || forzarLogicaB;
-      if (!usarLogicaB) {
-        // FACTURA A
-        this.subTotal = this.subTotal;
-        this.totalIva = this.subTotal * 0.21;
-        this.totalGeneral = this.subTotal + this.totalIva;
-        this.mostrarIva = true;
+      const esTipoB = this.venta.idTipoComprobante === TipoComprobante.FACTURA_B;
 
-      } else {
-        // FACTURA B (o forzada)
+      if (esTipoB) {
+        // FACTURA B: el precio ya incluye IVA, se discrimina.
         const totalConIva = this.subTotal;
 
         this.totalIva = totalConIva * 21 / 121;
         this.subTotal = totalConIva - this.totalIva;
         this.totalGeneral = totalConIva;
         this.mostrarIva = true;
+
+      } else if (esTipoA) {
+        // FACTURA A: a diferencia de B, acá this.subTotal llega NETO (sin IVA).
+        // PrepararPrecios() en listado-ventas.component.ts ya divide unitario/1.21
+        // para este tipo de comprobante antes de abrir este modal, así que corresponde
+        // sumar el IVA (no discriminarlo de un total que ya viene neto).
+        this.totalIva = this.subTotal * 0.21;
+        this.totalGeneral = this.subTotal + this.totalIva;
+        this.mostrarIva = true;
       }
 
-      // FACTURA C (11) → no IVA
+      // FACTURA C u otros → sin IVA (quedan los valores base seteados arriba)
     }
   }
 
@@ -166,7 +171,40 @@ export class NotasVentaComponent {
     producto.cantidad = Array.from({ length: 10 }, (_, i) => producto[`t${i + 1}`] || 0)
       .reduce((a, b) => a + b, 0);
 
-    producto.total = producto.cantidad * producto.unitario;
+    // precioMostrar es el precio unitario correcto (neto para Factura A, igual a unitario
+    // para B/C), seteado por PrepararPrecios(). Usar producto.unitario acá reintroduciría
+    // el IVA en la línea editada (unitario siempre queda bruto).
+    producto.total = producto.cantidad * (producto.precioMostrar ?? producto.unitario);
+
+    // Prorratea el descuento a la cantidad efectivamente devuelta, no a la original.
+    producto.importeDescuento = producto.total * ((producto.descuentoAplicado ?? 0) / 100);
+    producto.totalMostrar = producto.total - producto.importeDescuento;
+
+    this.CalcularTotalGeneral();
+  }
+
+  ActualizarCantidadServicio(servicio: any, event: any) {
+    const input = event.target as HTMLInputElement;
+    const value = Number(input.value) || 0;
+
+    const cantidadDisponible = Number(servicio.cantidadOriginal) || 0;
+    if (value > cantidadDisponible) {
+      this.Notificaciones.Warn(
+        `La cantidad ingresada supera la cantidad original (${cantidadDisponible}).`
+      );
+      input.value = servicio.cantidad;
+      return;
+    }
+
+    servicio.cantidad = value;
+    this.RecalcularServicio(servicio);
+  }
+
+  private RecalcularServicio(servicio: any) {
+    servicio.total = servicio.cantidad * (servicio.precioMostrar ?? servicio.unitario);
+    servicio.importeDescuento = servicio.total * ((servicio.descuentoAplicado ?? 0) / 100);
+    servicio.totalMostrar = servicio.total - servicio.importeDescuento;
+
     this.CalcularTotalGeneral();
   }
 
@@ -250,6 +288,7 @@ export class NotasVentaComponent {
     }
 
     this.nuevaVenta.productos = this.productosSeleccionados;
+    this.nuevaVenta.servicios = this.serviciosSeleccionados;
   }
 
   private armarObjetoFactura(){

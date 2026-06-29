@@ -8,6 +8,14 @@
     margin: 0%;
 }
 
+.encabezado-pagina{
+    margin: 20px 30px 0;
+
+    & + .contenido{
+        margin-top: 0;
+    }
+}
+
 .form{
     display: flex;
     gap: 30px;

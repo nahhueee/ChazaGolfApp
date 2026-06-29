@@ -11,6 +11,7 @@ import { ConfirmationService } from 'primeng/api';
 import { GlobalesService } from '../../../../services/globales.service';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-presupuesto-productos.component',
@@ -20,7 +21,8 @@ import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
     TableModule,
     TooltipModule,
     ConfirmPopupModule,
-    DecimalFormatPipe
+    DecimalFormatPipe,
+    EncabezadoSeccionComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './presupuesto-productos.component.html',

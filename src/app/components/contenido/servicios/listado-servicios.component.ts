@@ -11,6 +11,7 @@ import { ServiciosService } from '../../../services/servicios.service';
 import { NotificacionesService } from '../../../services/notificaciones.service';
 import { ConfirmationService } from 'primeng/api';
 import { GlobalesService } from '../../../services/globales.service';
+import { EncabezadoSeccionComponent } from '../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-servicios',
@@ -20,7 +21,8 @@ import { GlobalesService } from '../../../services/globales.service';
     TableModule,
     TooltipModule,
     ConfirmPopupModule,
-    DecimalFormatPipe
+    DecimalFormatPipe,
+    EncabezadoSeccionComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './listado-servicios.component.html',

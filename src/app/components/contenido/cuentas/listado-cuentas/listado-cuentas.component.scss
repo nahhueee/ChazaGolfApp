@@ -1,31 +1,9 @@
+@use '../../../../../styles/listados-compartidos';
+
 .contenido{
     background-color: var(--p-datatable-header-cell-background);
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.filtros{
-    display: flex;
-    gap: 30px;
-    margin-top: 5px;
-    margin-bottom: 20px;
-
-    .izq{
-        display: flex;
-        gap: 15px;
-        flex: 1;
-    }
-
-    .der{
-        display: flex;
-        gap: 10px;
-    }
-}
-
-
-.acciones{
-    display: flex;
-    gap: 5px;
 }
 

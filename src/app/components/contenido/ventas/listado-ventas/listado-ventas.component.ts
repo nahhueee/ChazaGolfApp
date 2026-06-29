@@ -1,11 +1,11 @@
 import { Component, ViewChild } from '@angular/core';
-import { Venta } from '../../../../models/Factura';
+import { ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { VentasService } from '../../../../services/ventas.service';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
@@ -28,6 +28,7 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -37,6 +38,7 @@ import { FilesService } from '../../../../services/files.service';
     ConfirmDialogModule,
     TableModule,
     Button,
+    RouterLink,
     TooltipModule,
     DecimalFormatPipe,
     DatePipe,
@@ -45,7 +47,8 @@ import { FilesService } from '../../../../services/files.service';
     VistaPreviaComponent,
     SplitButtonModule,
     PopoverModule,
-    NotasVentaComponent
+    NotasVentaComponent,
+    EncabezadoSeccionComponent
 ],
   templateUrl: './listado-ventas.component.html',
   styleUrl: './listado-ventas.component.scss',
@@ -295,35 +298,49 @@ export class ListadoVentasComponent {
     ].includes(this.ventaSeleccionada.idTipoComprobante!);
 
     this.ventaSeleccionada.productos.forEach(producto => {
-      const unitario = Number(producto.unitario) || 0; // Precio con iva
-      const cantidad = Number(producto.cantidad) || 0;
-
-      let precioNeto = 0; // Precio neto
-      if(esTipoA)
-        precioNeto = unitario / 1.21;
-      else
-        precioNeto = unitario;
-
-      producto.precioMostrar = precioNeto;
-      let totalNeto = precioNeto * cantidad;
-      producto.total = totalNeto;
-
-      // Porcentaje del descuento
-      const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, producto.topeDescuento ?? 100);
-      producto.descuentoAplicado = descuentoAplicado;
-
-      // Importe del descuento
-      const importeDescuento = totalNeto * (descuentoAplicado / 100);
-      producto.importeDescuento = importeDescuento;
-
-      // Total bruto del item
-      const totalFinalNeto = totalNeto - importeDescuento;
-      producto.totalMostrar = totalFinalNeto ;
+      this.calcularPrecioItem(producto, esTipoA);
 
       producto.stockInicial = Object.fromEntries(
         Object.entries(producto)
           .filter(([key]) => /^t\d+$/.test(key))
       );
     });
+
+    // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar).
+    // No tienen talles, por eso el tope de cantidad para la NC se guarda en
+    // cantidadOriginal en vez de stockInicial.
+    this.ventaSeleccionada.servicios?.forEach(servicio => {
+      this.calcularPrecioItem(servicio, esTipoA);
+      servicio.cantidadOriginal = servicio.cantidad;
+    });
+  }
+
+  // Calcula precioMostrar/total/descuentoAplicado/importeDescuento/totalMostrar
+  // para un ítem de la venta (producto o servicio), según el tipo de comprobante.
+  private calcularPrecioItem(item: ProductosFactura | ServiciosFactura, esTipoA: boolean) {
+    const unitario = Number(item.unitario) || 0; // Precio con iva
+    const cantidad = Number(item.cantidad) || 0;
+
+    let precioNeto = 0; // Precio neto
+    if(esTipoA)
+      precioNeto = unitario / 1.21;
+    else
+      precioNeto = unitario;
+
+    item.precioMostrar = precioNeto;
+    let totalNeto = precioNeto * cantidad;
+    item.total = totalNeto;
+
+    // Porcentaje del descuento
+    const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, item.topeDescuento ?? 100);
+    item.descuentoAplicado = descuentoAplicado;
+
+    // Importe del descuento
+    const importeDescuento = totalNeto * (descuentoAplicado / 100);
+    item.importeDescuento = importeDescuento;
+
+    // Total bruto del item
+    const totalFinalNeto = totalNeto - importeDescuento;
+    item.totalMostrar = totalFinalNeto;
   }
 }

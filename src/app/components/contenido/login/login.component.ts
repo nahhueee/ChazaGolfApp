@@ -78,7 +78,10 @@ export class LoginComponent {
   Ingresar(){
     if(this.formulario.invalid) return;
 
-    this.usuariosService.ObtenerUsuarioxUsername(this.formulario.get("usuario")?.value)
+    const usuario = this.formulario.get("usuario")?.value;
+    const pass = this.formulario.get("pass")?.value;
+
+    this.usuariosService.Login(usuario, pass)
     .subscribe(async response=> {
       if (response) {
         this.usuario = response;

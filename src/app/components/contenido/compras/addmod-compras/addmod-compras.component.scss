@@ -1,0 +1,99 @@
+@use '../../../../../styles/formularios-compartidos';
+
+.contenido{
+    padding-bottom: 60px;
+}
+.modal.contenido{
+    margin: 0%;
+}
+
+.proveedor-card{
+    background-color: var(--surface-ground);
+    border-radius: 8px;
+    padding: 10px 15px;
+
+    p{
+        margin: 2px 0;
+        font-size: 14px;
+    }
+}
+
+.noSeleccionado{
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--surface-border);
+    flex-direction: column;
+    padding: 15px;
+
+    p{
+        margin: 0;
+        font-size: 17px;
+    }
+
+    .icon{
+        border: 1px solid var(--surface-border);
+        border-radius: 80%;
+        padding: 5px;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+    i{
+        transform: scale(1.5);
+        color: var(--p-primary-color);
+    }
+}
+
+.noSeleccionado--error{
+    border-color: var(--red-400) !important;
+    background-color: color-mix(in srgb, var(--red-400) 8%, transparent);
+
+    .icon{
+        border-color: var(--red-400) !important;
+        color: var(--red-400);
+    }
+}
+
+.error-cliente{
+    color: var(--red-400);
+    font-weight: 600;
+    font-size: 0.9rem !important;
+}
+
+.form-linea{
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.form-linea-vertical{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.acciones-tabla{
+    text-align: center;
+}
+
+.botones{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 15px;
+    z-index: 1;
+    position: fixed;
+    bottom: 0;
+    padding: 10px 0px;
+    background: var(--surface-ground) !important;
+    box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--surface-border);
+}

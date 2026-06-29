@@ -1,14 +1,8 @@
 <div class="contenido">
-    <div class="cabecera">
-      <p-button label="Exportar" icon="pi pi-file-excel" raised (onClick)="DescargarResultados()"/>
-
-      <div class="alerta alerta-info">
-        <span class="alerta-icon">ℹ️</span>
-        <div class="alerta-texto">
-            Selecciona algun filtro para comenzar la busqueda.
-        </div>
-      </div>
-    </div>
+    <app-encabezado-seccion titulo="Productos" icono="pi pi-box">
+        <p-button label="Nuevo Producto" icon="pi pi-plus" routerLink="/productos/add" />
+        <p-button label="Exportar" icon="pi pi-file-excel" raised (onClick)="DescargarResultados()"/>
+    </app-encabezado-seccion>
 
     <div class="filtroTalles">
       <div class="filtros">
@@ -83,7 +77,6 @@
         
             <ng-template #header>
                 <tr>
-                    <th>Editar</th>
                     <th>Proceso</th>
                     <th>Temporada</th>
                     <th>Código</th>
@@ -93,25 +86,13 @@
                     <th>Gen</th>
                     <th>Material</th>
                     <th>Color</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XS</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">S</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">M</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">L</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XL</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">XXL</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">3XL</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">4XL</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">5XL</th>
-                    <th class="col-talle" [ngClass]="{ 'dark-mode': esDark }">6XL</th>
+                    <th *ngFor="let talla of talles" class="col-talle" [ngClass]="{ 'dark-mode': esDark }">{{ talla }}</th>
                     <th class="col-total" [ngClass]="{ 'dark-mode': esDark }">T</th>
-
+                    <th></th>
                 </tr>
             </ng-template>
             <ng-template #body let-producto>
                 <tr>
-                    <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [disabled]="producto.abrevProceso != 'STK'" icon="pi pi-pencil" (onClick)="Editar(producto.id)" pTooltip="Editar" tooltipPosition="bottom"/>
-                    </td>
                     <td [pTooltip]="producto.proceso" tooltipPosition="bottom"> {{producto.abrevProceso}} </td>
                     <td [pTooltip]="producto.temporada" tooltipPosition="bottom">{{ producto.abrevTemporada }}</td>
                     <td>{{ producto.codigo }}</td>
@@ -134,12 +115,16 @@
                     <td class="col-talle">{{ producto.t9 }}</td>
                     <td class="col-talle">{{ producto.t10 }}</td>
                     <td class="col-total" [ngClass]="{ 'dark-mode': esDark }">{{ producto.total }}</td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" [disabled]="producto.abrevProceso != 'STK'" icon="pi pi-pencil" (onClick)="Editar(producto.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                        </div>
+                    </td>
                 </tr>
             </ng-template>
             <!-- PIE DE TABLA (TOTALES) -->
             <ng-template pTemplate="footer">
                 <tr>
-                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -160,6 +145,7 @@
                 <td class="col-talle footer"><strong>{{ GetTotal('t9') }}</strong></td>
                 <td class="col-talle footer"><strong>{{ GetTotal('t10') }}</strong></td>
                 <td class="col-total footer"><strong>{{ GetTotal('total') }}</strong></td>
+                <td></td>
                 </tr>
             </ng-template>
         </p-table>

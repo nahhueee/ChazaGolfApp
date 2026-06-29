@@ -1,0 +1,139 @@
+<div class="contenido">
+    <div class="encabezado">
+        <div class="info">
+            <div class="elemento">
+                <h3>{{ proveedor }}</h3>
+            </div>
+            <div class="elemento saldos">
+                <span>Saldo Inicial: <strong>${{ cuenta.saldoInicial | decimalFormat }}</strong></span>
+                <span>Deuda: <strong class="deuda">${{ cuenta.deuda | decimalFormat }}</strong></span>
+                <span>Saldo a Favor: <strong class="verde">${{ cuenta.saldoAFavor | decimalFormat }}</strong></span>
+                <span>Saldo: <strong class="deuda" [class.verde]="cuenta.saldo < 0">${{ cuenta.saldo | decimalFormat }}</strong></span>
+            </div>
+            <div class="elemento">
+                <p-button label="Pagar a Proveedor" icon="pi pi-dollar" severity="primary" (onClick)="Pagar()" />
+            </div>
+        </div>
+    </div>
+
+    <div class="tabla">
+        <p-table
+        [value]="movimientos"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="15"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[15,30,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }">
+
+            <ng-template #header>
+                <tr>
+                    <th>Proceso</th>
+                    <th>Fecha</th>
+                    <th>Comprobante</th>
+                    <th>Referencia</th>
+                    <th>Debe</th>
+                    <th>Haber</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-movimiento>
+                <tr>
+                    <td>{{ movimiento.proceso }}</td>
+                    <td>{{ movimiento.fecha | date:'dd-MM-yyyy HH:mm' }}</td>
+                    <td>{{ movimiento.comprobante }}</td>
+                    <td>{{ movimiento.referencia }}</td>
+                    <td>${{ movimiento.debe || 0 | decimalFormat }}</td>
+                    <td>${{ movimiento.haber || 0 | decimalFormat }}</td>
+                    <td>${{ movimiento.saldo | decimalFormat }}</td>
+                    <td>
+                        @if(movimiento.estado != ''){
+                            <p-tag [value]="movimiento.estado" [severity]="GetSeverity(movimiento.estado)" />
+                        }
+                    </td>
+                    <td>
+                        <div class="acciones">
+                            @if(movimiento.proceso == 'PAGO'){
+                                <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerDetalle(movimiento.id)" pTooltip="Ver Detalle del Pago" tooltipPosition="bottom"/>
+                            }
+                            @if(movimiento.proceso == 'PAGO' && movimiento.estado != 'ANULADO'){
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AnularPago(movimiento)" pTooltip="Anular Pago" tooltipPosition="bottom"/>
+                            }
+                            @if(movimiento.observaciones && movimiento.observaciones != ""){
+                                <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-info-circle" (onClick)="VerObservaciones(movimiento.observaciones)" pTooltip="Ver Observaciones" tooltipPosition="bottom"/>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<div class="botones">
+    <p-button label="Volver" severity="secondary" (click)="Cerrar()" icon="pi pi-angle-left"/>
+</div>
+
+<app-pagar-proveedor [(visible)]="pagarVisible" [idProveedor]="idProveedor" [proveedor]="proveedor" [idCaja]="cajaActiva" [deuda]="cuenta.saldo" [saldoAFavor]="cuenta.saldoAFavor" (recargar)="onRecargar($event)"></app-pagar-proveedor>
+
+<p-dialog
+    header="Observaciones"
+    [(visible)]="mostrarObs"
+    [modal]="true"
+    [style]="{width: '400px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <div style="white-space: pre-line;">
+        {{ observacionSeleccionada }}
+    </div>
+</p-dialog>
+
+<p-dialog
+    header="Detalle del Pago"
+    [(visible)]="detalleVisible"
+    [modal]="true"
+    [style]="{width: '450px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    @if(pagoSeleccionado){
+        <div class="detalle-pago">
+            <p><strong>Fecha:</strong> {{ pagoSeleccionado.fecha | date:'dd-MM-yyyy' }} {{ pagoSeleccionado.hora }}</p>
+            <p><strong>Total:</strong> ${{ pagoSeleccionado.total | decimalFormat }}</p>
+            @if(pagoSeleccionado.observaciones){
+                <p><strong>Observaciones:</strong> {{ pagoSeleccionado.observaciones }}</p>
+            }
+
+            <h4>Métodos de Pago</h4>
+            <ul>
+                @for(metodo of pagoSeleccionado.metodos; track metodo.idMetodo){
+                    <li>{{ metodo.metodoPago }}: ${{ metodo.monto | decimalFormat }}</li>
+                }
+            </ul>
+
+            <h4>Aplicación</h4>
+            <ul>
+                @for(d of pagoSeleccionado.detalle; track $index){
+                    <li>
+                        @if(d.tipoAplicacion == 'SALDO_INICIAL'){
+                            Saldo inicial: ${{ d.montoAplicado | decimalFormat }}
+                        } @else if(d.tipoAplicacion == 'SALDO_A_FAVOR'){
+                            Excedente a saldo a favor: ${{ d.montoAplicado | decimalFormat }}
+                        } @else {
+                            {{ d.tipoComprobante }} {{ d.nroComprobante }}: ${{ d.montoAplicado | decimalFormat }}
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</p-dialog>
+
+<p-confirmdialog key="confirmarAnularPago" />

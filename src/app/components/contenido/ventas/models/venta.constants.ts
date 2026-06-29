@@ -116,8 +116,11 @@ export const ESTADO_FACTURA = {
 
 export type EstadoFactura = ValueOf<typeof ESTADO_FACTURA>;
 
-//Maximo de talles disponibles 
+//Maximo de talles disponibles
 export const MAX_TALLES = 10;
+
+//Escala fija de talles t1..t10 mostrada como header en las grillas de venta/recepción/stock por talla
+export const TALLES_ESTANDAR: string[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
 
 /**
  * Comprobante por defecto según

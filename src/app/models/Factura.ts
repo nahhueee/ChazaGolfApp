@@ -117,20 +117,28 @@ import { TallesProducto } from "./Producto";
     nomServicio?: string;
     cantidad?: number;
     unitario?: number;
+    precioMostrar?: number;
     total?: number;
+    totalMostrar?: number;
     topeDescuento?:number;
     descuentoAplicado?:number;
-  
+    importeDescuento?:number;
+    cantidadOriginal?: number;
+
     constructor(data?: any) {
       if (data) {
         this.idServicio = data.idServicio;
         this.codServicio = data.codServicio;
         this.cantidad = data.cantidad;
         this.unitario = data.unitario;
+        this.precioMostrar = data.precioMostrar;
         this.nomServicio = data.nomServicio;
         this.total = data.total;
+        this.totalMostrar = data.totalMostrar;
         this.topeDescuento = data.topeDescuento;
         this.descuentoAplicado = data.descuentoAplicado;
+        this.importeDescuento = data.importeDescuento;
+        this.cantidadOriginal = data.cantidadOriginal;
       }
     }
   }

@@ -19,6 +19,7 @@ import { AddModClientesComponent } from '../../clientes/addmod-clientes/addmod-c
 import { ListboxModule } from 'primeng/listbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Talle } from '../../../../models/Talle';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-addmod-productos',
@@ -31,7 +32,8 @@ import { Talle } from '../../../../models/Talle';
     ConfirmDialogModule,
     Dialog,
     AddModClientesComponent,
-    ListboxModule    
+    ListboxModule,
+    EncabezadoSeccionComponent,
 ],
   providers: [ConfirmationService],
   templateUrl: './addmod-productos.component.html',
@@ -311,7 +313,6 @@ export class AddmodProductosComponent {
             );
             if (indexInForm !== -1) {
               this.tallesProductoControl.at(indexInForm).get('id')?.setValue(pTalle.id);
-              this.tallesProductoControl.at(indexInForm).get('cantidad')?.setValue(pTalle.cantidad);
               this.tallesProductoControl.at(indexInForm).get('precio')?.setValue(pTalle.precio!.toString().replace('.', ','));
             }
           }, 100);
@@ -480,13 +481,14 @@ export class AddmodProductosComponent {
     }
   }
   
+  //Nota: no incluye "cantidad" (stock). El stock real por color/talle se administra
+  //vía Órdenes de Ingreso/Ventas, no desde esta pantalla, y el backend lo preserva/ignora.
   ConstruirRow(item: any, indice:number): FormGroup {
     return this.fb.group({
       id: 0,
       ubicacion: indice,
       talle: [item.talle],
       precio: [''],
-      cantidad: [''],
       idLineaTalle: [this.lineaTalleControl.id]
     });
   }
@@ -678,6 +680,12 @@ export class AddmodProductosComponent {
 
   CerrarModal(actualizar:boolean) {
     this.cerrar.emit(actualizar);
+  }
+
+  //Volver: si se accedió por ruta, vuelve al listado; si es modal, lo cierra sin actualizar.
+  Volver() {
+    if (this.desdeRouting) this.router.navigateByUrl('/productos');
+    else this.CerrarModal(false);
   }
 
   //Marca los campos del formulario como tocados para validar

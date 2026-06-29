@@ -1,3 +1,9 @@
+@if(desdeRouting){
+    <div class="encabezado-pagina">
+        <app-encabezado-seccion [titulo]="proveedor ? 'Editar Proveedor' : 'Agregar Proveedor'" icono="pi pi-truck" />
+    </div>
+}
+
 <div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" method="POST" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
 
@@ -143,8 +149,6 @@
 </div>
 
 <div class="botones">
-    @if(!desdeRouting){
-        <p-button label="Volver" severity="secondary" (click)="CerrarModal(false)" icon="pi pi-angle-left"/>
-    }
+    <p-button label="Volver" severity="secondary" (click)="Volver()" icon="pi pi-angle-left"/>
     <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
 </div>

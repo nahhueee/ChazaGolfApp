@@ -125,28 +125,17 @@
         <p-table [value]="productosOrden" dataKey="idProducto" #tablaProductos [expandedRowKeys]="expandedRows">
             <ng-template #header>
                 <tr>
-                    <th rowspan="5"></th>
-                    <th rowspan="5">Código</th>
-                    <th rowspan="5">Nombre</th>
+                    <th></th>
+                    <th>Código</th>
+                    <th>Nombre</th>
 
-                    <th rowspan="5">Color</th>
-                    <th colspan="10" class="text-center bloque-talles"></th>
+                    <th>Color</th>
+                    <th *ngFor="let talla of talles" class="text-center">{{ talla }}</th>
 
-                    <th rowspan="5">Cantidad</th>
-                    <th rowspan="5">Estado</th>
-                    <th rowspan="5">Quitar</th>
+                    <th>Cantidad</th>
+                    <th>Estado</th>
+                    <th>Quitar</th>
                 </tr>
-
-                    <!-- 4 filas visuales -->
-                    <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
-
-                    <th *ngFor="let col of columnasFijas; let i = index">
-                        {{ linea.talles![i] || '' }}
-                    </th>
-
-                </tr>
-                
-
             </ng-template>
             <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
                 <tr>

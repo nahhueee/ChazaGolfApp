@@ -1,0 +1,16 @@
+<div class="encabezado-seccion">
+    <div class="titulos">
+        <h2>
+            @if(icono){
+                <i [class]="icono"></i>
+            }
+            {{ titulo }}
+        </h2>
+        @if(subtitulo){
+            <span class="subtitulo">{{ subtitulo }}</span>
+        }
+    </div>
+    <div class="accion">
+        <ng-content></ng-content>
+    </div>
+</div>

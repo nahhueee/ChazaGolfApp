@@ -6,7 +6,7 @@ import { OrdenIngreso } from '../../../../models/OrdenIngreso';
 import { OrdenIngresoService } from '../../../../services/orden-ingreso.service';
 import { FiltroOrdenes } from '../../../../models/filtros/FIltroOrdenes';
 import { FormControl, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
 import { ProductoOrden } from '../../../../models/ProductoOrden';
 import { ProductoImprimir } from '../../../../models/ProductoImprimir';
@@ -17,6 +17,7 @@ import { OrdenIngresoReporteService } from '../../../../services/orden-ingreso-r
 import { ConfirmationService } from 'primeng/api';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-listado-ordenes',
@@ -25,10 +26,12 @@ import { ConfirmPopupModule } from 'primeng/confirmpopup';
     ...FORMS_IMPORTS,
     TableModule,
     Button,
+    RouterLink,
     TooltipModule,
     TagModule,
     ConfirmPopupModule,
-    AddIngresoComponent
+    AddIngresoComponent,
+    EncabezadoSeccionComponent
 ],
   templateUrl: './listado-ordenes.component.html',
   styleUrls: ['./listado-ordenes.component.scss'],

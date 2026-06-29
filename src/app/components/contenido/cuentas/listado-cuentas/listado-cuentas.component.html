@@ -1,5 +1,7 @@
 <div class="contenido">
-     <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
+    <app-encabezado-seccion titulo="Cuentas Corriente" icono="pi pi-wallet" />
+
+     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
             <!-- Nombre -->
             <p-floatlabel variant="on">

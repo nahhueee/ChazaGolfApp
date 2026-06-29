@@ -28,6 +28,10 @@ export class UsuariosService {
   }
 
   //#region OBTENER
+  Login(usuario:string, pass:string): Observable<any> {
+    return this.apiService.post('usuarios/login', { usuario, pass })
+  }
+
   GrabarSesion(usr:Usuario): Observable<any>{
     return this.apiService.put('usuarios/guardar-sesion', usr)
   }

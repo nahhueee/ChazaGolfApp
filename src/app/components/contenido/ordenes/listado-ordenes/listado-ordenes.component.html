@@ -1,6 +1,10 @@
 <p-confirmpopup />
 <div class="contenido">
-    <form [formGroup]="filtros" autocomplete="off" class="filtros">
+    <app-encabezado-seccion titulo="Órdenes de Ingreso" icono="pi pi-inbox">
+        <p-button label="Nueva Orden" icon="pi pi-plus" [routerLink]="['/ordenes-ingreso/adm', 0]" />
+    </app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="Buscar()">
       <div class="izq">
         <!-- Nro Orden -->
         <p-floatlabel variant="on">

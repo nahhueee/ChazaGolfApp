@@ -48,6 +48,9 @@ export class MiscService {
   ObtenerCondicionesIva(): Observable<any> {
     return this.apiService.get('misc/condiciones-iva')
   }
+  ObtenerCategoriasCliente(): Observable<any> {
+    return this.apiService.get('misc/categorias-cliente')
+  }
   ObtenerComprobantes(empresa:string, condicionIva:number): Observable<any> {
     return this.apiService.get('misc/comprobantes/'+ empresa + '/' + condicionIva)
   }

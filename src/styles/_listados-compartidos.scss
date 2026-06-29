@@ -1,0 +1,55 @@
+// Estilos compartidos para pantallas de listado (filtros de búsqueda y columna de acciones).
+// Extraído de listado-compras.component.scss para reutilizar en el resto de los listados
+// (proveedores, clientes, productos, servicios, ventas, órdenes, cuentas).
+// Se importa vía @use en el .scss de cada componente (los component styles de Angular están
+// encapsulados, así que esto no se "hereda" solo: cada componente que lo necesite debe importarlo).
+
+.filtros{
+    display: flex;
+    gap: 30px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+
+    .izq{
+        display: flex;
+        gap: 15px;
+        flex: 1;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .der{
+        display: flex;
+        gap: 10px;
+    }
+}
+
+.filtros-busqueda{
+    flex-wrap: nowrap;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    padding: 15px 20px;
+    background-color: var(--surface-ground);
+
+    .izq{
+        flex-wrap: nowrap;
+    }
+
+    // Estos campos no muestran validaciones, así que no necesitan el espacio
+    // reservado para el mensaje de error que sí usa p-floatlabel en el resto de la app.
+    p-floatlabel{
+        margin-bottom: 0;
+    }
+}
+
+.acciones-top{
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.acciones{
+    display: flex;
+    gap: 5px;
+}

@@ -43,10 +43,6 @@ export class VentasService {
   Modificar(venta:Venta): Observable<any>{
     return this.apiService.put('ventas/modificar', venta)
   }
-
-  Eliminar(id:number): Observable<any>{
-    return this.apiService.delete(`ventas/eliminar/${id}`)
-  }
   //#endregion
 
   Facturar(objFacturar:ObjFacturar): Observable<any>{

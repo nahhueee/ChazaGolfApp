@@ -11,8 +11,21 @@
     padding: 20px;
 }
 
+.encabezado-pagina{
+    margin: 20px 30px 0;
+
+    & + .contenido{
+        margin-top: 0;
+    }
+}
+
 .uppercase{
     text-transform: uppercase !important;
+}
+
+.acciones{
+    display: flex;
+    gap: 5px;
 }
 
 .tabla{

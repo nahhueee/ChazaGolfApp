@@ -13,6 +13,7 @@ import { FiltroClientes } from '../../../../models/filtros/FiltroClientes';
 import { MiscService } from '../../../../services/misc.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { TagModule } from 'primeng/tag';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-listado-cuentas',
@@ -23,6 +24,7 @@ import { TagModule } from 'primeng/tag';
     TooltipModule,
     TagModule,
     ...FORMS_IMPORTS,
+    EncabezadoSeccionComponent,
 ],
   templateUrl: './listado-cuentas.component.html',
   styleUrl: './listado-cuentas.component.scss',

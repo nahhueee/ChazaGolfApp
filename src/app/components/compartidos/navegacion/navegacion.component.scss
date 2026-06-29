@@ -5,15 +5,21 @@
     padding: 0% 5%;
 }
 
-.navegacion{
-    display: flex;
-    justify-content: space-between;
+:host ::ng-deep .menu-principal{
     width: 100%;
-    gap: 5px;
+    background: transparent;
+    border: none;
     padding: 5px 0px;
 }
 
-.activo {
-  background: var(--surface-overlay) !important;
-  color: var(--text-color) !important;
+:host ::ng-deep .menu-principal .p-menubar-item.activo > .p-menubar-item-content{
+    background: var(--surface-overlay) !important;
+}
+
+:host ::ng-deep .menu-principal .p-menubar-item.activo > .p-menubar-item-content .p-menubar-item-link{
+    color: var(--text-color) !important;
+}
+
+:host ::ng-deep .menu-principal .p-menubar-item.activo > .p-menubar-item-content .p-menubar-item-icon{
+    color: var(--p-primary-color) !important;
 }

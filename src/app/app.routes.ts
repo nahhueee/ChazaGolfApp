@@ -17,6 +17,10 @@ import { AddmodOrdenesComponent } from './components/contenido/ordenes/addmod-or
 import { MainFondosComponent } from './components/contenido/fondos/main-fondos/main-fondos.component';
 import { ListadoProveedoresComponent } from './components/contenido/proveedores/listado-proveedores/listado-proveedores.component';
 import { AddModProveedoresComponent } from './components/contenido/proveedores/addmod-proveedores/addmod-proveedores.component';
+import { ListadoComprasComponent } from './components/contenido/compras/listado-compras/listado-compras.component';
+import { AddModComprasComponent } from './components/contenido/compras/addmod-compras/addmod-compras.component';
+import { ListadoCuentasProveedoresComponent } from './components/contenido/compras/listado-cuentas-proveedores/listado-cuentas-proveedores.component';
+import { CuentaProveedorComponent } from './components/contenido/compras/cuenta-proveedor/cuenta-proveedor.component';
 
 export const routes: Routes = [
     {
@@ -95,5 +99,21 @@ export const routes: Routes = [
     {
         path: 'proveedores/add',
         component:AddModProveedoresComponent
+    },
+    {
+        path: 'compras',
+        component:ListadoComprasComponent
+    },
+    {
+        path: 'compras/add',
+        component:AddModComprasComponent
+    },
+    {
+        path: 'compras/cuentas',
+        component:ListadoCuentasProveedoresComponent
+    },
+    {
+        path: 'compras/cuentas/administrar/:idProveedor/:proveedor',
+        component:CuentaProveedorComponent
     },
 ];

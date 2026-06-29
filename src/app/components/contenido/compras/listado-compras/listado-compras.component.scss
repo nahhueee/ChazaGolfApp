@@ -1,0 +1,25 @@
+@use '../../../../../styles/formularios-compartidos';
+@use '../../../../../styles/listados-compartidos';
+
+.contenido{
+    background-color: var(--surface-card);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    i{
+        color: var(--p-primary-color);
+    }
+}
+
+.detalle{
+    .alerta{
+        margin-bottom: 20px;
+    }
+}

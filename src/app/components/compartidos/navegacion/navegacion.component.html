@@ -1,38 +1,15 @@
 <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="fire" [fullScreen] = "true"><p style="color: white" > Cargando... </p></ngx-spinner>
 
 <div class="contenedor">
-    <div class="navegacion">
-        <div class="items">
-            <button pButton label="Fondos" [ngClass]="{ 'activo': activo === 'fondos' }" icon="pi pi-chart-bar" class="p-button-text" (click)="activo = 'fondos'; Navegar('fondos')" ></button>
-
-            <button pButton label="Facturacion" [ngClass]="{ 'activo': activo === 'facturacion' }" icon="pi pi-money-bill" class="p-button-text" (click)="activo = 'facturacion'; menuFactura.toggle($event)"></button>
-            <p-menu #menuFactura [model]="itemsFacturacion" [popup]="true" />
-
-            <button pButton label="Pre-Facturacion" [ngClass]="{ 'activo': activo === 'pre' }" icon="pi pi-file-edit" class="p-button-text" (click)="activo = 'pre'; menuPre.toggle($event)"></button>
-            <p-menu #menuPre [model]="itemsPreFacturacion" [popup]="true" />
-
-            <button pButton label="Productos" [ngClass]="{ 'activo': activo === 'productos' }" icon="pi pi-box" class="p-button-text" (click)="activo = 'productos'; menuProductos.toggle($event)"></button>
-            <p-menu #menuProductos [model]="itemsProducto" [popup]="true" />
-
-            <button pButton label="Clientes" [ngClass]="{ 'activo': activo === 'clientes' }" icon="pi pi-users" class="p-button-text" (click)="activo = 'clientes'; menuClientes.toggle($event)"></button>
-            <p-menu #menuClientes [model]="itemsCliente" [popup]="true" />
-
-            <button pButton label="Proveedores" [ngClass]="{ 'activo': activo === 'proveedores' }" icon="pi pi-truck" class="p-button-text" (click)="activo = 'proveedores'; menuProveedores.toggle($event)"></button>
-            <p-menu #menuProveedores [model]="itemsProveedor" [popup]="true" />
-
-            <button pButton label="Cuentas Corriente" [ngClass]="{ 'activo': activo === 'cuentas' }" icon="pi pi-wallet" class="p-button-text" (click)="activo = 'cuentas'; Navegar('cuentas')" ></button>
-
-            <button pButton label="Órdenes Ingreso" [ngClass]="{ 'activo': activo === 'ordenes' }" icon="pi pi-file-import" class="p-button-text" (click)="activo = 'ordenes'; menuOrdenes.toggle($event)"></button>
-            <p-menu #menuOrdenes [model]="itemsOrdenes" [popup]="true" />
-        </div>
-        
-        <div class="opciones">
-            <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
-            <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
-            <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Perfil" tooltipPosition="bottom" icon="pi pi-user"/>
-            <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="Navegar('ingresar')"/>
-        </div>
-    </div>
+    <p-menubar [model]="items" class="menu-principal">
+        <ng-template #end>
+            <div class="opciones">
+                <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
+                <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
+                <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Perfil" tooltipPosition="bottom" icon="pi pi-user"/>
+                <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="Navegar('ingresar')"/>
+            </div>
+        </ng-template>
+    </p-menubar>
 </div>
-
 

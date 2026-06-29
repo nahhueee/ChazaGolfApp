@@ -62,7 +62,8 @@ import {
   ID_CONDICION_PAGO,
   MAX_TALLES,
   TIPO_METODO_PAGO,
-} from '../models/venta.constants';   
+  TALLES_ESTANDAR,
+} from '../models/venta.constants';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
@@ -108,7 +109,7 @@ export class AddModVentasComponent {
   proximoNroVenta:number = 0;
   nroRelacionado:number = 0;
   tipoRelacionado:string = "";
-  columnasFijas = Array(MAX_TALLES).fill(0);
+  talles = TALLES_ESTANDAR;
 
   decimal_mask: any;
   modificando:boolean;
@@ -769,6 +770,7 @@ export class AddModVentasComponent {
           .pipe(takeUntil(this.destroy$)) 
           .subscribe(response => {
             this.ventasCliente = response;
+            console.log("Ventas del cliente: ", this.ventasCliente);
           });
           
           if(!this.modificando){
@@ -850,7 +852,6 @@ export class AddModVentasComponent {
 
   CompletarCampos(){
     this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
-    console.log(this.venta.idProceso)
     this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
     this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
     this.formFacturacion.get('empresa')?.setValue(this.venta.idEmpresa);
@@ -934,7 +935,7 @@ export class AddModVentasComponent {
               if(this.venta.productos) this.productosFactura = this.venta.productos;
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
               this.formFacturacion.get('descuento')?.setValue(0);
-              this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
+              this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0].id);
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -1017,7 +1018,7 @@ export class AddModVentasComponent {
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formFacturacion.get('descuento')?.setValue(0);
-        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0]);
+        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0].id);
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
@@ -1130,6 +1131,7 @@ export class AddModVentasComponent {
     if (!this.productoSeleccionado?.talles) return 0;
 
     const encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
+    console.log("encontrado", encontrado);
     if(proceso=="stock")
       return encontrado ? encontrado.cantidad : 0;
     else if(proceso=="agregar")

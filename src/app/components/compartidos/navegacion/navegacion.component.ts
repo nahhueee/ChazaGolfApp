@@ -3,10 +3,9 @@ import { NavigationEnd, Router } from '@angular/router';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { MenuModule } from 'primeng/menu';
+import { MenubarModule } from 'primeng/menubar';
 import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { CommonModule } from '@angular/common';
 import { UsuariosService } from '../../../services/usuarios.service';
 import { NotificacionesService } from '../../../services/notificaciones.service';
 
@@ -14,22 +13,16 @@ import { NotificacionesService } from '../../../services/notificaciones.service'
   selector: 'app-navegacion',
   standalone: true,
   imports: [
-    MenuModule,
+    MenubarModule,
     ButtonModule,
     NgxSpinnerModule,
-    TooltipModule,
-    CommonModule
+    TooltipModule
   ],
   templateUrl: './navegacion.component.html',
   styleUrl: './navegacion.component.scss',
 })
 export class NavegacionComponent {
-  itemsFacturacion: MenuItem[] | undefined;
-  itemsPreFacturacion: MenuItem[] | undefined;
-  itemsProducto: MenuItem[] | undefined;
-  itemsCliente: MenuItem[] | undefined;
-  itemsProveedor: MenuItem[] | undefined;
-  itemsOrdenes: MenuItem[] | undefined;
+  items: MenuItem[] = [];
   esDark: boolean = false;
   activo: string = 'inicio';
 
@@ -60,64 +53,118 @@ export class NavegacionComponent {
       }
     });
 
-   this.itemsFacturacion = [
-      { label: 'Facturar', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'factura' } },
-      { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'factura' }}
-    ];
-
-    this.itemsPreFacturacion = [
-      { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'pre' } },
-      { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'pre' } }
-    ];
-    
-    this.itemsProducto = [
-        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/productos/add' },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' },
-        { separator: true }, 
-        { label: 'Prod Presupuesto', icon: 'pi pi-wallet', routerLink: '/productos-presupuesto' },
-        { label: 'Servicios', icon: 'pi pi-verified', routerLink: '/servicios' },
-    ];
-
-    this.itemsCliente = [
-        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/clientes/add' },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/clientes' }
-    ];
-
-    this.itemsProveedor = [
-        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/proveedores/add' },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/proveedores' }
-    ];
-
-     this.itemsOrdenes = [
-        { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ordenes-ingreso/adm', 0] },
-        { label: 'Listado', icon: 'pi pi-list', routerLink: '/ordenes-ingreso' }
-    ];
-
     this.esDark = localStorage.getItem('theme') === 'dark';
+    this.items = this.ConstruirItems();
+  }
+
+  // Modelo único para p-menubar. Se reconstruye en cada navegación (ver ActualizarActivo)
+  // para poder marcar con styleClass el dominio top-level activo, ya que p-menubar no
+  // resalta automáticamente un padre cuando la ruta activa es de un hijo suyo.
+  ConstruirItems(): MenuItem[] {
+    return [
+      {
+        label: 'Fondos',
+        icon: 'pi pi-chart-bar',
+        styleClass: this.activo === 'fondos' ? 'activo' : undefined,
+        routerLink: '/fondos',
+      },
+      {
+        label: 'Ventas',
+        icon: 'pi pi-money-bill',
+        styleClass: this.activo === 'ventas' ? 'activo' : undefined,
+        items: [
+          {
+            label: 'Facturación',
+            items: [
+              { label: 'Facturar', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'factura' } },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'factura' } }
+            ]
+          },
+          {
+            label: 'Pre-Facturación',
+            items: [
+              { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'pre' } },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'pre' } }
+            ]
+          },
+        ]
+      },
+      {
+        label: 'Compras',
+        icon: 'pi pi-shopping-cart',
+        styleClass: this.activo === 'compras' ? 'activo' : undefined,
+        items: [
+          {
+            label: 'Compras',
+            items: [
+              { label: 'Nueva', icon: 'pi pi-plus', routerLink: '/compras/add' },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: '/compras' }
+            ]
+          },
+          {
+            label: 'Proveedores',
+            items: [
+              { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/proveedores/add' },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: '/proveedores' },
+              { label: 'Cuentas Corrientes', icon: 'pi pi-wallet', routerLink: '/compras/cuentas' }
+            ]
+          },
+        ]
+      },
+      {
+        label: 'Stock',
+        icon: 'pi pi-box',
+        styleClass: this.activo === 'stock' ? 'activo' : undefined,
+        items: [
+          {
+            label: 'Productos',
+            items: [
+              { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/productos/add' },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: '/productos' },
+              { label: 'Prod Presupuesto', icon: 'pi pi-wallet', routerLink: '/productos-presupuesto' }
+            ]
+          },
+          { label: 'Servicios', routerLink: '/servicios' },
+          {
+            label: 'Órdenes de Ingreso',
+            items: [
+              { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ordenes-ingreso/adm', 0] },
+              { label: 'Listado', icon: 'pi pi-list', routerLink: '/ordenes-ingreso' }
+            ]
+          }
+        ]
+      },
+      {
+        label: 'Clientes',
+        icon: 'pi pi-users',
+        styleClass: this.activo === 'clientes' ? 'activo' : undefined,
+        items: [
+          { label: 'Nuevo', icon: 'pi pi-plus', routerLink: '/clientes/add' },
+          { label: 'Listado', icon: 'pi pi-list', routerLink: '/clientes' },
+          { label: 'Cuentas Corrientes', icon: 'pi pi-wallet', routerLink: '/cuentas' }
+        ]
+      },
+      
+    ];
   }
 
   ActualizarActivo(url: string) {
     if (url.startsWith('/inicio')) {
       this.activo = 'inicio';
-    } else if (url.startsWith('/ventas') && url.includes('tipo=factura')) {
-      this.activo = 'facturacion';
-    } else if (url.startsWith('/ventas') && url.includes('tipo=pre')) {
-      this.activo = 'pre';
-    } else if (url.startsWith('/productos')) {
-      this.activo = 'productos';
-    } else if (url.startsWith('/clientes')) {
-      this.activo = 'clientes';
-    } else if (url.startsWith('/proveedores')) {
-      this.activo = 'proveedores';
+    } else if (url.startsWith('/ventas') || url.startsWith('/clientes')) {
+      this.activo = 'ventas';
+    } else if (url.startsWith('/productos') || url.startsWith('/servicios') || url.startsWith('/ordenes-ingreso')) {
+      this.activo = 'stock';
+    } else if (url.startsWith('/compras') || url.startsWith('/proveedores')) {
+      this.activo = 'compras';
     } else if (url.startsWith('/cuentas')) {
       this.activo = 'cuentas';
-    } else if (url.startsWith('/ordenes-ingreso')) {
-      this.activo = 'ordenes';  
     } else if (url.startsWith('/fondos')) {
-      this.activo = 'fondos';      
+      this.activo = 'fondos';
     } else {
       this.activo = '';
     }
+    this.items = this.ConstruirItems();
   }
 
   Navegar(ruta:string){
@@ -134,11 +181,9 @@ export class NavegacionComponent {
   AplicarTema(){
     const element = document.querySelector('html');
     element!.classList.toggle('dark-mode');
-    
+
     // También aplica la clase al body para mayor especificidad
     document.body.classList.toggle('dark-mode');
   }
   //#endregion
-
-
 }

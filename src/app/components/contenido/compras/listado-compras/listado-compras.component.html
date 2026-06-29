@@ -1,0 +1,211 @@
+<p-confirmdialog key="bajaCompra"/>
+
+<div class="contenido">
+    <app-encabezado-seccion titulo="Compras" icono="pi pi-shopping-cart">
+        <p-button label="Nueva Compra" icon="pi pi-plus" routerLink="/compras/add" />
+    </app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="Buscar()">
+        <div class="izq">
+            <!-- Proveedor -->
+            <p-floatlabel variant="on">
+                <p-autocomplete
+                    formControlName="proveedor"
+                    [suggestions]="proveedoresFiltrados"
+                    placeholder="Buscar por razón social"
+                    emptyMessage="No se encontraron resultados"
+                    (completeMethod)="FiltrarProveedores($event)"
+                    optionLabel="razonSocial"
+                >
+                    <ng-template let-proveedor pTemplate="item">
+                        {{ proveedor.razonSocial }} - {{ proveedor.documento }}
+                    </ng-template>
+                </p-autocomplete>
+                <label>Proveedor</label>
+            </p-floatlabel>
+
+            <!-- Fecha -->
+            <p-floatlabel variant="on">
+                <p-datepicker formControlName="fechas" selectionMode="range" />
+                <label>Rango de Fecha</label>
+            </p-floatlabel>
+
+            <!-- Tipo de Comprobante -->
+            <p-floatlabel variant="on">
+                <p-select [options]="comprobantes" formControlName="tipoComprobante" optionValue="id" optionLabel="descripcion" />
+                <label>Tipo de Comprobante</label>
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()" />
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+    </form>
+
+    <div class="tabla">
+        <p-table
+        [value]="compras"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="15"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[15,30,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }">
+
+            <ng-template #header>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Proveedor</th>
+                    <th>Comprobante</th>
+                    <th>Método de Pago</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-compra>
+                <tr>
+                    <td>{{ compra.fecha | date:'dd-MM-yyyy' }}</td>
+                    <td>{{ compra.proveedor }}</td>
+                    <td>{{ compra.tipoComprobante }} {{ compra.nroComprobante }}</td>
+                    <td>{{ compra.metodoPago }}</td>
+                    <td>${{ compra.total ?? 0 | decimalFormat }}</td>
+                    <td>
+                        <p-tag [value]="compra.baja ? 'De Baja' : compra.estado" [severity]="GetSeverity(compra)" />
+                    </td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerDetalle(compra.id)" pTooltip="Ver Detalle" tooltipPosition="bottom" />
+
+                            @if(!compra.baja){
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-ban" (onClick)="DarDeBaja(compra)" pTooltip="Dar de Baja" tooltipPosition="bottom" />
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="7">No se encontraron compras.</td></tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Modal Detalle (solo lectura) -->
+<p-dialog [modal]="true" [(visible)]="mostrarModalDetalle" [style]="{ width: '70vw' }">
+    <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-eye"></i>
+            <span>Detalle de Compra</span>
+        </div>
+    </ng-template>
+
+    @if(compraSeleccionada){
+        <div class="detalle">
+
+            @if(compraSeleccionada.baja){
+                <div class="alerta alerta-danger">
+                    <i class="alerta-icon pi pi-ban"></i>
+                    <span class="alerta-texto">Esta compra está dada de baja.</span>
+                </div>
+            }
+
+            <div class="seccion">
+                <h3><i class="pi pi-info-circle"></i>Datos Generales</h3>
+                <div class="enLinea">
+                    <div class="izq">
+                        <p><strong>Proveedor:</strong> {{ compraSeleccionada.proveedor }}</p>
+                        <p><strong>Condición IVA:</strong> {{ compraSeleccionada.condicionIvaProveedor }}</p>
+                        <p><strong>Comprobante:</strong> {{ compraSeleccionada.tipoComprobante }} {{ compraSeleccionada.nroComprobante }}</p>
+                        <p><strong>Fecha:</strong> {{ compraSeleccionada.fecha | date:'dd-MM-yyyy' }}</p>
+                    </div>
+                    <div class="der">
+                        <p><strong>Método de Pago:</strong> {{ compraSeleccionada.metodoPago }}</p>
+                        <p><strong>Estado:</strong> {{ compraSeleccionada.estado }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="seccion">
+                <h3><i class="pi pi-list"></i>Conceptos</h3>
+                <p-table [value]="compraSeleccionada.detalle ?? []">
+                    <ng-template #header>
+                        <tr>
+                            <th>Cantidad</th>
+                            <th>Concepto</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template #body let-linea>
+                        <tr>
+                            <td>{{ linea.cantidad }}</td>
+                            <td>{{ linea.concepto }}</td>
+                            <td>{{ linea.importe ?? 0 | decimalFormat }}</td>
+                            <td>{{ (linea.cantidad ?? 1) * (linea.importe ?? 0) | decimalFormat }}</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="tres-columnas">
+                @if(compraSeleccionada.percepcionesIibb && compraSeleccionada.percepcionesIibb.length > 0){
+                    <div class="seccion col iibb">
+                        <h3><i class="pi pi-map-marker"></i>Percepciones IIBB</h3>
+                        <p-table [value]="compraSeleccionada.percepcionesIibb">
+                            <ng-template #header>
+                                <tr>
+                                    <th>Provincia</th>
+                                    <th>Importe</th>
+                                </tr>
+                            </ng-template>
+                            <ng-template #body let-percepcion>
+                                <tr>
+                                    <td>{{ percepcion.provincia }}</td>
+                                    <td>{{ percepcion.importe ?? 0 | decimalFormat }}</td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                }
+
+                @if(compraSeleccionada.iva && compraSeleccionada.iva.length > 0){
+                    <div class="seccion col iva-resumen">
+                        <h3><i class="pi pi-percentage"></i>IVA</h3>
+                        <p-table [value]="compraSeleccionada.iva">
+                            <ng-template #header>
+                                <tr>
+                                    <th>Alícuota</th>
+                                    <th>Importe</th>
+                                </tr>
+                            </ng-template>
+                            <ng-template #body let-iva>
+                                <tr>
+                                    <td>{{ iva.alicuota }}</td>
+                                    <td>{{ iva.importe ?? 0 | decimalFormat }}</td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                }
+
+                <div class="seccion col resumen">
+                    <h3><i class="pi pi-calculator"></i>Resumen</h3>
+                    <div class="totales">
+                        <div class="fila"><span>Neto:</span><span>{{ compraSeleccionada.totalNeto ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>IVA:</span><span>{{ compraSeleccionada.totalIva ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>IIBB:</span><span>{{ compraSeleccionada.totalIibb ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Tasa Municipal:</span><span>{{ compraSeleccionada.tasaMunicipal ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Percepción IVA:</span><span>{{ compraSeleccionada.percepcionIva ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Retención Ganancias:</span><span>{{ compraSeleccionada.retencionGanancia ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila total"><span>Total:</span><span>{{ compraSeleccionada.total ?? 0 | decimalFormat }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</p-dialog>

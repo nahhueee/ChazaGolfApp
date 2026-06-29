@@ -4,17 +4,20 @@ import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { ClientesService } from '../../../../services/clientes.service';
 import { CondicionesIva } from '../../../../models/CondicionesIva';
+import { CategoriaCliente } from '../../../../models/CategoriaCliente';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { DireccionesService } from '../../../../services/direcciones.service';
 import { MiscService } from '../../../../services/misc.service';
 import { ActivatedRoute, Route, Router } from '@angular/router';
 import { GlobalesService } from '../../../../services/globales.service';
+import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
 @Component({
   selector: 'app-addmod-clientes',
   standalone: true,
   imports: [
-    ...FORMS_IMPORTS
+    ...FORMS_IMPORTS,
+    EncabezadoSeccionComponent,
   ],
   templateUrl: './addmod-clientes.component.html',
   styleUrl: './addmod-clientes.component.scss',
@@ -49,12 +52,7 @@ export class AddModClientesComponent {
     {id: 3, descripcion: 'PAGO DIGITAL'},
     {id: 4, descripcion: 'OTRO'},
   ];
-  categorias = [
-    {id: 1, descripcion: 'MINORISTA'},
-    {id: 2, descripcion: 'MAYORISTA'},
-    {id: 3, descripcion: 'EMBAJADOR'},
-    {id: 4, descripcion: 'ACUERDO'},
-  ];
+  categorias: CategoriaCliente[] = [];
   listasPrecio = [
     {id: 1, descripcion: 'CONSUMIDOR FINAL'},
     {id: 2, descripcion: 'LISTA 3'},
@@ -152,9 +150,9 @@ export class AddModClientesComponent {
     }
 
     this.ObtenerCondiciones();
+    this.ObtenerCategoriasCliente();
     this.ObtenerProvincias();
 
-    this.formulario.get('categoria')?.setValue(this.categorias[0]);
     this.formulario.get('lista')?.setValue(this.listasPrecio[0]);
     this.formulario.get('condPago')?.setValue(this.condicionesPago[0]);
   
@@ -288,6 +286,15 @@ export class AddModClientesComponent {
       });
   }
 
+  ObtenerCategoriasCliente(){
+    this.miscService.ObtenerCategoriasCliente()
+      .subscribe(response => {
+        this.categorias = response;
+        //Default MINORISTA (id 1) explicito por id, no por indice: el orden del combo es alfabetico, no coincide con el orden de ids.
+        this.formulario.get('categoria')?.setValue(this.categorias.find(c => c.id === 1) ?? this.categorias[0]);
+      });
+  }
+
   FiltrarProvincias(event: any) {
     const query = event.query.toLowerCase();
     this.provinciasFiltrado = this.provincias.filter(p => {
@@ -406,6 +413,12 @@ export class AddModClientesComponent {
 
   CerrarModal(actualizar:boolean) {
     this.cerrar.emit(actualizar);
+  }
+
+  //Volver: si se accedió por ruta, vuelve al listado; si es modal, lo cierra sin actualizar.
+  Volver() {
+    if (this.desdeRouting) this.router.navigateByUrl('/clientes');
+    else this.CerrarModal(false);
   }
 
   //Marca los campos del formulario como tocados para validar

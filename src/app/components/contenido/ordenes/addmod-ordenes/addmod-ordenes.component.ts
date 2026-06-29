@@ -24,6 +24,7 @@ import { ProductoImprimir } from '../../../../models/ProductoImprimir';
 import { EtiquetasService } from '../../../../services/etiquetas.service';
 import { RecepcionHistorial } from '../../../../models/Recepcion';
 import { AutoComplete } from 'primeng/autocomplete';
+import { TALLES_ESTANDAR } from '../../ventas/models/venta.constants';
 
 
 interface TalleUI {
@@ -77,13 +78,12 @@ export class AddmodOrdenesComponent implements OnInit {
   tallesProducto: TalleUI[] = []; 
 
   lineasTalles: LineasTalle[] = [];
-  columnasFijas = Array(10).fill(0);
   @ViewChild('tablaProductos') tablaProductos: Table | undefined;
 
   ordenIngreso:OrdenIngreso = new OrdenIngreso();
   recepcionesPorProducto: { [idProducto: number]: RecepcionHistorial[] } = {};
   expandedRows: { [key: number]: boolean } = {};
-  talles = ["XS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL"];
+  talles = TALLES_ESTANDAR;
 
   recepcionesRevertir:Revertir[] = [];
 

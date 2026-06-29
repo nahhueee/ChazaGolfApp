@@ -24,8 +24,13 @@ import { TipoComprobante } from '../../../../models/ObjFacturar';
   styleUrl: './vista-previa.component.scss',
 })
 export class VistaPreviaComponent {
-  @Input() visible = false; 
+  @Input() visible = false;
   @Input() venta: Venta = new Venta();
+  // Indica si venta.productos/servicios ya vienen NETOS (sin IVA) para Factura A,
+  // como deja listado-ventas.PrepararPrecios() antes de abrir esta vista (caso por defecto).
+  // En addmod-ventas los precios siempre llegan BRUTOS (con IVA incluido, para A y B),
+  // por eso ese caller pasa preciosNetos=false explícitamente.
+  @Input() preciosNetos: boolean = true;
   @Output() visibleChange = new EventEmitter<boolean>();
 
   cantProductos:number = 0;
@@ -101,20 +106,16 @@ export class VistaPreviaComponent {
     let totalGeneral = 0;
     this.mostrarIva = false;
 
-    const forzarFacturaB =
-      this.venta.cliente?.idCategoria === 1 &&
-      this.venta.cliente?.idCondicionIva === 1;
-
     const esTipoA = [
          TipoComprobante.FACTURA_A,
          TipoComprobante.NC_A,
          TipoComprobante.ND_A
     ].includes(this.venta.idTipoComprobante!);
-    
+
     const esTipoB = this.venta.idTipoComprobante === 6;
 
-    // FACTURA B (tipo 6 o forzada)
-    if (esTipoB || forzarFacturaB) {
+    // FACTURA B (tipo 6)
+    if (esTipoB) {
 
       totalIva = subtotalNeto * 21 / 121;
       totalGeneral = subtotalNeto; // ya incluye IVA
@@ -123,8 +124,15 @@ export class VistaPreviaComponent {
     // FACTURA A (tipo 1)
     } else if (esTipoA) {
 
-      totalIva = subtotalNeto * 0.21;
-      totalGeneral = subtotalNeto + totalIva;
+      if (this.preciosNetos) {
+        // Precios ya netos (PrepararPrecios los convirtió antes de abrir esta vista) → se suma IVA
+        totalIva = subtotalNeto * 0.21;
+        totalGeneral = subtotalNeto + totalIva;
+      } else {
+        // Precios brutos con IVA incluido (ej. desde addmod-ventas) → se discrimina, igual que B
+        totalIva = subtotalNeto * 21 / 121;
+        totalGeneral = subtotalNeto; // ya incluye IVA
+      }
       this.mostrarIva = true;
 
     // Otros comprobantes → sin IVA

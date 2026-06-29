@@ -1,0 +1,288 @@
+<div class="contenido" [class.modal]="!desdeRouting">
+
+    <!-- ENCABEZADO: Datos Generales + Proveedor -->
+    <div class="seccion">
+        <h3><i class="pi pi-info-circle"></i>Datos Generales</h3>
+
+        <form [formGroup]="formulario" method="POST" (keyup.esc)="Volver()" autocomplete="off">
+            <div class="enLinea">
+                <div class="izq">
+                    <div class="horizontal">
+                        <!-- Empresa -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" (onChange)="CambioEmpresa()" />
+                            <label>Empresa</label>
+                        </p-floatlabel>
+                    </div>
+
+                    <div class="horizontal">
+                        <!-- Tipo Comprobante -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="comprobantesDisponibles" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" />
+                            <label>Tipo Comprobante</label>
+                        </p-floatlabel>
+
+                        <!-- Fecha -->
+                        <p-floatlabel variant="in">
+                            <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
+                            <label>Fecha</label>
+                        </p-floatlabel>
+
+                        <!-- Nro Comprobante -->
+                        <p-floatlabel variant="in">
+                            <input pInputText formControlName="nroComprobante" type="text" />
+                            <label>Nro Comprobante</label>
+                            @if(nroComprobante?.hasError('required') && nroComprobante?.touched){
+                                <small class="error">Requerido salvo Cotización.</small>
+                            }
+                        </p-floatlabel>
+                    </div>
+                </div>
+
+                <div class="der">
+                    <!-- Proveedor -->
+                    <p-floatlabel variant="in">
+                        <p-autocomplete
+                            formControlName="proveedor"
+                            [suggestions]="proveedoresFiltrados"
+                            placeholder="Buscar por razón social"
+                            emptyMessage="No se encontraron resultados"
+                            (completeMethod)="FiltrarProveedores($event)"
+                            (onSelect)="SeleccionarProveedor()"
+                            optionLabel="razonSocial"
+                        >
+                            <ng-template let-proveedor pTemplate="item">
+                                {{ proveedor.razonSocial }} - {{ proveedor.documento }}
+                            </ng-template>
+                        </p-autocomplete>
+                        <label>Proveedor</label>
+                        @if(campoInvalido('proveedor')){
+                            <small class="error">Seleccioná un proveedor.</small>
+                        }
+                    </p-floatlabel>
+
+                    @if(proveedorSeleccionado){
+                        <div class="proveedor-card">
+                            <p><strong>Condición Fiscal:</strong> {{ proveedorSeleccionado.condicionIva }}</p>
+                            <p><strong>Documento:</strong> {{ proveedorSeleccionado.tipoDocumento }} {{ proveedorSeleccionado.documento }}</p>
+                        </div>
+                    }@else{
+                        <div class="noSeleccionado" [class.noSeleccionado--error]="campoInvalido('proveedor')">
+                            <div class="icon">
+                                <i class="pi pi-truck"></i>
+                            </div>
+                            @if(campoInvalido('proveedor')){
+                                <p class="error-cliente">Seleccioná un proveedor para continuar.</p>
+                            }@else{
+                                <p>Selecciona un proveedor para ver sus datos</p>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="tres-columnas">
+        <!-- CONCEPTOS -->
+        <div class="seccion col">
+            <h3><i class="pi pi-list"></i>Conceptos</h3>
+
+            <form class="form-linea" [formGroup]="formLinea" (keyup.enter)="AgregarLinea()" autocomplete="off">
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="cantidad" type="number" (focus)="SelectContent($event)" />
+                    <label>Cant.</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input #inputConcepto pInputText formControlName="concepto" type="text" />
+                    <label>Concepto</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="importe" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Precio Unit.</label>
+                </p-floatlabel>
+                <p-button label="Agregar" icon="pi pi-plus" (onClick)="AgregarLinea()" />
+            </form>
+
+            <p-table [value]="lineas" dataKey="concepto">
+                <ng-template #header>
+                    <tr>
+                        <th>Cantidad</th>
+                        <th>Concepto</th>
+                        <th>Precio Unit.</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-linea let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ linea.cantidad }}</td>
+                        <td>{{ linea.concepto }}</td>
+                        <td>{{ linea.importe ?? 0 | decimalFormat }}</td>
+                        <td>{{ (linea.cantidad ?? 1) * (linea.importe ?? 0) | decimalFormat }}</td>
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="QuitarLinea(rowIndex)" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="5">No hay conceptos cargados.</td></tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <!-- FORMA DE PAGO -->
+        <div class="seccion col">
+            <h3><i class="pi pi-wallet"></i>Forma de Pago</h3>
+
+            <form class="form-linea" [formGroup]="formPago" (keyup.enter)="AgregarPago()" autocomplete="off">
+                <p-floatlabel variant="in">
+                    <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
+                    <label>Método de Pago</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="monto" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Monto</label>
+                </p-floatlabel>
+                <p-button label="Agregar" icon="pi pi-plus" (onClick)="AgregarPago()" />
+            </form>
+
+            <p-table [value]="pagosNuevos">
+                <ng-template #header>
+                    <tr>
+                        <th>Método</th>
+                        <th>Monto</th>
+                        <th></th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-pago let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ pago.metodo }}</td>
+                        <td>{{ pago.monto ?? 0 | decimalFormat }}</td>
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago(rowIndex)" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="3">No se agregaron métodos de pago.</td></tr>
+                </ng-template>
+                <ng-template #footer>
+                    @if(pagosNuevos.length > 0){
+                        <tr>
+                            <td><strong>Pagado</strong></td>
+                            <td><strong>{{ montoPagado | decimalFormat }}</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Restante</strong></td>
+                            <td><strong>{{ remanente | decimalFormat }}</strong></td>
+                            <td></td>
+                        </tr>
+                    }
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+    
+
+    <!-- TRES COLUMNAS: Percepciones IIBB | IVA + Otros Importes | Resumen -->
+    <div class="tres-columnas">
+
+        <!-- Percepciones IIBB -->
+        <div class="seccion col iibb">
+            <h3><i class="pi pi-map-marker"></i>Percepciones IIBB</h3>
+
+            <form class="form-linea-vertical" [formGroup]="formPercepcion" (keyup.enter)="AgregarPercepcion()" autocomplete="off">
+                <p-floatlabel variant="in">
+                    <p-select [options]="provincias" formControlName="provincia" />
+                    <label>Provincia</label>
+                </p-floatlabel>
+                <div class="horizontal">
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="importe" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                        <label>Importe</label>
+                    </p-floatlabel>
+                    <p-button label="Agregar" icon="pi pi-plus" (onClick)="AgregarPercepcion()" />
+                </div>
+            </form>
+
+            <p-table [value]="percepcionesIibb" dataKey="provincia">
+                <ng-template #header>
+                    <tr>
+                        <th>Provincia</th>
+                        <th>Importe</th>
+                        <th></th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-percepcion let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ percepcion.provincia }}</td>
+                        <td>{{ percepcion.importe ?? 0 | decimalFormat }}</td>
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="QuitarPercepcion(rowIndex)" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="3">No hay percepciones cargadas.</td></tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <!-- IVA + Otros Importes -->
+        <div class="seccion col iva" [formGroup]="formulario">
+            <h3><i class="pi pi-percentage"></i>IVA</h3>
+            <div class="horizontal">
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="iva21" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>21%</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="iva105" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>10,5%</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="iva27" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>27%</label>
+                </p-floatlabel>
+            </div>
+
+            <h3><i class="pi pi-file-edit"></i>Otros Importes</h3>
+            <div class="horizontal">
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="tasaMunicipal" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Tasa Municipal</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="percepcionIva" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Percepción IVA</label>
+                </p-floatlabel>
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="retencionGanancia" type="text" [imask]="decimal_mask" (focus)="SelectContent($event)" />
+                    <label>Retención Ganancias</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <!-- Resumen -->
+        <div class="seccion col resumen">
+            <h3><i class="pi pi-calculator"></i>Resumen</h3>
+
+            <div class="totales">
+                <div class="fila"><span>Neto:</span><span>{{ totalNetoPreview | decimalFormat }}</span></div>
+                <div class="fila"><span>IVA:</span><span>{{ totalIvaPreview | decimalFormat }}</span></div>
+                <div class="fila"><span>IIBB:</span><span>{{ totalIibbPreview | decimalFormat }}</span></div>
+                <div class="fila"><span>Tasa Municipal:</span><span>{{ tasaMunicipalPreview | decimalFormat }}</span></div>
+                <div class="fila"><span>Percepción IVA:</span><span>{{ percepcionIvaPreview | decimalFormat }}</span></div>
+                <div class="fila"><span>Retención Ganancias:</span><span>{{ retencionGananciaPreview | decimalFormat }}</span></div>
+                <div class="fila total"><span>Total:</span><span>{{ totalPreview | decimalFormat }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="botones">
+    <p-button label="Volver" severity="secondary" (click)="Volver()" icon="pi pi-angle-left"/>
+    <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
+</div>

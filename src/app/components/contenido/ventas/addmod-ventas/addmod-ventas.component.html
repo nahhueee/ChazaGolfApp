@@ -97,7 +97,6 @@
                         <div class="ventas-cliente">
                             <p class="titulo">Relacionados</p>
                             @for (venta of ventasCliente; track venta) {
-                                
                                 @if(
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 5) ||
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 7) ||
@@ -271,32 +270,20 @@
                      #tablaProductos>
                 <ng-template #header>
                     <tr>
-                        <th rowspan="5">Código</th>
-                        <th rowspan="5">Nombre</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
 
                         @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                            <th rowspan="5">Color</th>
+                            <th>Color</th>
 
-                            <th colspan="10" class="text-center bloque-talles"></th>
+                            <th *ngFor="let talla of talles" class="text-center">{{ talla }}</th>
                         }
 
-                        <th rowspan="5">Cant.</th>
-                        <th rowspan="5">Precio</th>
-                        <th rowspan="5">Total</th>
-                        <th rowspan="5">Quitar</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Quitar</th>
                         </tr>
-
-                        @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
-                            <!-- 4 filas visuales -->
-                            <tr *ngFor="let linea of lineasTalles ; let last = last" class="fila-talles"  [ngClass]="{'ultima-fila-talles': last}">
-
-                            <th *ngFor="let col of columnasFijas; let i = index">
-                                {{ linea.talles![i] || '' }}
-                            </th>
-
-                            </tr>
-                        }
-                        
                 </ng-template>
                 <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
                     <tr>
@@ -686,7 +673,7 @@
 
 
 <!-- Modal Resumen -->
-<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta"></app-vista-previa>
+<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta" [preciosNetos]="false"></app-vista-previa>
 
 
 <!-- Modal Datos Cliente -->

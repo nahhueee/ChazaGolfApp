@@ -1,6 +1,12 @@
 <p-confirmpopup />
 <p-confirmdialog key="borrarColor"/>
 
+@if(desdeRouting){
+    <div class="encabezado-pagina">
+        <app-encabezado-seccion [titulo]="producto ? 'Editar Producto' : 'Agregar Producto'" icono="pi pi-box" />
+    </div>
+}
+
 <div class="contenido" [class.modal]="!desdeRouting">
     <form class="form" [formGroup]="formulario" (keyup.enter)='Guardar()' (keyup.esc)="CerrarModal(false)" autocomplete="off">
 
@@ -243,11 +249,12 @@
 
 @if(!desdeRouting){
     <div class="botones-float">
-        <p-button label="Volver" severity="secondary" (click)="CerrarModal(false)" icon="pi pi-angle-left"/>
+        <p-button label="Volver" severity="secondary" (click)="Volver()" icon="pi pi-angle-left"/>
         <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
     </div>
 }@else {
     <div class="botones">
+        <p-button label="Volver" severity="secondary" (click)="Volver()" icon="pi pi-angle-left"/>
         <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
     </div>
 }

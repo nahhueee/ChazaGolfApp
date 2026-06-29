@@ -1,7 +1,12 @@
 <p-confirmdialog key="cerrarDialog"/>
 
 <div class="contenido">
-    <form [formGroup]="filtros" autocomplete="off" class="filtros">
+    <app-encabezado-seccion [titulo]="tipo == 'factura' ? 'Facturación' : 'Pre-Facturación'" icono="pi pi-money-bill">
+        <p-button [label]="tipo == 'factura' ? 'Nueva Facturación' : 'Nueva Pre-Facturación'" icon="pi pi-plus" [routerLink]="['/ventas/administrar', 0]" [queryParams]="{tipo: tipo}"/>
+        <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
+    </app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
             <!-- Proceso -->
             <p-floatlabel variant="on">
@@ -43,8 +48,6 @@
         <div class="der">
             <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
             <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
-            
-            <p-button class="exportar" variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
         </div>
     </form>
 
@@ -64,7 +67,6 @@
         
             <ng-template #header>
                 <tr>
-                    <th>Editar</th>
                     <th>Proceso</th>
                     <th>Nro</th>
                     <th>Fecha</th>
@@ -77,9 +79,6 @@
             </ng-template>
             <ng-template #body let-venta>
                 <tr>
-                    <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO'"/>
-                    </td>
                     <td>{{ venta.proceso }}</td>
                     <td>{{ venta.nroProceso }}</td>
                     <td>{{ venta.fecha | date:'dd-MM-yyyy' }} | {{ venta.hora }}</td>
@@ -102,6 +101,8 @@
                     </td>
                     <td>
                         <div class="acciones">
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO'"/>
+
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
 
                             @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada") 

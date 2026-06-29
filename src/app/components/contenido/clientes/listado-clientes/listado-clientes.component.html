@@ -1,5 +1,9 @@
 <div class="contenido">
-    <form [formGroup]="filtros" autocomplete="off" class="filtros" (keyup.enter)='Buscar()'>
+    <app-encabezado-seccion titulo="Clientes" icono="pi pi-user">
+        <p-button label="Nuevo Cliente" icon="pi pi-plus" routerLink="/clientes/add" />
+    </app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
             <!-- Nombre -->
             <p-floatlabel variant="on">
@@ -39,7 +43,6 @@
         
             <ng-template #header>
                 <tr>
-                    <th>Editar</th>
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Email</th>
@@ -47,13 +50,11 @@
                     <th>Celular</th>
                     <th>Condición</th>
                     <th>Documento</th>
+                    <th>Acciones</th>
                 </tr>
             </ng-template>
             <ng-template #body let-cliente>
                 <tr>
-                    <td>
-                        <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(cliente.id)" pTooltip="Editar" tooltipPosition="bottom"/>
-                    </td>
                     <td>{{ cliente.id }}</td>
                     <td>{{ cliente.nombre }}</td>
                     <td>{{ cliente.email }}</td>
@@ -61,11 +62,12 @@
                     <td>{{ cliente.celular }}</td>
                     <td>{{ cliente.condicionIva }}</td>
                     <td>{{ cliente.documento }}</td>
-                    <!-- <td>
+                    <td>
                         <div class="acciones">
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cliente.id, cliente.nombre)" pTooltip="Estadisticas" tooltipPosition="bottom"/>
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(cliente.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                            <!-- <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cliente.id, cliente.nombre)" pTooltip="Estadisticas" tooltipPosition="bottom"/> -->
                         </div>
-                    </td> -->
+                    </td>
                 </tr>
             </ng-template>
         </p-table>

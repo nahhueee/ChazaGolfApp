@@ -1,0 +1,96 @@
+// Estilos compartidos para pantallas de carga/detalle con secciones (ej: Compras, y a futuro
+// cualquier módulo que necesite el mismo patrón de "carga" <-> "detalle de solo lectura").
+// Se importa vía @use en el .scss de cada componente (los component styles de Angular están
+// encapsulados, así que esto no se "hereda" solo: cada componente que lo necesite debe importarlo).
+
+.seccion{
+    width: 100%;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    background-color: var(--surface-card);
+
+    h3{
+        font-size: 15px;
+        font-family: 'Poppins';
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+
+        i{
+            margin-right: 8px;
+            color: var(--p-primary-color);
+        }
+    }
+}
+
+.enLinea{
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    flex-wrap: wrap;
+
+    .izq{
+        flex: 2;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .der{
+        flex: 1;
+        min-width: 280px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+.horizontal{
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.tres-columnas{
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    flex-wrap: wrap;
+
+    .col{
+        flex: 1;
+    }
+    .iibb{
+        flex: 1;
+    }
+    .iva{
+        flex: 1.5;
+    }
+    .iva-resumen{
+        flex: 1;
+    }
+    .resumen{
+        flex: 1;
+    }
+}
+
+.totales{
+    background-color: var(--surface-ground);
+    border-radius: 8px;
+    padding: 12px 15px;
+
+    .fila{
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+
+        &.total{
+            font-weight: 600;
+            font-size: 16px;
+            border-top: 1px solid var(--surface-border);
+            margin-top: 6px;
+            padding-top: 8px;
+        }
+    }
+}

@@ -1,0 +1,64 @@
+<div class="contenido">
+    <app-encabezado-seccion titulo="Cuentas Corrientes - Proveedores" icono="pi pi-wallet" />
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
+        <div class="izq">
+            <!-- Proveedor -->
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="razonSocial" type="text"/>
+                <label>Proveedor</label>
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+        </div>
+    </form>
+
+    <div class="tabla">
+        <p-table
+        [value]="cuentas"
+        [lazy]="true"
+        [paginator]="true"
+        [rows]="15"
+        [totalRecords]="totalRecords"
+        (onLazyLoad)="Buscar($event)"
+        [loading]="loading"
+        [rowsPerPageOptions]="[15,30,50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        [tableStyle]="{ 'min-width': '60rem' }">
+
+            <ng-template #header>
+                <tr>
+                    <th>Cod.Proveedor</th>
+                    <th>Proveedor</th>
+                    <th>Saldo Inicial</th>
+                    <th>Deuda</th>
+                    <th>Saldo a Favor</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Ult. Movimiento</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-cuenta>
+                <tr>
+                    <td>{{ cuenta.idProveedor }}</td>
+                    <td>{{ cuenta.proveedor }}</td>
+                    <td>${{ cuenta.saldoInicial | decimalFormat }}</td>
+                    <td>${{ cuenta.deuda | decimalFormat }}</td>
+                    <td>${{ cuenta.saldoAFavor | decimalFormat }}</td>
+                    <td>${{ cuenta.saldo | decimalFormat }}</td>
+                    <td><p-tag [value]="cuenta.estado" [severity]="GetSeverity(cuenta.estado)" /></td>
+                    <td>{{ cuenta.ultimoMovimiento | date:'dd-MM-yyyy HH:mm' }}</td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-list" (onClick)="VerCuenta(cuenta.idProveedor, cuenta.proveedor)" pTooltip="Gestionar Cuenta" tooltipPosition="bottom"/>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
