@@ -734,9 +734,9 @@ export class AddModVentasComponent {
   FiltrarClientes(event: any) {
     const query = event.query.toLowerCase();
     this.clientesFiltrados = this.clientes.filter(c => {
-      const nombre = c.nombre!.toLowerCase();
-      const dni = c.documento!.toString(); 
-      const razon = c.razonSocial!.toLowerCase();
+      const nombre = (c.nombre ?? '').toLowerCase();
+      const dni = (c.documento ?? '').toString();
+      const razon = (c.razonSocial ?? '').toLowerCase();
       return nombre.includes(query) || dni.includes(query) || razon.includes(query);
     });
   }

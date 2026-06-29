@@ -353,8 +353,8 @@ export class AddmodProductosComponent {
   FiltrarClientes(event: any) {
     const query = event.query.toLowerCase();
     this.clientesFiltrados = this.clientes.filter(c => {
-      const nombre = c.nombre!.toLowerCase();
-      const dni = c.documento!.toString(); 
+      const nombre = (c.nombre ?? '').toLowerCase();
+      const dni = (c.documento ?? '').toString();
       return nombre.includes(query) || dni.includes(query);
     });
   }

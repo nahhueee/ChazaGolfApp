@@ -306,12 +306,12 @@ export class AddModClientesComponent {
   FiltrarCiudades(event: any) {
     const query = event.query.toLowerCase();
 
-    if (query.length < 3) {
-      this.ciudades = []; 
+    if (query.length < 3 || !this.provinciaControl?.value?.nombre) {
+      this.ciudades = [];
       return;
     }
 
-    this.direccionesService.ObtenerLocalidades(this.provinciaControl?.value.nombre, query)
+    this.direccionesService.ObtenerLocalidades(this.provinciaControl.value.nombre, query)
     .subscribe(response => {
       this.ciudades = response;
     });
@@ -320,12 +320,12 @@ export class AddModClientesComponent {
   FiltrarCalles(event: any) {
     const query = event.query.toLowerCase();
 
-    if (query.length < 3) {
-      this.calles = []; 
+    if (query.length < 3 || !this.ciudadControl?.value?.nombre) {
+      this.calles = [];
       return;
     }
 
-    this.direccionesService.ObtenerCalles(this.ciudadControl?.value.nombre, query)
+    this.direccionesService.ObtenerCalles(this.ciudadControl.value.nombre, query)
     .subscribe(response => {
       this.calles = response;
     });
