@@ -36,8 +36,8 @@ export class CuentasCorrientesService {
     return this.apiService.put('cuentas/actualizar-pago', {idVenta, idCaja, idCliente, totalDeuda, pagos})
   }
 
-  EntregaDinero(idCaja:number, idCliente:number, idMetodo:number, monto:number, observaciones:string): Observable<any> {
-    return this.apiService.put('cuentas/entrega', {idCaja, idCliente, idMetodo, monto, observaciones})
+  EntregaDinero(idCaja:number, idCliente:number, idEmpresa:number, idMetodo:number, monto:number, observaciones:string, cheque?: any, retencion?: any): Observable<any> {
+    return this.apiService.put('cuentas/entrega', {idCaja, idCliente, idEmpresa, idMetodo, monto, observaciones, cheque, retencion})
   }
 
 }

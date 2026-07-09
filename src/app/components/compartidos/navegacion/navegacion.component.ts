@@ -8,6 +8,7 @@ import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { UsuariosService } from '../../../services/usuarios.service';
 import { NotificacionesService } from '../../../services/notificaciones.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-navegacion',
@@ -25,6 +26,12 @@ export class NavegacionComponent {
   items: MenuItem[] = [];
   esDark: boolean = false;
   activo: string = 'inicio';
+
+  // Pill de ambiente en el menú: solo se muestra fuera de producción real. No usamos
+  // environment.production para esto porque environment.test.ts también lo deja en true
+  // (build optimizado apuntando a la API de test) - ver environment.envName.
+  nombreEntorno: string = environment.envName.toUpperCase();
+  esProduccion: boolean = environment.envName === 'production';
 
   constructor(
     private router:Router,
@@ -151,14 +158,15 @@ export class NavegacionComponent {
   ActualizarActivo(url: string) {
     if (url.startsWith('/inicio')) {
       this.activo = 'inicio';
-    } else if (url.startsWith('/ventas') || url.startsWith('/clientes')) {
+    } else if (url.startsWith('/ventas')) {
       this.activo = 'ventas';
     } else if (url.startsWith('/productos') || url.startsWith('/servicios') || url.startsWith('/ordenes-ingreso')) {
       this.activo = 'stock';
     } else if (url.startsWith('/compras') || url.startsWith('/proveedores')) {
       this.activo = 'compras';
-    } else if (url.startsWith('/cuentas')) {
-      this.activo = 'cuentas';
+    } else if (url.startsWith('/clientes') || url.startsWith('/cuentas')) {
+      // /cuentas (Cuentas Corrientes) cuelga del ítem "Clientes" en el menú.
+      this.activo = 'clientes';
     } else if (url.startsWith('/fondos')) {
       this.activo = 'fondos';
     } else {

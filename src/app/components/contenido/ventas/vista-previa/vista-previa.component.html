@@ -44,47 +44,67 @@
 
         <div class="data-productos">
             <p>Productos</p>
-            <p-table [value]="venta.productos" size="small" showGridlines>
+            <p-table [value]="venta.productos" size="small" showGridlines dataKey="codProducto" rowGroupMode="subheader" groupRowsBy="idLineaTalle">
                 <ng-template #header>
                     <tr>
                         <th>Código</th>
                         <th>Nombre</th>
                         <th>Color</th>
-                        <th>XS</th>
-                        <th>S</th>
-                        <th>M</th>
-                        <th>L</th>
-                        <th>XL</th>
-                        <th>XXL</th>
-                        <th>3XL</th>
-                        <th>4XL</th>
-                        <th>5XL</th>
-                        <th>6XL</th>
+                        <th colspan="10" class="text-center">Talles</th>
                         <th>Cant.</th>
                         <th>Precio</th>
                         <th>Desc. Aplicado</th>
                         <th>Total</th>
                     </tr>
                 </ng-template>
-                <ng-template #body let-producto>
-                    <tr>
-                        <td>{{ producto.codProducto }}</td>
-                        <td>{{ producto.nomProducto }}</td>
-                        <td>{{ producto.color }}</td>
-                        <td>{{ producto.t1 }}</td>
-                        <td>{{ producto.t2 }}</td>
-                        <td>{{ producto.t3 }}</td>
-                        <td>{{ producto.t4 }}</td>
-                        <td>{{ producto.t5 }}</td>
-                        <td>{{ producto.t6 }}</td>
-                        <td>{{ producto.t7 }}</td>
-                        <td>{{ producto.t8 }}</td>
-                        <td>{{ producto.t9 }}</td>
-                        <td>{{ producto.t10 }}</td>
+                <ng-template #groupheader let-producto>
+                    <tr class="grupo-linea-talle">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        @for (t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']; track t; let i = $index) {
+                            <td class="text-center">
+                                <strong>{{ ObtenerTallesDeLinea(producto.idLineaTalle)[i] }}</strong>
+                            </td>
+                        }
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-producto let-rowIndex="rowIndex">
+                    <tr [class.fila-continuacion]="EsContinuacionMismoProducto(rowIndex)"
+                        [class.precede-continuacion]="PrecedeContinuacion(rowIndex)">
+                        <td>
+                            @if(EsContinuacionMismoProducto(rowIndex)){
+                                <span class="indicador-continuacion" pTooltip="Mismo producto que la fila anterior: tiene precio distinto según el talle." tooltipPosition="top">
+                                    <i class="pi pi-info-circle"></i>
+                                </span>
+                            } @else {
+                                {{ producto.codProducto }}
+                            }
+                        </td>
+                        <td>{{ EsContinuacionMismoProducto(rowIndex) ? '' : producto.nomProducto }}</td>
+                        <td>
+                            @if(!EsContinuacionMismoProducto(rowIndex)){
+                                {{ producto.color }}
+                            }
+                        </td>
+                        <td>{{ producto.t1 || '' }}</td>
+                        <td>{{ producto.t2 || '' }}</td>
+                        <td>{{ producto.t3 || '' }}</td>
+                        <td>{{ producto.t4 || '' }}</td>
+                        <td>{{ producto.t5 || '' }}</td>
+                        <td>{{ producto.t6 || '' }}</td>
+                        <td>{{ producto.t7 || '' }}</td>
+                        <td>{{ producto.t8 || '' }}</td>
+                        <td>{{ producto.t9 || '' }}</td>
+                        <td>{{ producto.t10 || '' }}</td>
                         <td style="width: 150px;">{{ producto.cantidad }}</td>
                         <td style="width: 150px;">${{ producto.precioMostrar | decimalFormat}}</td>
                         <td style="width: 150px;">{{ producto.descuentoAplicado ?? 0 }}%</td>
-                        <td style="width: 150px;">${{ producto.totalMostrar | decimalFormat }}</td>
+                        <td style="width: 150px;">${{ producto.total | decimalFormat }}</td>
                     </tr>
 
                     @if(venta.ajuste === 1){
@@ -110,6 +130,7 @@
                     }
                 </ng-template>
             </p-table>
+            
         </div>
         <div class="contadores">
             <div class="item">{{cantProductos}}</div>
@@ -127,8 +148,8 @@
                         <th>Nombre</th>
                         <th>Cant.</th>
                         <th>Precio</th>
-                        <th>Total</th>
                         <th>Desc. Aplicado</th>
+                        <th>Total</th>
                     </tr>
                 </ng-template>
                 <ng-template #body let-servicio>
@@ -200,6 +221,13 @@
                         <span>Subtotal:</span>
                         <span class="monto">${{subTotal | decimalFormat}}</span>
                     </div>
+                    @if(venta.ajuste === 1){
+                    <div class="fila">
+                        <span>Recargo Transferencia (10%):</span>
+                        <span class="monto">${{totalAjuste | decimalFormat}}</span>
+                    </div>
+                    }
+
                     <div class="fila">
                         <span>Descuento:</span>
                         <span class="monto">${{totalDescuento | decimalFormat}}</span>

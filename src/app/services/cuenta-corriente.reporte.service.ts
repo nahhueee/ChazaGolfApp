@@ -93,12 +93,18 @@ export class CuentaCorrienteReporteService {
             }
 
             //Totales
-            const saldoMovimientos = data.movimientos.reduce((acc, m) => {
-                const debe = Number(m.debe) || 0;
-                const haber = Number(m.haber) || 0;
-                return acc + (debe - haber);
-            }, 0);
-            const saldoAnterior = (data.saldo || 0) - saldoMovimientos;
+            // El "saldo anterior" es la primera fila que manda el backend (estado === 'INICIAL'),
+            // en vez de recalcularlo por diferencia (podía quedar inconsistente con lo que se ve en la tabla).
+            const filaAnterior = data.movimientos.find(m => m.estado === 'INICIAL');
+            const saldoAnterior = filaAnterior ? Number(filaAnterior.saldo) || 0 : 0;
+
+            const saldoMovimientos = data.movimientos
+                .filter(m => m.estado !== 'INICIAL')
+                .reduce((acc, m) => {
+                    const debe = Number(m.debe) || 0;
+                    const haber = Number(m.haber) || 0;
+                    return acc + (debe - haber);
+                }, 0);
 
             const documentDefinition: any = {
                 pageSize: 'A4',

@@ -11,6 +11,14 @@ export class ObjComprobante {
     redondeo?:number;
     filasProducto?:any[];
     filasServicio?:any[];
+    // Índices (dentro de filasProducto) de las filas de subheader por línea de talle,
+    // para que el layout de la tabla (ArmarInternoA4) las pueda estilar distinto del zebra normal.
+    filasProductoGrupos?:number[];
+    // Índices (dentro de filasProducto) de filas que son "continuación" del mismo producto
+    // (mismo idProducto+idColor que la fila anterior), partido en 2+ líneas por tener precio
+    // distinto entre talles -ver addmod-ventas.component.ts AgregarProducto-. Se usa para
+    // no repetir Código/Nombre/Color y no dibujar la línea divisoria entre ambas filas.
+    filasProductoContinuacion?:number[];
     cantProductos?:number;
     cantServicios?:number;
     subTotal?:number;

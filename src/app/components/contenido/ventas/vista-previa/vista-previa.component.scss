@@ -159,4 +159,37 @@ p-divider {
     border: 1px solid var(--surface-border);
   }
 }
+
+// Subheader de grupo (rowGroupMode="subheader" por idLineaTalle) en la tabla de Productos.
+// Mismo criterio visual que addmod-ventas.
+.grupo-linea-talle{
+  td{
+    background-color: color-mix(in srgb, var(--surface-card) 30%, transparent);
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border);
+  }
+}
+
+// Fila "continuación" del mismo producto (mismo idProducto+idColor) partido en 2+ líneas
+// por tener precio distinto entre talles -ver addmod-ventas AgregarProducto-. La línea
+// visible entre ambas filas es el border-bottom de la de ARRIBA (border-collapse/gridlines
+// de PrimeNG), por eso hay que sacarlo de precede-continuacion además del border-top de
+// fila-continuacion.
+.fila-continuacion td{
+  border-top: none;
+}
+.precede-continuacion td{
+  border-bottom: none;
+}
+.indicador-continuacion{
+  color: var(--orange-400, #ffa726);
+  cursor: help;
+  font-size: 1.1rem;
+}
+.leyenda-continuacion{
+  font-size: 0.75rem;
+  color: var(--orange-400, #ffa726);
+  margin-top: -4px;
+  font-style: italic;
+}
 /*#endregion */

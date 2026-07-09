@@ -29,6 +29,7 @@ import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
+import { esMayoristaConListaPropia } from '../models/venta.constants';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -142,8 +143,9 @@ export class ListadoVentasComponent {
   }
 
   Exportar(){
-    if(this.filtros.get('fechas')?.value == null || this.filtros.get('fechas')?.value == ''){
-      this.Notificaciones.Warn("Debe seleccionar al menos un rango de fechas.");
+    const fechas = this.filtros.get('fechas')?.value;
+    if(!fechas || fechas.length !== 2 || !fechas[0] || !fechas[1]){
+      this.Notificaciones.Warn("Debe seleccionar un rango de fechas completo (desde y hasta).");
       return;
     }
 
@@ -290,6 +292,28 @@ export class ListadoVentasComponent {
     this.Buscar();
   }
 
+  // Cliente mayorista con lista de precio propia (≠ Consumidor Final) de la venta
+  // seleccionada. Igual que en addmod-ventas: para estos clientes el unitario ya
+  // viene neto (sin IVA), tanto en Factura A como B.
+  EsMayoristaConListaPropia(): boolean {
+    return esMayoristaConListaPropia(this.ventaSeleccionada.cliente?.idCategoria, this.ventaSeleccionada.idListaPrecio);
+  }
+
+  // Indica si, tras calcularPrecioItem(), los items quedaron en NETO (sin IVA).
+  // Se usa para el binding [preciosNetos] de <app-vista-previa>: esa pantalla necesita
+  // saber si debe sumar el IVA arriba (items netos) o discriminarlo de un total que ya
+  // lo incluye (items brutos). Factura A siempre termina en neto (se divide o ya lo es,
+  // ver calcularPrecioItem). Factura B solo queda en neto cuando el cliente es mayorista
+  // con lista propia; el resto de los casos (consumidor final, etc.) queda en bruto.
+  ItemsEnPreciosNetos(): boolean {
+    const esTipoA = [
+      TipoComprobante.FACTURA_A,
+      TipoComprobante.NC_A,
+      TipoComprobante.ND_A
+    ].includes(this.ventaSeleccionada.idTipoComprobante!);
+    return esTipoA || this.EsMayoristaConListaPropia();
+  }
+
   PrepararPrecios(){
     const esTipoA = [
       TipoComprobante.FACTURA_A,
@@ -297,8 +321,10 @@ export class ListadoVentasComponent {
       TipoComprobante.ND_A
     ].includes(this.ventaSeleccionada.idTipoComprobante!);
 
+    const esMayorista = this.EsMayoristaConListaPropia();
+
     this.ventaSeleccionada.productos.forEach(producto => {
-      this.calcularPrecioItem(producto, esTipoA);
+      this.calcularPrecioItem(producto, esTipoA, esMayorista);
 
       producto.stockInicial = Object.fromEntries(
         Object.entries(producto)
@@ -310,33 +336,46 @@ export class ListadoVentasComponent {
     // No tienen talles, por eso el tope de cantidad para la NC se guarda en
     // cantidadOriginal en vez de stockInicial.
     this.ventaSeleccionada.servicios?.forEach(servicio => {
-      this.calcularPrecioItem(servicio, esTipoA);
+      this.calcularPrecioItem(servicio, esTipoA, esMayorista);
       servicio.cantidadOriginal = servicio.cantidad;
     });
   }
 
   // Calcula precioMostrar/total/descuentoAplicado/importeDescuento/totalMostrar
   // para un ítem de la venta (producto o servicio), según el tipo de comprobante.
-  private calcularPrecioItem(item: ProductosFactura | ServiciosFactura, esTipoA: boolean) {
-    const unitario = Number(item.unitario) || 0; // Precio con iva
+  private calcularPrecioItem(item: ProductosFactura | ServiciosFactura, esTipoA: boolean, esMayorista: boolean) {
+    const unitario = Number(item.unitario) || 0; // Precio con iva (salvo mayorista con lista propia, ver abajo)
     const cantidad = Number(item.cantidad) || 0;
 
     let precioNeto = 0; // Precio neto
-    if(esTipoA)
+    if(esTipoA && !esMayorista)
+      // Resto de Factura A: precio con IVA incluido → se desglosa a neto.
       precioNeto = unitario / 1.21;
     else
+      // Factura B, Factura A mayorista (unitario ya es neto), u otros comprobantes.
       precioNeto = unitario;
 
     item.precioMostrar = precioNeto;
     let totalNeto = precioNeto * cantidad;
     item.total = totalNeto;
 
-    // Porcentaje del descuento
-    const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, item.topeDescuento ?? 100);
-    item.descuentoAplicado = descuentoAplicado;
-
-    // Importe del descuento
-    const importeDescuento = totalNeto * (descuentoAplicado / 100);
+    // Importe del descuento: se usa el valor persistido en el momento de la venta
+    // (respeta el topeDescuento que tenía el ítem en ese momento, dato que no se
+    // guarda en ningún lado más). Si no está disponible (venta anterior al fix de
+    // 07/2026), se cae al cálculo aproximado de antes, que asume topeDescuento=100
+    // para todo ítem — puede quedar mal si el ítem tenía un tope distinto (deuda
+    // técnica conocida, ver memoria del proyecto).
+    let importeDescuento: number;
+    if (item.importeDescuento != null) {
+      importeDescuento = item.importeDescuento;
+      // Redondeado a 2 decimales: es una división entre montos, sin esto arrastra
+      // el error de punto flotante típico de JS (ej. 13.309999999999999%).
+      item.descuentoAplicado = totalNeto > 0 ? Math.round((importeDescuento / totalNeto) * 10000) / 100 : 0;
+    } else {
+      const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, item.topeDescuento ?? 100);
+      item.descuentoAplicado = descuentoAplicado;
+      importeDescuento = totalNeto * (descuentoAplicado / 100);
+    }
     item.importeDescuento = importeDescuento;
 
     // Total bruto del item

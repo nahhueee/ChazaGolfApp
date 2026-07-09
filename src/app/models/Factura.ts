@@ -76,6 +76,10 @@ import { TallesProducto } from "./Producto";
     importeDescuento?:number;
     tallesSeleccionados:string = "";
     stockInicial: any = {};
+    // true si el precio fue acordado/editado a mano (ver ActualizarValoresPresupuesto en
+    // addmod-ventas). Evita que los recálculos automáticos de precio por cambio de cliente/
+    // comprobante pisen el valor pactado. precio (lista) no se toca y viaja como precioLista.
+    precioEditadoManualmente?: boolean;
   
     constructor(data?: any) {
       if (data) {
@@ -150,6 +154,10 @@ import { TallesProducto } from "./Producto";
     tipo?: string;
     monto?: number;
     cheque?: any;   // datos del cheque cuando tipo === 'CHEQUE'
+    // Retención sufrida (Ganancias/IIBB/SUSS). Vive desacoplada de `cheque` a
+    // propósito: es un atributo del pago, no del instrumento - hoy solo se carga
+    // cuando tipo === 'CHEQUE', pero el modelo no lo asume.
+    retencion?: { tipo: string; importe: number };
 
     constructor(data?: any) {
       if (data) {
@@ -158,6 +166,7 @@ import { TallesProducto } from "./Producto";
         this.tipo = data.tipo;
         this.monto = data.monto;
         this.cheque = data.cheque;
+        this.retencion = data.retencion;
       }
     }
   }

@@ -182,6 +182,25 @@ export const MULTIPLICADOR_LISTA_PRECIO: Record<IdListaPrecio, number> = {
 } as const;
 
 /**
+ * Cliente mayorista con lista de precio propia (≠ Consumidor Final).
+ * Para estos clientes, el precio resultante de calcularPrecioCliente() es siempre
+ * NETO (sin IVA), a diferencia de Consumidor Final donde el precio de góndola ya
+ * incluye IVA. Se usa para decidir, tanto en Factura A como en B, si el IVA se suma
+ * arriba del precio (mayorista) o se discrimina de un precio que ya lo incluye (resto).
+ *
+ * Centralizada acá porque la misma condición se necesita en addmod-ventas,
+ * listado-ventas, notas-venta y vista-previa.
+ */
+export function esMayoristaConListaPropia(
+  idCategoria?: number | null,
+  idListaPrecio?: number | null
+): boolean {
+  return idCategoria === CATEGORIA_CLIENTE.MAYORISTA &&
+         idListaPrecio != null &&
+         idListaPrecio !== LISTA_PRECIO.CONSUMIDOR_FINAL;
+}
+
+/**
  * Estados posibles de una venta.
  *
  * Todavía se mantienen las variantes
@@ -197,6 +216,12 @@ export const ESTADO_VENTA = {
 
   ASOCIADO: 'Asociado',
   ASOCIADA: 'Asociada',
+
+  // Estado de cierre exclusivo del Presupuesto: a diferencia de Pedido/Nota
+  // de Empaque, el Presupuesto no tiene un "Facturado" propio (no es un
+  // documento que se facture). Una vez usado para armar un Pedido/Nota, o
+  // facturado directo, queda en RELACIONADO y no vuelve a aparecer para elegir.
+  RELACIONADO: 'Relacionado',
 
   PENDIENTE: 'Pendiente',
   FINALIZADA: 'Finalizada',
@@ -216,6 +241,8 @@ const ESTADOS_FACTURADO = new Set<EstadoVenta>([
 const ESTADOS_ASOCIADO = new Set<EstadoVenta>([
   ESTADO_VENTA.ASOCIADO,
   ESTADO_VENTA.ASOCIADA,
+  // RELACIONADO es el equivalente de "ya usado/no disponible" para Presupuesto.
+  ESTADO_VENTA.RELACIONADO,
 ]);
 
 /**
@@ -253,3 +280,23 @@ export const TIPO_METODO_PAGO = {
 } as const;
 
 export type TipoMetodoPago = keyof typeof TIPO_METODO_PAGO;
+
+/**
+ * Tipos de retención sufrida al cobrar (Ganancias/IIBB/SUSS).
+ * Hoy solo se habilita en la UI cuando el método es CHEQUE (ver DatosRetencion en
+ * Factura.ts), pero el valor persiste igual sin importar el método, para no tener
+ * que tocar este catálogo el día que se habilite para otros métodos.
+ */
+export const TIPO_RETENCION = {
+  GANANCIAS: 'GANANCIAS',
+  IIBB:      'IIBB',
+  SUSS:      'SUSS',
+} as const;
+
+export type TipoRetencion = ValueOf<typeof TIPO_RETENCION>;
+
+export const TIPO_RETENCION_OPCIONES: { value: TipoRetencion; label: string }[] = [
+  { value: TIPO_RETENCION.GANANCIAS, label: 'Ganancias' },
+  { value: TIPO_RETENCION.IIBB,      label: 'Ing. Brutos' },
+  { value: TIPO_RETENCION.SUSS,      label: 'SUSS' },
+];

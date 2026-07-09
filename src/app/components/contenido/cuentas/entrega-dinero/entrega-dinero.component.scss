@@ -35,3 +35,130 @@
 textarea{
   width: 100%;
 }
+
+// Resumen genérico dentro del <p-confirmdialog> (ver #message en el .html) -
+// sirve tanto para el modo itemizado (varios pagos) como para entrega general
+// (uno solo), y para cualquier método, no solo cheque.
+.resumen-confirmacion{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.resumen-alerta{
+  margin: 0;
+}
+
+.resumen-pago{
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resumen-pago-linea{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resumen-detalle{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+// Contexto de deuda/saldo, siempre visible en modo entrega general (antes no
+// existía - el usuario cargaba una entrega sin ver cuánto debía el cliente).
+.contexto-deuda{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.contexto-item{
+  flex: 1;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.contexto-label{
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  margin-bottom: 2px;
+}
+
+.contexto-valor{
+  font-size: 1rem;
+}
+
+.contexto-deuda-valor{
+  color: var(--p-red-400);
+}
+
+// Títulos de sección dentro del form (Datos de la entrega / Detalle adicional / Retención)
+.seccion-titulo{
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--p-text-muted-color);
+  margin: 20px 0 10px;
+
+  &:first-child{
+    margin-top: 0;
+  }
+}
+
+.seccion-subtitulo{
+  text-transform: none;
+  font-weight: 400;
+}
+
+.seccion-caja{
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.detalle-cheque-estado{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detalle-cheque-pendiente{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.detalle-cheque-ok{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+
+  i{
+    color: var(--p-green-500);
+  }
+}
+
+.error{
+  color: var(--p-red-500);
+  font-size: 0.8rem;
+  display: block;
+  margin: 6px 0 10px;
+}

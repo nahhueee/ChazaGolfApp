@@ -23,3 +23,19 @@
 :host ::ng-deep .menu-principal .p-menubar-item.activo > .p-menubar-item-content .p-menubar-item-icon{
     color: var(--p-primary-color) !important;
 }
+
+// Pill de ambiente (ver NavegacionComponent.esProduccion): avisa cuando NO se está en
+// producción real, para no confundir datos de test/local con datos reales de un comercio.
+.pill-entorno{
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background-color: #ff9800;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: help;
+}

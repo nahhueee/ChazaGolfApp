@@ -22,8 +22,8 @@
                     <div class="horizontal">
                         <!-- Proceso -->
                         <p-floatlabel variant="in">
-                            <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"
-                            [disabled]="productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO'" (onChange)="SetearTitulo()" />
+                            <p-select [options]="procesosSeleccionables" formControlName="proceso" optionLabel="descripcion"
+                            [disabled]="soloLecturaPorEdicion || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo()" />
                             <label>Proceso</label>
                         </p-floatlabel>
                         <!-- Fecha -->
@@ -44,6 +44,7 @@
                         <p-floatlabel variant="in">
                             <p-autocomplete
                                 formControlName="cliente"
+                                [disabled]="soloLecturaPorEdicion || clienteBloqueadoPorRelacion"
                                 [suggestions]="clientesFiltrados"
                                 placeholder="Buscar por nombre o DNI"
                                 emptyMessage="No se encontraron resultados"
@@ -59,9 +60,11 @@
                             </p-autocomplete>
                             <label>Cliente</label>
                         </p-floatlabel>
-                        <p-inputgroup-addon>
-                            <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
-                        </p-inputgroup-addon>                                
+                        @if(!soloLecturaPorEdicion){
+                            <p-inputgroup-addon>
+                                <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
+                            </p-inputgroup-addon>
+                        }
                     </p-inputgroup>
 
                     <!-- Nota Empaque -->
@@ -93,14 +96,14 @@
 
                         <p class="link" (click)="modalClienteVisible = true">Ver Más</p>
                     </div>
-                    @if(ventasCliente.length>0){
+                    @if(!soloLecturaPorEdicion && ventasCliente.length>0){
                         <div class="ventas-cliente">
                             <p class="titulo">Relacionados</p>
                             @for (venta of ventasCliente; track venta) {
                                 @if(
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 5) ||
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 7) ||
-                                    (venta.idProceso == 5 && [1, 2, 3].includes(this.ProcesoControl.id))
+                                    (venta.idProceso == 5 && this.ProcesoControl.id == 3)
                                     ){
                                     <div class="venta disabled">
                                         <p><strong>{{venta.proceso}}</strong> {{venta.nroProceso}}</p>
@@ -141,6 +144,7 @@
         <h3>Productos</h3>
 
         @if(ProcesoControl){
+            @if(!soloLecturaPorEdicion){
             <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
                 <div class="izq">
                     <div class="campos">
@@ -239,7 +243,7 @@
                         <div class="alerta alerta-info">
                             <span class="alerta-icon">ℹ️</span>
                             <div class="alerta-texto">
-                                Puedes editar la cantidad una vez confirmes el producto al pedido desde la tabla de productos.
+                                Puedes editar la cantidad y el precio una vez confirmes el producto al pedido desde la tabla de productos.
                             </div>
                         </div>
                     <!-- Si esta realizando un presupuesto puede ingresar cantidad y precio manualmente en la tabla o en los inputs -->
@@ -261,12 +265,24 @@
                         </div>
                     }
                 </div>
-               
-                
-            </form>
 
-            <p-table [value]="productosFactura" 
-                     dataKey="codProducto" 
+
+            </form>
+            }
+
+            @if(ProcesoControl && ProcesoControl.descripcion === 'PEDIDO'){
+                <div class="alerta alerta-warn">
+                    <span class="alerta-icon">⚠️</span>
+                    <div class="alerta-texto">
+                        Los talles que queden en cantidad 0 no se van a guardar al confirmar el pedido.
+                    </div>
+                </div>
+            }
+
+            <p-table [value]="productosFactura"
+                     dataKey="codProducto"
+                     [rowGroupMode]="(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO') ? 'subheader' : undefined"
+                     groupRowsBy="idLineaTalle"
                      #tablaProductos>
                 <ng-template #header>
                     <tr>
@@ -276,35 +292,65 @@
                         @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
                             <th>Color</th>
 
-                            <th *ngFor="let talla of talles" class="text-center">{{ talla }}</th>
+                            <th colspan="10" class="text-center">Talles</th>
                         }
 
                         <th>Cant.</th>
                         <th>Precio</th>
                         <th>Total</th>
-                        <th>Quitar</th>
+                        @if(!soloLecturaPorEdicion){
+                            <th>Quitar</th>
+                        }
                         </tr>
                 </ng-template>
+                <ng-template #groupheader let-producto>
+                    <tr class="grupo-linea-talle">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']; let i = index" class="text-center">
+                            <strong>{{ ObtenerTallesDeLinea(producto.idLineaTalle)[i] ?? '' }}</strong>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        @if(!soloLecturaPorEdicion){
+                            <td></td>
+                        }
+                    </tr>
+                </ng-template>
                 <ng-template #body let-producto let-editing="editing" let-rowIndex="rowIndex">
-                    <tr>
-                        <td>{{ producto.codProducto }}</td>
-                        <td>{{ producto.nomProducto }}</td>
+                    <tr [class.fila-continuacion]="EsContinuacionMismoProducto(rowIndex)"
+                        [class.precede-continuacion]="PrecedeContinuacion(rowIndex)">
+                        <td>
+                            @if(EsContinuacionMismoProducto(rowIndex)){
+                                <span class="indicador-continuacion" pTooltip="Mismo producto que la fila anterior: tiene precio distinto según el talle." tooltipPosition="top">
+                                    <i class="pi pi-info-circle"></i>
+                                </span>
+                            } @else {
+                                {{ producto.codProducto }}
+                            }
+                        </td>
+                        <td>{{ EsContinuacionMismoProducto(rowIndex) ? '' : producto.nomProducto }}</td>
                         @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
                             <td>
-                                <div class="color-cell">
-                                    <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
-                                    {{ producto.color }}
-                                </div>
+                                @if(!EsContinuacionMismoProducto(rowIndex)){
+                                    <div class="color-cell">
+                                        <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                                        {{ producto.color }}
+                                    </div>
+                                }
                             </td>
-                            <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
-                                [pEditableColumn]="producto[t]" 
+                            <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']"
+                                [pEditableColumn]="soloLecturaPorEdicion ? null : producto[t]"
                                 [pEditableColumnField]="t">
+                                <ng-container *ngIf="!soloLecturaPorEdicion; else soloLecturaTalle">
                                 <p-cellEditor>
                                 <ng-template pTemplate="input">
-                                    <input 
-                                    pInputText 
+                                    <input
+                                    pInputText
                                     id="editable"
-                                    type="number" 
+                                    type="number"
                                     [value]="producto[t]"
                                     (keydown.enter)="ActualizarCantidad(producto, t, $event)"
                                     (keydown.tab)="ActualizarCantidad(producto, t, $event)"
@@ -315,14 +361,18 @@
                                     {{ producto[t] }}
                                 </ng-template>
                                 </p-cellEditor>
+                                </ng-container>
+                                <ng-template #soloLecturaTalle>
+                                    {{ producto[t] }}
+                                </ng-template>
                             </td>
 
                         }
                         
-                        <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
+                        <td [pEditableColumn]="(esPresupuesto && !soloLecturaPorEdicion) ? producto.unitario : null"
                             pEditableColumnField="cantidad">
 
-                            <ng-container *ngIf="esPresupuesto; else soloLecturaCant">
+                            <ng-container *ngIf="esPresupuesto && !soloLecturaPorEdicion; else soloLecturaCant">
                                 <p-cellEditor>
 
                                     <ng-template pTemplate="input">
@@ -332,6 +382,7 @@
                                             fluid
                                             [value]="producto.cantidad"
                                             style="max-width: 70px;"
+                                            (focus)="SelectContent($event)"
                                             (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
                                             (keydown.tab)="ActualizarValoresPresupuesto(producto, $event, 'cantidad')"
                                             (keydown.arrowRight)="$event.stopPropagation()"
@@ -351,10 +402,10 @@
                             </ng-template>
                         </td>
 
-                        <td [pEditableColumn]="esPresupuesto ? producto.unitario : null"
+                        <td [pEditableColumn]="(permiteEditarPrecio && !soloLecturaPorEdicion) ? producto.unitario : null"
                             pEditableColumnField="unitario">
 
-                            <ng-container *ngIf="esPresupuesto; else soloLecturaPrecio">
+                            <ng-container *ngIf="permiteEditarPrecio && !soloLecturaPorEdicion; else soloLecturaPrecio">
                                 <p-cellEditor>
 
                                     <ng-template pTemplate="input">
@@ -363,8 +414,9 @@
                                             type="text"
                                             fluid
                                             [imask]="decimal_mask"
-                                            [value]="producto.unitario"
+                                            [value]="producto.unitario | decimalFormat"
                                             style="max-width: 100px;"
+                                            (focus)="SelectContent($event)"
                                             (keydown.enter)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
                                             (keydown.tab)="ActualizarValoresPresupuesto(producto, $event, 'precio')"
                                             (keydown.arrowLeft)="$event.stopPropagation()"
@@ -385,10 +437,30 @@
                         </td>
 
                         <td>{{ producto.total | decimalFormat }}</td>
-                        <td class="acciones-tabla">
-                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
-                        </td>
+                        @if(!soloLecturaPorEdicion){
+                            <td class="acciones-tabla">
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
+                            </td>
+                        }
                     </tr>
+                </ng-template>
+                <ng-template #footer>
+                    @if(productosFactura.length > 0){
+                        <tr>
+                            <td><strong>Total Unidades</strong></td>
+                            <td></td>
+                            @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
+                                <td></td>
+                                <td *ngFor="let talla of talles"></td>
+                            }
+                            <td><strong>{{ totalUnidadesProductos }}</strong></td>
+                            <td></td>
+                            <td></td>
+                            @if(!soloLecturaPorEdicion){
+                                <td></td>
+                            }
+                        </tr>
+                    }
                 </ng-template>
             </p-table>
             }
@@ -406,6 +478,7 @@
     <div class="seccion">
         <h3>Servicios</h3>
 
+        @if(!soloLecturaPorEdicion){
         <form [formGroup]="formServicios" class="formServicio" autocomplete="off" (keyup.enter)='AgregarServicio()'>
             <div class="horizontal">
                 <!-- Codigo - Nombre -->
@@ -443,6 +516,7 @@
         <div class="acciones">
             <p-button label="Confirmar Servicio" [raised]="true" icon="pi pi-check" (onClick)="AgregarServicio()"/>
         </div>
+        }
 
         <p-table [value]="serviciosFactura">
             <ng-template #header>
@@ -452,7 +526,9 @@
                     <th>Cant.</th>
                     <th>Precio</th>
                     <th>Total</th>
-                    <th>Quitar</th>
+                    @if(!soloLecturaPorEdicion){
+                        <th>Quitar</th>
+                    }
                 </tr>
             </ng-template>
             <ng-template #body let-servicio let-rowIndex="rowIndex">
@@ -462,10 +538,26 @@
                     <td>{{ servicio.cantidad }}</td>
                     <td>{{ servicio.unitario | decimalFormat}}</td>
                     <td>{{ servicio.total | decimalFormat }}</td>
-                    <td class="acciones-tabla">
-                        <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
-                    </td>
+                    @if(!soloLecturaPorEdicion){
+                        <td class="acciones-tabla">
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
+                        </td>
+                    }
                 </tr>
+            </ng-template>
+            <ng-template #footer>
+                @if(serviciosFactura.length > 0){
+                    <tr>
+                        <td><strong>Total Unidades</strong></td>
+                        <td></td>
+                        <td><strong>{{ totalUnidadesServicios }}</strong></td>
+                        <td></td>
+                        <td></td>
+                        @if(!soloLecturaPorEdicion){
+                            <td></td>
+                        }
+                    </tr>
+                }
             </ng-template>
         </p-table>
     </div>
@@ -483,20 +575,20 @@
                 <div class="horizontal">
                     <!-- Empresa -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" (onChange)="CambioEmpresa()" />
+                        <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" [disabled]="soloLecturaPorEdicion" (onChange)="CambioEmpresa()" />
                         <label>Empresa</label>
                     </p-floatlabel>
 
                     <!-- Tipo Comprobante -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" (onChange)="CambioTipoComprobante()" />
+                        <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" (onChange)="CambioTipoComprobante()" />
                         <label>Tipo Comprobante</label>
                     </p-floatlabel>
                 </div>
                 <div class="horizontal">
                     <!-- Tipo Descuento -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" />
+                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" />
                         <label>Tipo Descuento</label>
                     </p-floatlabel>
 
@@ -504,7 +596,7 @@
                         <!-- Descuento -->
                         <p-inputgroup>
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="descuento" type="number" (input)="CalcularTotalGeneral()"/>
+                                <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion" (input)="CalcularTotalGeneral()"/>
                                 <label>Descuento</label>
                             </p-floatlabel>
                             <p-inputgroup-addon>%</p-inputgroup-addon>
@@ -512,16 +604,17 @@
                     }@else {
                         <!-- Cod Promocion -->
                         <p-floatlabel variant="in">
-                            <input pInputText formControlName="codPromo" type="text"/>
+                            <input pInputText formControlName="codPromo" type="text" [disabled]="soloLecturaPorEdicion"/>
                             <label>Cod. Promocional</label>
                         </p-floatlabel>
                     }
                 </div>
                 <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1">
-                    <p-checkbox 
+                    <p-checkbox
                         inputId="check1"
                         formControlName="ajuste"
                         [binary]="true"
+                        [disabled]="soloLecturaPorEdicion"
                         (onChange)="CalcularTotalGeneral()">
                     </p-checkbox>
 
@@ -535,7 +628,7 @@
                     <p-floatlabel variant="in">
                         <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" />
                         <label>Metodo Pago</label>
-                    </p-floatlabel>  
+                    </p-floatlabel>
 
                     <!-- Monto -->
                     <p-floatlabel variant="in">
@@ -551,24 +644,28 @@
                         <tr>
                             <th>Metodo</th>
                             <th>Monto</th>
-                            <th>Acciones</th>
+                            @if(!soloLecturaPorEdicion){
+                                <th>Acciones</th>
+                            }
                         </tr>
                     </ng-template>
                     <ng-template #body let-pago let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ pago.metodo }}</td>
                             <td>{{ pago.monto | decimalFormat}}</td>
-                            <td class="acciones-tabla">
-                                @if (pago.tipo === 'CHEQUE') {
-                                    <p-button severity="info" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="EditarCheque(rowIndex)" pTooltip="Editar cheque" />
-                                }
-                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'pagos', rowIndex)" />
-                            </td>
+                            @if(!soloLecturaPorEdicion){
+                                <td class="acciones-tabla">
+                                    @if (pago.tipo === 'CHEQUE') {
+                                        <p-button severity="info" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="EditarCheque(rowIndex)" pTooltip="Editar cheque" />
+                                    }
+                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'pagos', rowIndex)" />
+                                </td>
+                            }
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="3">
+                            <td [attr.colspan]="soloLecturaPorEdicion ? 2 : 3">
                                 <div class="noPagos">
                                     <i class="pi pi-dollar text-3xl text-500"></i>
 
@@ -576,8 +673,7 @@
                                         No se registraron métodos de pago.
                                     </span>
 
-                                    <!-- Solo SUCEDE tiene el metodo de pago contado -->
-                                    @if(EmpresaControl == 1){ 
+                                    @if(!soloLecturaPorEdicion){
                                         <p-button
                                             label="Agregar pago al contado"
                                             icon="pi pi-check"
@@ -587,11 +683,10 @@
                                             (onClick)="AgregarPagoContado()"
                                         />
                                     }
-                                    
+
                                 </div>
 
-                                <!-- Solo SUCEDE tiene el metodo de pago Saldo a Favor -->
-                                @if (saldoAFavor > 0 && EmpresaControl == 1) {
+                                @if (!soloLecturaPorEdicion && saldoAFavor > 0) {
                                 <div class="saldoFavor">
                                     <i class="pi pi-wallet text-3xl text-500"></i>
 
@@ -609,7 +704,7 @@
                                     />
                                 </div>
                                 }
-                                
+
                             </td>
                         </tr>
                     </ng-template>
@@ -646,7 +741,7 @@
                     </div> 
                     <div class="fila">
                         <span>Redondeo:</span>
-                        <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" (focus)="SelectContent($event)"/>
+                        <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" [disabled]="soloLecturaPorEdicion" (focus)="SelectContent($event)"/>
                     </div>
                 }
                 
@@ -673,7 +768,9 @@
 
 
 <!-- Modal Resumen -->
-<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta" [preciosNetos]="false"></app-vista-previa>
+<!-- preciosNetos refleja la misma condición que recalcularTotales() (ver EsMayoristaConListaPropia),
+     para que el total de la vista previa coincida con el del resumen de esta pantalla. -->
+<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta" [preciosNetos]="EsMayoristaConListaPropia()"></app-vista-previa>
 
 
 <!-- Modal Datos Cliente -->

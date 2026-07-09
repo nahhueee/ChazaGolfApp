@@ -344,6 +344,33 @@ p-accordion-header{
   margin-bottom: 25px;
 }
 
+// Subheader de grupo (rowGroupMode="subheader" por idLineaTalle) en la tabla de Productos.
+// Fondo sutil + borde para que se note la separación entre líneas de talle sin competir
+// visualmente con las filas de datos.
+.grupo-linea-talle{
+  td{
+    background-color: color-mix(in srgb, var(--surface-card) 30%, transparent);
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border);
+  }
+}
+
+// Fila "continuación" del mismo producto (mismo idProducto+idColor) partido en 2+ líneas
+// por tener precio distinto entre talles -ver AgregarProducto-. La línea visible entre ambas
+// filas es el border-bottom de la fila de ARRIBA (border-collapse), por eso hay que sacarlo
+// de precede-continuacion; sacarle solo el border-top a fila-continuacion no alcanza.
+.fila-continuacion td{
+  border-top: none;
+}
+.precede-continuacion td{
+  border-bottom: none;
+}
+.indicador-continuacion{
+  color: var(--orange-400, #ffa726);
+  cursor: help;
+  font-size: 1.1rem;
+}
+
 /*#endregion */
 
 /*#region DATOS FACTURACION*/

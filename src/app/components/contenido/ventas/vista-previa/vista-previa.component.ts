@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
 import { Venta } from '../../../../models/Factura';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
@@ -6,8 +6,11 @@ import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { ComprobanteService } from '../../../../services/comprobante.service';
 import { TipoComprobante } from '../../../../models/ObjFacturar';
+import { MiscService } from '../../../../services/misc.service';
+import { LineasTalle } from '../../../../models/Producto';
 
 @Component({
   selector: 'app-vista-previa',
@@ -17,13 +20,14 @@ import { TipoComprobante } from '../../../../models/ObjFacturar';
     DecimalFormatPipe,
     DatePipe,
     TableModule,
-    ButtonModule
+    ButtonModule,
+    TooltipModule
   ],
   standalone: true,
   templateUrl: './vista-previa.component.html',
   styleUrl: './vista-previa.component.scss',
 })
-export class VistaPreviaComponent {
+export class VistaPreviaComponent implements OnInit {
   @Input() visible = false;
   @Input() venta: Venta = new Venta();
   // Indica si venta.productos/servicios ya vienen NETOS (sin IVA) para Factura A,
@@ -51,9 +55,16 @@ export class VistaPreviaComponent {
   saldoAplicado:number = 0;
   aplicaSaldoAFavor:boolean = false;
 
+  lineasTalles: LineasTalle[] = [];
+
   constructor(
-    private comprobanteService:ComprobanteService
+    private comprobanteService:ComprobanteService,
+    private miscService:MiscService
   ){}
+
+  ngOnInit() {
+    this.miscService.ObtenerLineasTalle(true).subscribe(data => this.lineasTalles = data);
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
@@ -65,8 +76,45 @@ export class VistaPreviaComponent {
       //   this.saldoAplicado = 0;
       //   this.aplicaSaldoAFavor = false;
       // }
+      // Copia ordenada por idLineaTalle: rowGroupMode/groupRowsBy de PrimeNG necesita filas
+      // contiguas por grupo. No mutamos el array original del padre (venta.productos es @Input).
+      if (this.venta.productos) {
+        this.venta.productos = [...this.venta.productos].sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
+      }
       this.CalcularTotalGeneral();
   }
+  }
+
+  // Talles reales (en el mismo orden posicional que t1..t10) de la línea de talle del producto.
+  // Se usa en el groupheader de la tabla de Productos para mostrar el talle real de cada columna.
+  ObtenerTallesDeLinea(idLineaTalle?: number): string[] {
+    return this.lineasTalles.find(l => l.id === idLineaTalle)?.talles ?? [];
+  }
+
+  // Mismo criterio que addmod-ventas.component.ts: detecta si la fila en rowIndex es
+  // "continuación" del mismo producto (idProducto+idColor) que la fila anterior, cuando un
+  // producto queda partido en 2+ líneas por tener precio distinto entre talles.
+  EsContinuacionMismoProducto(rowIndex: number): boolean {
+    if (rowIndex <= 0) return false;
+    const anterior = this.venta.productos?.[rowIndex - 1];
+    const actual = this.venta.productos?.[rowIndex];
+    return !!anterior && !!actual
+      && anterior.idProducto === actual.idProducto
+      && anterior.idColor === actual.idColor;
+  }
+
+  // Complemento: true si la fila siguiente es continuación de esta (para sacarle el
+  // border-bottom y que no se vea la línea divisoria entre ambas).
+  PrecedeContinuacion(rowIndex: number): boolean {
+    const actual = this.venta.productos?.[rowIndex];
+    const siguiente = this.venta.productos?.[rowIndex + 1];
+    return !!actual && !!siguiente
+      && actual.idProducto === siguiente.idProducto
+      && actual.idColor === siguiente.idColor;
+  }
+
+  get hayFilasContinuacion(): boolean {
+    return (this.venta.productos ?? []).some((_, i) => this.EsContinuacionMismoProducto(i));
   }
 
   CalcularTotalGeneral() {
@@ -93,65 +141,67 @@ export class VistaPreviaComponent {
 
     this.totalProductos = productos.total + totalAjuste;
     this.totalServicios = servicios.total;
-    
-    //Importes base
+
+    //Importes base (bruto, sin descuento aplicado por ítem — ver fix de ítems en bruto)
     const subtotalBruto = this.totalProductos + servicios.total;
     const totalDescuento = productos.descuento + servicios.descuento;
 
-    //Neto sin IVA
+    //Neto sin IVA (solo se usa como fallback si todavía no hay venta.factura)
     const subtotalNeto = subtotalBruto - totalDescuento;
-    this.subTotal = subtotalNeto;
 
-    let totalIva = 0;
-    let totalGeneral = 0;
-    this.mostrarIva = false;
-
-    const esTipoA = [
+    const esComprobanteConIva = [
          TipoComprobante.FACTURA_A,
          TipoComprobante.NC_A,
-         TipoComprobante.ND_A
+         TipoComprobante.ND_A,
+         TipoComprobante.FACTURA_B
     ].includes(this.venta.idTipoComprobante!);
 
-    const esTipoB = this.venta.idTipoComprobante === 6;
+    // Si la venta ya está facturada (CAE/neto/iva confirmados por AFIP en venta.factura),
+    // se usan esos valores como fuente de verdad en vez de recalcular desde los ítems —
+    // mismo criterio ya aplicado en factura.service.ts (ver memoria "fix ítems en bruto y
+    // Subtotal factura"). Evita que este resumen termine mostrando un total distinto al que
+    // realmente pagó el cliente. Mientras la venta se arma en addmod-ventas todavía no hay
+    // venta.factura (no se facturó contra AFIP) → se sigue calculando local como antes.
+    if (this.venta.factura) {
+      this.subTotal = (this.venta.factura.neto ?? subtotalNeto) + totalDescuento;
+      this.totalDescuento = totalDescuento;
+      this.totalIva = esComprobanteConIva ? (this.venta.factura.iva ?? 0) : 0;
+      this.mostrarIva = esComprobanteConIva;
+      this.totalGeneral = (this.venta.total ?? subtotalNeto) - (this.venta.redondeo ?? 0);
+      this.totalAPagar = this.totalGeneral + (this.venta.redondeo ?? 0);
 
-    // FACTURA B (tipo 6)
-    if (esTipoB) {
-
-      totalIva = subtotalNeto * 21 / 121;
-      totalGeneral = subtotalNeto; // ya incluye IVA
-      this.mostrarIva = true;
-
-    // FACTURA A (tipo 1)
-    } else if (esTipoA) {
-
-      if (this.preciosNetos) {
-        // Precios ya netos (PrepararPrecios los convirtió antes de abrir esta vista) → se suma IVA
-        totalIva = subtotalNeto * 0.21;
-        totalGeneral = subtotalNeto + totalIva;
-      } else {
-        // Precios brutos con IVA incluido (ej. desde addmod-ventas) → se discrimina, igual que B
-        totalIva = subtotalNeto * 21 / 121;
-        totalGeneral = subtotalNeto; // ya incluye IVA
-      }
-      this.mostrarIva = true;
-
-    // Otros comprobantes → sin IVA
     } else {
+      let totalIva = 0;
+      let totalGeneral = 0;
 
-      totalIva = 0;
-      totalGeneral = subtotalNeto;
-      this.mostrarIva = false;
+      // Aplica igual para A y B: el caller decide vía preciosNetos si el precio de los
+      // ítems ya viene neto (mayorista con lista propia → se suma IVA) o con IVA incluido
+      // (resto de casos → se discrimina). Ver EsMayoristaConListaPropia en addmod-ventas.
+      if (esComprobanteConIva) {
+
+        if (this.preciosNetos) {
+          totalIva = subtotalNeto * 0.21;
+          totalGeneral = subtotalNeto + totalIva;
+        } else {
+          totalIva = subtotalNeto * 21 / 121;
+          totalGeneral = subtotalNeto; // ya incluye IVA
+        }
+        this.mostrarIva = true;
+
+      // Otros comprobantes → sin IVA
+      } else {
+
+        totalIva = 0;
+        totalGeneral = subtotalNeto;
+        this.mostrarIva = false;
+      }
+
+      this.subTotal = subtotalBruto;
+      this.totalDescuento = totalDescuento;
+      this.totalIva = totalIva;
+      this.totalGeneral = totalGeneral;
+      this.totalAPagar = totalGeneral + this.venta.redondeo;
     }
-
-    //Definimos totales
-    this.subTotal = subtotalBruto;
-    this.totalDescuento = totalDescuento;
-    this.totalIva = totalIva;
-    this.totalGeneral = totalGeneral;
-    this.totalAPagar = totalGeneral + this.venta.redondeo;
-    this.totalAPagar =
-      this.totalGeneral +
-      this.venta.redondeo;
 
     // cantidades
     this.cantProductos = this.venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;

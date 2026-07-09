@@ -3,21 +3,21 @@
   [modal]="true"
   [style]="{ width: '480px' }"
   [(visible)]="visible"
-  (onHide)="onCancelar()"
+  (onHide)="onDialogHide()"
 >
   <form [formGroup]="form" class="cheque-form">
 
     <p-floatlabel variant="in">
-      <label>Número de cheque <span class="req">*</span></label>
       <input pInputText formControlName="numero" placeholder="Ej: 00012345" />
+      <label>Número de cheque <span class="req">*</span></label>
       @if (campoInvalido('numero')) {
         <small class="error">Requerido.</small>
       }
     </p-floatlabel>
 
     <p-floatlabel variant="in">
-      <label>Banco <span class="req">*</span></label>
       <input pInputText formControlName="banco" placeholder="Ej: Santander" />
+      <label>Banco <span class="req">*</span></label>
       @if (campoInvalido('banco')) {
         <small class="error">Requerido.</small>
       }
@@ -26,8 +26,8 @@
     <div class="field-row-inline">
 
       <p-floatlabel variant="in">
-        <label>Importe <span class="req">*</span></label>
         <input pInputText type="number" formControlName="importe" min="0.01" step="0.01" />
+        <label>Importe <span class="req">*</span></label>
         @if (campoInvalido('importe') && campo('importe').hasError('required')) {
           <small class="error">Requerido.</small>
         }
@@ -37,13 +37,14 @@
       </p-floatlabel>
 
       <p-floatlabel variant="in">
-        <label>Fecha de cobro <span class="req">*</span></label>
         <p-datepicker
           formControlName="fechaCobro"
           dateFormat="dd/mm/yy"
-          [showIcon]="true"
+          showIcon
+          iconDisplay="input"
           appendTo="body"
         />
+        <label>Fecha de cobro <span class="req">*</span></label>
         @if (campoInvalido('fechaCobro')) {
           <small class="error">Requerido.</small>
         }
@@ -54,13 +55,13 @@
     <p-divider />
 
     <p-floatlabel variant="in">
-      <label>Librador / Titular</label>
       <input pInputText formControlName="libradorNombre" placeholder="Nombre completo" />
+      <label>Librador / Titular</label>
     </p-floatlabel>
 
     <p-floatlabel variant="in">
-      <label>CUIT</label>
       <input pInputText formControlName="libradorCuit" placeholder="11 dígitos sin guiones" />
+      <label>CUIT</label>
       @if (campoInvalido('libradorCuit')) {
         <small class="error">CUIT/CUIL inválido (11 dígitos sin guiones).</small>
       }

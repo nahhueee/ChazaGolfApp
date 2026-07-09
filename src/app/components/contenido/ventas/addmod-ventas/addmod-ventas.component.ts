@@ -48,7 +48,6 @@ import {
   METODO_PAGO,
   TIPO_COMPROBANTE,
   CONDICION_IVA,
-  CATEGORIA_CLIENTE,
   CONDICION_EMPRESA,
   COMPROBANTE_POR_CONDICION_IVA,
   ESTADO_VENTA,
@@ -63,6 +62,7 @@ import {
   MAX_TALLES,
   TIPO_METODO_PAGO,
   TALLES_ESTANDAR,
+  esMayoristaConListaPropia,
 } from '../models/venta.constants';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
@@ -109,6 +109,9 @@ export class AddModVentasComponent {
   proximoNroVenta:number = 0;
   nroRelacionado:number = 0;
   tipoRelacionado:string = "";
+  // true cuando se está facturando un Pedido relacionado (ver ConfirmarFacturacionRelacionado):
+  // el cliente queda fijo al del pedido, no se puede cambiar. Se resetea en ReiniciarTodo().
+  clienteBloqueadoPorRelacion: boolean = false;
   talles = TALLES_ESTANDAR;
 
   decimal_mask: any;
@@ -303,9 +306,23 @@ export class AddModVentasComponent {
 
           this.CompletarCampos();
 
+          // 'descuento'/'codPromo' (input nativo con formControlName) y 'redondeo'
+          // (FormControl standalone) no respetan el [disabled] del template: al usar
+          // formControlName/[formControl], Angular sincroniza el disabled del DOM con
+          // el estado real del FormControl (setDisabledState), pisando ese binding.
+          // Los p-select/p-checkbox/p-autocomplete no tienen este problema porque
+          // manejan su propio @Input() disabled internamente. Por eso estos 3 controles
+          // se deshabilitan acá de forma explícita en vez de confiar en el template.
+          if (this.soloLecturaPorEdicion) {
+            this.formFacturacion.get('descuento')?.disable();
+            this.formFacturacion.get('codPromo')?.disable();
+            this.redondeo.disable();
+          }
+
         } else {
 
           this.modificando = false;
+          this.AplicarValoresDefaultNuevaVenta();
 
           if (this.procesos.length > 1) {
             this.formGenerales
@@ -332,7 +349,6 @@ export class AddModVentasComponent {
       nroNota: new FormControl({ value: '', disabled: true }),
       fecha: new FormControl(new Date(), [Validators.required]),
       cliente: new FormControl([null], [Validators.required]),
-      lista: new FormControl(''),
     });
 
     this.formProductos = new FormGroup({
@@ -379,9 +395,43 @@ export class AddModVentasComponent {
     get EmpresaControl(){return this.formFacturacion.get('empresa')?.value ?? '';}
     get esPresupuesto(): boolean {return this.ProcesoControl?.id === ID_PROCESO.PRESUPUESTO;}
 
+    // Pedido: permite acordar un precio distinto al de lista con el cliente (ej. combo
+    // cerrado, negociación puntual), sin perder el precio de lista original (producto.precio),
+    // que viaja como precioLista al backend para poder auditar el desvío después.
+    get permiteEditarPrecio(): boolean {return this.esPresupuesto || this.ProcesoControl?.id === ID_PROCESO.PEDIDO;}
+
+    // Una venta de Facturación/Pre-Factura ya guardada solo permite editar fecha y punto de venta.
+    // No aplica a tipo='pre' (Presupuesto/Pedido/Nota de Empaque), que sigue su flujo incremental actual.
+    get soloLecturaPorEdicion(): boolean {return this.modificando && this.tipo === 'factura';}
+
+    // Opciones visibles en el combo de Proceso. NOTA DE CREDITO/DEBITO se excluyen porque no son
+    // procesos que el usuario deba elegir a mano al crear una venta: la NC se genera desde
+    // listado-ventas (EmitirNotaCredito -> notas-venta.component, idProceso=3 asignado por código)
+    // y la ND no tiene flujo de creación implementado. this.procesos (sin filtrar) se mantiene
+    // intacto para no romper el .find() por id que resuelve el valor del combo al editar una venta.
+    get procesosSeleccionables(): ProcesoVenta[] {
+      return this.procesos.filter(p => p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO);
+    }
+
+    // Totales para el footer de las tablas de Productos/Servicios.
+    // producto.cantidad ya se mantiene como suma de t1..t10 (ver ActualizarCantidad),
+    // y también se usa directo en presupuesto, así que sirve igual en ambos casos.
+    get totalUnidadesProductos(): number {return this.productosFactura.reduce((acc, p) => acc + (p.cantidad ?? 0), 0);}
+    get totalUnidadesServicios(): number {return this.serviciosFactura.reduce((acc, s) => acc + (s.cantidad ?? 0), 0);}
+
+    // Cuenta Corriente no es plata real todavía (queda pendiente de cobro), así
+    // que no puede contar como "pago completo" - mismo criterio que ya usa
+    // getSaldoPendiente más abajo. Antes esto no excluía CUENTA_CORRIENTE: una
+    // venta pagada (total o parcialmente) a cuenta corriente daba
+    // pagoCompleto=true, y eso hacía que ArmarObjetoVenta() nunca marcara
+    // venta.impaga=1 - la deuda quedaba invisible para EntregaDinero
+    // (ObtenerVentasImpagas filtra por impaga=1), aunque el listado de cuentas
+    // siguiera mostrándola bien (no depende de impaga). Bug real: Venta #109,
+    // cliente Club Náutico San Isidro, corregido 07/2026.
     get pagoCompleto(): boolean {
     if(this.pagosFactura.length > 0){
       const totalPagos = this.pagosFactura
+      .filter(p => p.tipo !== TIPO_METODO_PAGO.CUENTA_CORRIENTE)
       .reduce(
         (acc, p) => acc + (p.monto || 0),
         0
@@ -395,7 +445,7 @@ export class AddModVentasComponent {
   get getSaldoPendiente(): number {
     if(this.pagosFactura.length > 0){
       const totalPagos = this.pagosFactura
-      .filter(p => p.idMetodo !== METODO_PAGO.CUENTA_CORRIENTE)
+      .filter(p => p.tipo !== TIPO_METODO_PAGO.CUENTA_CORRIENTE)
       .reduce(
         (acc, p) => acc + (p.monto || 0),
         0
@@ -440,7 +490,7 @@ export class AddModVentasComponent {
     this.servicios = datos.servicios;
     this.lineasTalles = datos.lineasTalle;
     this.tiposDescuento = datos.tiposDescuento;
-    
+
     // Cargar métodos de pago de la empresa por defecto
     this.ObtenerMetodosPago(this.empresas[0]?.id!);
 
@@ -455,13 +505,19 @@ export class AddModVentasComponent {
       lazy: false,
       signed: true,
     };
+  }
 
-    // Valores por defecto de formulario 
+  // Valores por defecto de formulario, solo para alta nueva.
+  // Se agenda con setTimeout porque los p-select necesitan que sus opciones
+  // ([options]="empresas"/"puntos") ya estén renderizadas para reconocer el setValue.
+  // IMPORTANTE: no debe ejecutarse en edición — pisaría los valores reales que
+  // CompletarCampos() ya seteó sincrónicamente (ver bug de empresa/comprobante mal cargados).
+  private AplicarValoresDefaultNuevaVenta(): void {
     setTimeout(() => {
       this.formFacturacion.get('empresa')?.setValue(this.empresas[0]?.id);
-      this.formPagos.get('metodo')?.setValue(this.metodosPago[0]);
+      this.formPagos.get('metodo')?.setValue(this.metodoEfectivo ?? this.metodosPago[0]);
       this.formFacturacion.get('tDescuento')?.setValue(1);
-      this.formGenerales.get('punto')?.setValue(this.puntos[0]);
+      //this.formGenerales.get('punto')?.setValue(this.puntos[0]);
     });
   }
 
@@ -478,11 +534,13 @@ export class AddModVentasComponent {
     this.venta.id = 0;
 
     this.redondeo.setValue('');
+    this.redondeo.enable(); // re-habilita si quedó disabled por soloLecturaPorEdicion en una edición previa
     this.totales = this.totalesVacios();
     this.productosFactura = [];
     this.serviciosFactura = [];
     this.pagosFactura = [];
     this.clienteSeleccionado = undefined;
+    this.clienteBloqueadoPorRelacion = false;
 
     this.ArmarFormularios();
     this.CalcularTotalGeneral();
@@ -517,6 +575,13 @@ export class AddModVentasComponent {
     }
 
     if (
+      idProceso === ID_PROCESO.PRESUPUESTO &&
+      [ID_PROCESO.FACTURA, ID_PROCESO.COTIZACION].includes(procesoActual)
+    ) {
+      return 'Click para Facturar';
+    }
+
+    if (
       idProceso === ID_PROCESO.PEDIDO &&
       [ID_PROCESO.FACTURA, ID_PROCESO.COTIZACION, ID_PROCESO.NOTA_CREDITO].includes(procesoActual)
     ) {
@@ -531,11 +596,10 @@ export class AddModVentasComponent {
   }
 
   EliminarItem(event: Event, lista: 'productos' | 'servicios' | 'pagos', indice: number): void {
-    const mapaListas = {
-      productos: this.productosFactura,
-      servicios: this.serviciosFactura,
-      pagos:     this.pagosFactura,
-    };
+    if (this.soloLecturaPorEdicion) {
+      this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
 
     this.confirmationService.confirm({
       target: event.target as EventTarget,
@@ -548,7 +612,20 @@ export class AddModVentasComponent {
         outlined: true,
       },
       accept: () => {
-        mapaListas[lista].splice(indice, 1);
+        // Reasignación de referencia (no .splice() in-place): la tabla de Productos usa
+        // groupRowsBy, que en PrimeNG solo refresca su estado interno cuando [value]
+        // recibe una referencia nueva. Mutar in-place deja una fila fantasma renderizada.
+        switch (lista) {
+          case 'productos':
+            this.productosFactura = this.productosFactura.filter((_, i) => i !== indice);
+            break;
+          case 'servicios':
+            this.serviciosFactura = this.serviciosFactura.filter((_, i) => i !== indice);
+            break;
+          case 'pagos':
+            this.pagosFactura = this.pagosFactura.filter((_, i) => i !== indice);
+            break;
+        }
 
         if (lista !== 'pagos') {
           this.CalcularTotalGeneral();
@@ -567,7 +644,6 @@ export class AddModVentasComponent {
       .subscribe(response => {
         this.procesos = response;
         this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
-        console.log(this.procesos);
       });
   }
   ObtenerClientes(): void {
@@ -578,13 +654,32 @@ export class AddModVentasComponent {
       });
   }
 
+  // Método de pago "Efectivo" del listado ya cargado, usado como default de
+  // "pago al contado"/valores iniciales. Se busca por `tipo` (string, estable
+  // entre empresas) y NO por id ni por índice [0]: `metodos_pago` es una tabla
+  // por empresa con auto-increment propio, así que ni el id ni el orden en que
+  // el backend devuelve las filas es el mismo para todas las empresas (ver
+  // METODO_PAGO.CUENTA_CORRIENTE/SALDO_A_FAVOR, ids fijos que solo son
+  // correctos para la empresa 1).
+  private get metodoEfectivo(): MetodoPago | undefined {
+    return this.metodosPago.find(m => m.tipo === TIPO_METODO_PAGO.EFECTIVO);
+  }
+
+  // Método de pago "Cuenta Corriente" de la empresa actual, buscado por tipo
+  // por el mismo motivo. Se usa al armar la línea de saldo pendiente (ver
+  // CompletarVenta) en vez de asumir METODO_PAGO.CUENTA_CORRIENTE (id fijo de
+  // empresa 1).
+  private get metodoCuentaCorriente(): MetodoPago | undefined {
+    return this.metodosPagoOriginal.find(m => m.tipo === TIPO_METODO_PAGO.CUENTA_CORRIENTE);
+  }
+
   ObtenerMetodosPago(idEmpresa: number): void {
     this.miscService.ObtenerMetodosPago(idEmpresa)
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => {
         this.metodosPago         = response;
         this.metodosPagoOriginal = [...response];
-        this.formPagos.get('metodo')?.setValue(this.metodosPago[0]);
+        this.formPagos.get('metodo')?.setValue(this.metodoEfectivo ?? this.metodosPago[0]);
       });
   }
   //#endregion  
@@ -606,12 +701,23 @@ export class AddModVentasComponent {
     };
   }
 
-  //Aplica descuentoAplicado a cada ítem según su tope individual.
+  //Aplica descuentoAplicado (%) e importeDescuento ($) a cada ítem según su tope individual.
+  //importeDescuento es el que consume vista-previa.component.ts para mostrar el descuento.
   private aplicarDescuentoAItems(): void {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
     [...this.productosFactura, ...this.serviciosFactura].forEach(item => {
       item.descuentoAplicado = Math.min(descuentoUsuario, item.topeDescuento ?? 100);
+      item.importeDescuento  = (item.total ?? 0) * item.descuentoAplicado / 100;
     });
+  }
+
+  //Cliente mayorista con lista de precio propia (≠ Consumidor Final).
+  //Para estos clientes, calcularPrecioCliente() devuelve un precio neto (sin IVA),
+  //a diferencia de Consumidor Final donde el precio de góndola ya incluye IVA.
+  //Usado para decidir si en Factura A el IVA se suma o se discrimina (recalcularTotales),
+  //y para que la vista previa de impresión muestre el mismo total (ver template).
+  EsMayoristaConListaPropia(): boolean {
+    return esMayoristaConListaPropia(this.clienteSeleccionado?.idCategoria, this.clienteSeleccionado?.idListaPrecio);
   }
 
   //Calcula todos los totales de la venta a partir del estado actual.
@@ -659,16 +765,24 @@ export class AddModVentasComponent {
     let general    = base;
     let mostrarIva = false;
 
-    if (esFacturaConIva) {
-      if (tipoComprobante === TIPO_COMPROBANTE.FACTURA_A) {
-        // Precios incluyen IVA → discriminar el IVA contenido (igual que B)
-        iva        = base * 21 / 121;
-        subtotal   = base - iva;
-        general    = base;
+    const esComprobanteConIva =
+      tipoComprobante === TIPO_COMPROBANTE.FACTURA_A ||
+      tipoComprobante === TIPO_COMPROBANTE.FACTURA_B;
+
+    if (esFacturaConIva && esComprobanteConIva) {
+      if (this.EsMayoristaConListaPropia()) {
+        // Mayorista con lista de precio propia (≠ Consumidor Final): el precio
+        // resultante de calcularPrecioCliente() es neto (sin IVA) → se suma el 21% arriba.
+        // Aplica igual para A y B. No discriminar acá adentro como con CONSUMIDOR_FINAL,
+        // porque ahí el precio de góndola ya incluye IVA.
+        iva        = base * 0.21;
+        subtotal   = base;
+        general    = base + iva;
         mostrarIva = true;
 
-      } else if (tipoComprobante === TIPO_COMPROBANTE.FACTURA_B) {
-        // Precio con IVA incluido → se desglosa
+      } else {
+        // Resto de Factura A (ej. Responsable Inscripto con lista Consumidor Final) y
+        // toda Factura B: precio ya incluye IVA → se discrimina.
         iva        = base * 21 / 121;
         subtotal   = base - iva;
         general    = base;
@@ -715,6 +829,7 @@ export class AddModVentasComponent {
     ) {
       if (!this.esPresupuesto) {
         this.productosFactura.forEach(element => {
+          if (element.precioEditadoManualmente) return;
           element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
           element.total = element.unitario! * element.cantidad!;
         });
@@ -750,7 +865,7 @@ export class AddModVentasComponent {
 
         this.metodosPago = this.saldoAFavor > 0
         ? [...this.metodosPagoOriginal]
-        : this.metodosPagoOriginal.filter(m => m.id !== METODO_PAGO.SALDO_A_FAVOR);
+        : this.metodosPagoOriginal.filter(m => m.tipo !== TIPO_METODO_PAGO.SALDO_FAVOR);
       });
   }
 
@@ -770,12 +885,12 @@ export class AddModVentasComponent {
           .pipe(takeUntil(this.destroy$)) 
           .subscribe(response => {
             this.ventasCliente = response;
-            console.log("Ventas del cliente: ", this.ventasCliente);
           });
           
           if(!this.modificando){
             if(this.productosFactura.length > 0 && !this.esPresupuesto){
               this.productosFactura.forEach(element => {
+                if (element.precioEditadoManualmente) return;
                 element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
                 element.total = element.unitario! * element.cantidad!;
               });
@@ -811,21 +926,27 @@ export class AddModVentasComponent {
 
         if (!this.modificando && this.productosFactura.length > 0 && !this.esPresupuesto) {
           this.productosFactura.forEach(element => {
+            if (element.precioEditadoManualmente) return;
             element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado!.idListaPrecio!);
             element.total    = element.unitario! * element.cantidad!;
           });
         }
 
-        if (seleccionada?.abrevCondicion === CONDICION_EMPRESA.RESPONSABLE_INSCRIPTO) {
-          if (condIvaCliente === CONDICION_IVA.RESPONSABLE_INSCRIPTO) {
-            this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_A);
-          } else if (condIvaCliente === CONDICION_IVA.CONSUMIDOR_FINAL) {
-            this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_B);
+        // Estas reglas derivan el comprobante a partir de empresa+condición IVA,
+        // y solo tienen sentido en alta nueva. En edición, el comprobante guardado
+        // (comprobanteExistente, ya aplicado arriba) no debe re-derivarse/sobrescribirse.
+        if (!this.modificando) {
+          if (seleccionada?.abrevCondicion === CONDICION_EMPRESA.RESPONSABLE_INSCRIPTO) {
+            if (condIvaCliente === CONDICION_IVA.RESPONSABLE_INSCRIPTO) {
+              this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_A);
+            } else if (condIvaCliente === CONDICION_IVA.CONSUMIDOR_FINAL) {
+              this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_B);
+            }
           }
-        }
 
-        if (seleccionada?.abrevCondicion === CONDICION_EMPRESA.MONOTRIBUTO) {
-          this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_C);
+          if (seleccionada?.abrevCondicion === CONDICION_EMPRESA.MONOTRIBUTO) {
+            this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.FACTURA_C);
+          }
         }
 
       } else {
@@ -841,6 +962,23 @@ export class AddModVentasComponent {
   //#endregion
 
   //#region PROCESOS RELACIONADOS
+
+  // El flag precioEditadoManualmente vive solo en memoria (no se persiste, ver
+  // ActualizarValoresPresupuesto): al recargar una venta guardada (editar un Pedido, facturar
+  // un Pedido/Nota de Empaque relacionado) se pierde, y CambioEmpresa/SeleccionarCliente
+  // terminan recalculando un precio que el vendedor ya había pactado a mano. Lo reconstruimos acá
+  // comparando el precio final contra lo que la lista de precio del cliente daría hoy: si
+  // difieren, es porque alguien lo editó, y no debe volver a recalcularse.
+  private MarcarPreciosEditados(productos: ProductosFactura[], idListaPrecio?: number) {
+    (productos ?? []).forEach(p => {
+      if (p.precio == null || idListaPrecio == null) return;
+      const precioSegunLista = calcularPrecioCliente(p.precio, idListaPrecio);
+      if (Math.abs((p.unitario ?? 0) - precioSegunLista) > 0.01) {
+        p.precioEditadoManualmente = true;
+      }
+    });
+  }
+
   ObtenerVenta(idVenta){
     this.ventasService.ObtenerVenta(idVenta)
       .pipe(takeUntil(this.destroy$)) 
@@ -870,6 +1008,8 @@ export class AddModVentasComponent {
     this.formGenerales.get('cliente')?.setValue(this.venta.cliente);
 
     if(this.venta.productos) this.productosFactura = this.venta.productos;
+    this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+    this.OrdenarProductosPorLineaTalle();
     if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
     if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
 
@@ -933,6 +1073,8 @@ export class AddModVentasComponent {
               this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
 
               if(this.venta.productos) this.productosFactura = this.venta.productos;
+              this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+              this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
               this.formFacturacion.get('descuento')?.setValue(0);
               this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0].id);
@@ -947,6 +1089,7 @@ export class AddModVentasComponent {
   }
 
   RelacionarActualizarProceso(venta:Venta){
+    if (this.soloLecturaPorEdicion) return;
     if(venta.nroProceso == this.nroRelacionado) return;
 
     this.nroRelacionado = venta.nroProceso!;
@@ -979,8 +1122,20 @@ export class AddModVentasComponent {
     }
 
     if(venta.idProceso == ID_PROCESO.PRESUPUESTO){
-      this.Notificaciones.Info("Se relacionará con el presupuesto Nro: " + venta.nroProceso);
       this.tipoRelacionado = TIPO_RELACIONADO.PRESUPUESTO;
+
+      // Un Presupuesto puede facturarse directo (Factura/Cotización) además de
+      // usarse para armar un Pedido/Nota de Empaque. En el primer caso se
+      // precargan productos/servicios igual que con Pedido/Nota relacionados;
+      // en el segundo, el Presupuesto solo aporta el nro. relacionado y el
+      // operador arma el nuevo proceso a mano (comportamiento sin cambios).
+      const esParaFacturar = this.ProcesoControl.id === ID_PROCESO.FACTURA || this.ProcesoControl.id === ID_PROCESO.COTIZACION;
+      if(esParaFacturar){
+        this.ConfirmarFacturacionRelacionado(venta);
+        return;
+      }
+
+      this.Notificaciones.Info("Se relacionará con el presupuesto Nro: " + venta.nroProceso);
     }
 
     if(venta.idProceso == ID_PROCESO.PEDIDO){
@@ -1015,6 +1170,8 @@ export class AddModVentasComponent {
       accept: () => {
         this.venta = venta;
         if(this.venta.productos) this.productosFactura = this.venta.productos;
+        this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+        this.OrdenarProductosPorLineaTalle();
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         this.formFacturacion.get('descuento')?.setValue(0);
@@ -1022,11 +1179,20 @@ export class AddModVentasComponent {
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
+          // Facturar un Pedido relacionado no debe permitir cambiar el cliente: el precio
+          // pactado (y el propio pedido) están atados a ese cliente puntual. Se maneja por
+          // template ([disabled] en el input de cliente) y no con .disable() del FormControl
+          // porque ese control ya tiene [disabled]="soloLecturaPorEdicion" en el html: mezclar
+          // ambos mecanismos hace que la próxima detección de cambios pise el .disable().
+          this.clienteBloqueadoPorRelacion = true;
           this.Notificaciones.Info("Se facturará el pedido Nro: " + venta.nroProceso);
         }
         if(venta.idProceso == ID_PROCESO.NOTA_EMPAQUE){
           this.formGenerales.get('nroNota')?.setValue(venta.nroProceso);
           this.Notificaciones.Info("Se relacionará con la nota de empaque Nro: " + venta.nroProceso);
+        }
+        if(venta.idProceso == ID_PROCESO.PRESUPUESTO){
+          this.Notificaciones.Info("Se facturará el presupuesto Nro: " + venta.nroProceso);
         }
 
       },
@@ -1103,6 +1269,7 @@ export class AddModVentasComponent {
     })
     .sort((a, b) => a.color.localeCompare(b.color));
 
+    console.log(this.variantesDisponibles);
     if(this.coloresDisponibles.length == 1){
       this.productoSeleccionado = this.variantesDisponibles.find(v=>v.id === this.coloresDisponibles[0].idProducto)!;
       this.formProductos.get('colorSeleccionado')?.setValue(this.coloresDisponibles[0]);
@@ -1131,7 +1298,6 @@ export class AddModVentasComponent {
     if (!this.productoSeleccionado?.talles) return 0;
 
     const encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
-    console.log("encontrado", encontrado);
     if(proceso=="stock")
       return encontrado ? encontrado.cantidad : 0;
     else if(proceso=="agregar")
@@ -1158,6 +1324,11 @@ export class AddModVentasComponent {
 
   async AgregarProducto() {
     if (this.tablaProductos) this.tablaProductos.editingCell = null;
+
+    if (this.soloLecturaPorEdicion) {
+      this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
 
     if(this.ProcesoControl.id === ID_PROCESO.PRESUPUESTO){
       if (!this.productoSeleccionado) return;
@@ -1256,6 +1427,7 @@ export class AddModVentasComponent {
             existente.tallesSeleccionados = tallesExistentes.join(", ");
           }
         } else {
+          console.log(this.productoSeleccionado);
           // Crear nueva línea de producto
           const nuevo = new ProductosFactura({
             idProducto: this.productoSeleccionado.id,
@@ -1276,14 +1448,18 @@ export class AddModVentasComponent {
             tallesSeleccionados: talleSel.talle
           });
 
+          console.log('Agregando nuevo producto a la factura:', nuevo);
+
           // Asignar cantidad a tX
           this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
           this.productosFactura.push(nuevo);
 
         }
       });
+
+      this.OrdenarProductosPorLineaTalle();
     }
-    
+
     this.CalcularTotalGeneral();
     this.productoSeleccionado = new Producto();
     this.formProductos.reset();
@@ -1293,10 +1469,13 @@ export class AddModVentasComponent {
     }, 0);
   }
 
+  // Deshabilitado (01-jul-2026): sumaba 21% al precio mostrado en esta celda según
+  // TipoComprobanteControl/EsMayoristaConListaPropia, desalineado con producto.total (que nunca
+  // reflejó este ajuste) y sin uso real detectado - nadie lo había reportado. Se deja la función
+  // (no se toca el template) por si en el futuro hace falta retomar la distinción neto/bruto acá,
+  // pero por ahora se muestra el precio tal cual está guardado.
   getPrecioMostrado(precioBase: number): number {
-    return this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_B
-      ? precioBase * 1.21
-      : precioBase;
+    return precioBase;
   }
 
   AsignarTalle(productoFactura: ProductosFactura, talle: string, cantidad: number, idLineaTalle: number) {
@@ -1308,6 +1487,54 @@ export class AddModVentasComponent {
 
     const campo = `t${index + 1}` as keyof ProductosFactura;
     (productoFactura as any)[campo] = ((productoFactura as any)[campo] ?? 0) + cantidad;
+  }
+
+  // Talles reales (en el mismo orden posicional que t1..t10) de la línea de talle de un producto.
+  // t1..t10 son posiciones dentro de la escala propia de cada línea (ver AsignarTalle), no "XS..6XL"
+  // fijo. Se usa en el groupheader de la tabla de Productos para mostrar el talle real de cada
+  // columna cuando se agrupa por idLineaTalle, en vez del header fijo de TALLES_ESTANDAR.
+  ObtenerTallesDeLinea(idLineaTalle?: number): string[] {
+    return this.lineasTalles.find(l => l.id === idLineaTalle)?.talles ?? [];
+  }
+
+  // Mantiene productosFactura agrupado de forma contigua por idLineaTalle. rowGroupMode="subheader"
+  // de PrimeNG no agrupa los datos por sí mismo: solo dibuja un subheader cada vez que cambia el
+  // valor de groupRowsBy entre filas adyacentes, así que si dos filas de la misma línea no quedan
+  // contiguas se ven como dos grupos separados. Sort estable: no altera el orden de carga dentro
+  // de cada línea, solo el orden relativo entre líneas distintas.
+  // Reasigna una NUEVA referencia de array (no sort in-place). p-table de PrimeNG solo
+  // re-evalúa su lógica de sort/groupRowsBy dentro de ngOnChanges, que Angular dispara
+  // únicamente cuando cambia la referencia del [value] vinculado. Mutar productosFactura
+  // in-place (push + sort sobre el mismo array) deja esa recomputación interna "stale"
+  // tras el primer bind, aunque el *ngFor de las filas siga viendo los datos nuevos.
+  private OrdenarProductosPorLineaTalle() {
+    this.productosFactura = [...this.productosFactura].sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
+  }
+
+  // Detecta si la fila en rowIndex es la "continuación" de la misma variante (idProducto +
+  // idColor) que la fila anterior. Pasa cuando un producto tiene precios distintos entre
+  // talles de una misma línea (ver AgregarProducto: agrupa por precio, no solo por producto)
+  // y termina partido en 2+ filas. Se usa solo para no repetir Código/Nombre/Color en la
+  // grilla, así el operador ve claramente que es el mismo producto y no un duplicado/bug.
+  EsContinuacionMismoProducto(rowIndex: number): boolean {
+    if (rowIndex <= 0) return false;
+    const anterior = this.productosFactura[rowIndex - 1];
+    const actual = this.productosFactura[rowIndex];
+    return !!anterior && !!actual
+      && anterior.idProducto === actual.idProducto
+      && anterior.idColor === actual.idColor;
+  }
+
+  // Complemento de EsContinuacionMismoProducto: true si la fila SIGUIENTE es la continuación
+  // de esta. Se usa para sacarle el border-bottom a esta fila (la línea visible entre ambas
+  // filas es el border-bottom de la de arriba, con border-collapse -no alcanza con sacarle
+  // el border-top solo a la fila de abajo).
+  PrecedeContinuacion(rowIndex: number): boolean {
+    const actual = this.productosFactura[rowIndex];
+    const siguiente = this.productosFactura[rowIndex + 1];
+    return !!actual && !!siguiente
+      && actual.idProducto === siguiente.idProducto
+      && actual.idColor === siguiente.idColor;
   }
 
   ActualizarCantidad(producto: any, field: string, event: any) {
@@ -1389,8 +1616,14 @@ export class AddModVentasComponent {
     if(tipo === 'cantidad')
       producto.cantidad = value;
 
-    if(tipo === 'precio')
+    if(tipo === 'precio'){
       producto.unitario = value;
+      // Marca el ítem como editado a mano para que los recálculos automáticos de precio
+      // (cambio de cliente / tipo de comprobante, ver CambioTipoComprobante, SeleccionarCliente,
+      // PrepararFacturacionCliente) no lo pisen. producto.precio (precio de lista) no se toca acá:
+      // sigue siendo el ancla que viaja al backend como precioLista.
+      producto.precioEditadoManualmente = true;
+    }
 
     producto.total = producto.cantidad * producto.unitario;
     this.CalcularTotalGeneral();
@@ -1417,6 +1650,10 @@ export class AddModVentasComponent {
   }
 
   AgregarServicio() {
+    if (this.soloLecturaPorEdicion) {
+      this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
     if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
       this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
       return;
@@ -1450,9 +1687,10 @@ export class AddModVentasComponent {
   AgregarPagoContado(){
     if(this.totales.aPagar == 0) return;
     const nuevoPago = new PagosFactura();
-    const seleccionado = this.metodosPago[0];
+    const seleccionado = this.metodoEfectivo ?? this.metodosPago[0];
     nuevoPago.idMetodo = seleccionado.id;
     nuevoPago.metodo = seleccionado.descripcion;
+    nuevoPago.tipo = seleccionado.tipo;
     nuevoPago.monto = this.totales.aPagar;
     this.pagosFactura.push(nuevoPago);
   }
@@ -1460,12 +1698,13 @@ export class AddModVentasComponent {
   AgregarPagoAFavor() {
     if (this.totales.aPagar === 0) return;
 
-    const metodo = this.metodosPago.find(x => x.id === METODO_PAGO.SALDO_A_FAVOR)!;
+    const metodo = this.metodosPago.find(x => x.tipo === TIPO_METODO_PAGO.SALDO_FAVOR)!;
     this.saldoAplicado = Math.min(this.saldoAFavor, this.totales.aPagar);
 
     this.pagosFactura.push(new PagosFactura({
       idMetodo: metodo.id,
       metodo:   metodo.descripcion,
+      tipo:     metodo.tipo,
       monto:    this.saldoAplicado,
     }));
 
@@ -1556,7 +1795,11 @@ export class AddModVentasComponent {
     }
 
     this.markFormTouched(this.formGenerales);
-    this.markFormTouched(this.formFacturacion);
+    const validarFacturacion = this.tipo === 'factura';
+
+    if (validarFacturacion) {
+      this.markFormTouched(this.formFacturacion);
+    }
 
     if (!this.clienteSeleccionado) {
       this.Notificaciones.Warn("Seleccioná un cliente antes de guardar.");
@@ -1565,10 +1808,14 @@ export class AddModVentasComponent {
       return;
     }
 
-    if(this.formGenerales.invalid || this.formFacturacion.invalid){
-      this.Notificaciones.Warn("Falta completar datos obligatorios.")
+    const formularioInvalido =
+      this.formGenerales.invalid ||
+      (validarFacturacion && this.formFacturacion.invalid);
+
+    if (formularioInvalido) {
+      this.Notificaciones.Warn("Falta completar datos obligatorios.");
       return;
-    } 
+    }
 
     this.ArmarObjetoVenta();
     if(factura && factura.estado === ESTADO_VENTA.APROBADO)
@@ -1581,14 +1828,40 @@ export class AddModVentasComponent {
       this.venta.estado = ESTADO_VENTA.FINALIZADA;
 
 
-    //Control para clientes con cuenta corriente
-    const pendiente = this.getSaldoPendiente;
-    if (!this.pagoCompleto && pendiente > 0) {
-      this.venta.pagos.push(new PagosFactura({
-        idMetodo: METODO_PAGO.CUENTA_CORRIENTE,
-        metodo:   "Cuenta Corriente",
-        monto:    pendiente,
-      }));
+    //Control para clientes con cuenta corriente. Solo aplica a Factura/Cotización/NC/ND
+    // (tipo === 'factura'): Presupuesto/Pedido/Nota de Empaque no muestran el formulario
+    // de pago (pagosFactura siempre vacío), así que sin este filtro pagoCompleto daba
+    // siempre false y esto les armaba una línea de "Cuenta Corriente por el total"
+    // aunque todavía no sean una venta confirmada.
+    if (this.tipo === 'factura') {
+      const pendiente = this.getSaldoPendiente;
+      // ObtenerMetodosPago() de este componente (a diferencia del de
+      // entrega-dinero.component.ts) no excluye CUENTA_CORRIENTE del combo, así
+      // que el operador puede cargarla a mano como método de la venta. Como
+      // getSaldoPendiente la excluye siempre del cálculo de "ya pagado" (por
+      // diseño), "pendiente" da el total completo aunque ya haya una línea CC
+      // manual - sin este chequeo, se agregaba una SEGUNDA línea CC por el mismo
+      // importe y la deuda del cliente quedaba duplicada. Bug real: 2 ventas con
+      // servicios/Factura C el 08/07/2026, corregido el mismo día.
+      const yaTieneCuentaCorriente = this.pagosFactura.some(p => p.tipo === TIPO_METODO_PAGO.CUENTA_CORRIENTE);
+      if (!this.pagoCompleto && pendiente > 0 && !yaTieneCuentaCorriente) {
+        // Se busca el método "Cuenta Corriente" de la empresa actual por tipo,
+        // no por METODO_PAGO.CUENTA_CORRIENTE (id fijo que solo es correcto
+        // para la empresa 1) - con metodos_pago por empresa, ese id puede no
+        // existir o pertenecer a otro método en otra empresa. Si no aparece
+        // (dato faltante en metodos_pago para esta empresa), se cae al id fijo
+        // como último recurso para no romper el alta, pero queda logueado.
+        const metodoCC = this.metodoCuentaCorriente;
+        if (!metodoCC) {
+          console.warn(`No se encontró método CUENTA_CORRIENTE para la empresa actual - usando id fijo ${METODO_PAGO.CUENTA_CORRIENTE} como fallback.`);
+        }
+        this.venta.pagos.push(new PagosFactura({
+          idMetodo: metodoCC?.id ?? METODO_PAGO.CUENTA_CORRIENTE,
+          metodo:   metodoCC?.descripcion ?? "Cuenta Corriente",
+          tipo:     TIPO_METODO_PAGO.CUENTA_CORRIENTE,
+          monto:    pendiente,
+        }));
+      }
     }
 
     if(!this.modificando){
@@ -1729,7 +2002,7 @@ export class AddModVentasComponent {
     this.venta.idPunto = this.formGenerales.get('punto')?.value.id;
     this.venta.punto = this.formGenerales.get('punto')?.value.descripcion;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
-    this.venta.ajuste = this.formGenerales.get('ajuste')?.value == true ? 1 : 0;
+    this.venta.ajuste = this.formFacturacion.get('ajuste')?.value == true ? 1 : 0;
     
     this.venta.cliente = this.clienteSeleccionado;
     this.venta.nroRelacionado = this.nroRelacionado;
@@ -1741,16 +2014,19 @@ export class AddModVentasComponent {
       this.venta.estado = ESTADO_VENTA.APROBADO;
 
 
-    const idLista = this.formGenerales.get('lista')?.value;
-
-    if(idLista == null || idLista == ""){
+    // idListaPrecio se persiste desde clienteSeleccionado: es la misma fuente que ya
+    // usa recalcularTotales()/EsMayoristaConListaPropia() para el cálculo en pantalla.
+    // Antes se leía de un FormControl 'lista' sin UI (siempre vacío), que forzaba
+    // CONSUMIDOR_FINAL en toda venta y rompía el recálculo de IVA en NC/Resumen
+    // para clientes mayoristas con lista propia.
+    if(this.clienteSeleccionado?.idListaPrecio == null){
       this.venta.idListaPrecio = LISTA_PRECIO.CONSUMIDOR_FINAL;
       this.venta.listaPrecio = "CONSUMIDOR FINAL";
     }
     else
     {
-      this.venta.idListaPrecio = this.formGenerales.get('lista')?.value.id;
-      this.venta.listaPrecio = this.formGenerales.get('lista')?.value.descripcion;
+      this.venta.idListaPrecio = this.clienteSeleccionado.idListaPrecio;
+      this.venta.listaPrecio = this.clienteSeleccionado.listaPrecio;
     }
       
     if(this.tipo === 'factura'){
@@ -1773,7 +2049,13 @@ export class AddModVentasComponent {
     }
 
     this.venta.total = this.totales.aPagar;
-    this.venta.productos = this.productosFactura;
+    // Filtramos filas de producto sin ningún talle cargado (ej. cuando un mismo producto
+    // se parte en 2 líneas por tener precios distintos por talle -ver AgregarProducto- y el
+    // operador solo carga cantidad en una de ellas). No tiene sentido persistir ni imprimir
+    // una línea en 0: no aporta información y en el remito se ve como un renglón vacío.
+    // No mutamos productosFactura: la grilla en pantalla sigue mostrando la fila para que el
+    // operador pueda completarla.
+    this.venta.productos = this.productosFactura.filter(p => (p.cantidad ?? 0) > 0);
     this.venta.servicios = this.serviciosFactura;
     this.venta.pagos = this.pagosFactura;
   }

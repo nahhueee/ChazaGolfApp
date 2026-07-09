@@ -61,7 +61,7 @@
                 }
               ],
               "outputPath": "build/test/",
-              "baseHref": "/apps/chazagolf/",             
+              "baseHref": "/apps/chazagolftest/",             
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,

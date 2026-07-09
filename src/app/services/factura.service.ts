@@ -164,48 +164,40 @@ export class FacturaService {
           break;
       }
 
-      //Importes base
+      //Importes base locales (suma de ítems, incluye ajuste de transferencia si aplica).
+      //Solo se usan como fallback para comprobantes sin facturación fiscal (cotización, etc.)
+      //o si por algún motivo no llegó venta.factura.
       const subtotalBruto = productos.total + servicios.total;
       const totalDescuento = productos.descuento + servicios.descuento;
+      const subtotalSinComprobante = subtotalBruto - totalDescuento;
 
-      //Neto sin IVA
-      const subtotalNeto = subtotalBruto - totalDescuento;
-      comprobante.subTotal = subtotalNeto;
       comprobante.descuento = totalDescuento;
+      comprobante.redondeo = venta.redondeo;
 
-      let totalIva = 0;
-      let totalGeneral = 0;
-
-      const esTipoA = [
-            TipoComprobante.FACTURA_A,
-            TipoComprobante.NC_A,
-            TipoComprobante.ND_A
-      ].includes(venta.idTipoComprobante!);
-      const esTipoB = venta.idTipoComprobante === 6;
-
-      // FACTURA B (tipo 6)
-      if (esTipoB) {
-        totalIva = subtotalNeto * 21 / 121;
-        totalGeneral = subtotalNeto; // ya incluye IVA
-
-      // FACTURA A (tipo 1)
-      } else if (esTipoA) {
-        totalIva = subtotalNeto * 0.21;
-        totalGeneral = subtotalNeto + totalIva;
-
-      // Otros comprobantes → sin IVA
+      // Usamos neto/iva/total ya confirmados por AFIP (venta.factura, venta.total) en vez de
+      // recalcular desde los ítems con una regla fija (A siempre neto, B siempre con IVA
+      // incluido) que no aplica a todos los clientes (ver EsMayoristaConListaPropia en
+      // addmod-ventas) y podía mostrar, en este Detalle de Totales, un número distinto al
+      // Neto/IVA Total que se imprime más abajo en el pie del mismo comprobante.
+      if (venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.factura) {
+        // venta.factura.neto es el importe YA NETO DE DESCUENTO (y de IVA) que confirmó AFIP.
+        // Para que el "Subtotal" impreso sea el bruto (antes de descuento, como ahora se
+        // muestran los ítems) y la cuenta Subtotal - Descuento = Total General cierre en la
+        // página, se reconstruye sumándole el descuento de vuelta — sin volver a recalcular
+        // el neto desde los ítems (eso es justamente lo que se evitó con el fix de IVA
+        // mayorista, para no volver a desalinear este bloque con el pie "Neto Total/IVA Total").
+        comprobante.subTotal = (venta.factura.neto ?? subtotalSinComprobante) + totalDescuento;
+        comprobante.totalIva = venta.factura.iva ?? 0;
+        comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
+        comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
       } else {
-        totalIva = 0;
-        totalGeneral = subtotalNeto;
+        // Sin comprobante fiscal (cotización, etc.) → sin IVA
+        comprobante.subTotal = subtotalBruto;
+        comprobante.totalIva = 0;
+        comprobante.totalFinal = subtotalSinComprobante;
+        comprobante.totalAPagar = subtotalSinComprobante + comprobante.redondeo;
       }
 
-      //Definimos totales
-      comprobante.totalIva = totalIva;
-      comprobante.totalFinal = totalGeneral;
-      comprobante.redondeo = venta.redondeo;
-      
-      comprobante.totalAPagar = totalGeneral + comprobante.redondeo;
-      
       
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
       comprobante.cantServicios = venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
@@ -240,15 +232,14 @@ export class FacturaService {
         return cantNumero % 1 === 0 ? cantNumero.toFixed(0) : cantNumero.toFixed(1);
       };
   
-      const FormatearPrecioTotal = (unitario, cantidad, descuento) => {
+      // Total de la fila en bruto (sin descuento): el descuento se muestra aparte
+      // en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
+      const FormatearPrecioTotalBruto = (unitario, cantidad) => {
         const nCantidad = Number(cantidad) || 0;
-        const nDescuento = parseFloat(descuento) || 0;
 
         const totalBruto = unitario * nCantidad;
 
-        const totalConDescuento = totalBruto * (1 - (nDescuento / 100));
-
-        return totalConDescuento.toLocaleString('es-AR', {
+        return totalBruto.toLocaleString('es-AR', {
           minimumFractionDigits: 1,
           maximumFractionDigits: 1
         });
@@ -277,7 +268,7 @@ export class FacturaService {
           FormatearCantidad(item.cantidad),
           { text: item.precioMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: item.totalMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
+          { text: item.total!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
         ]);
       });
 
@@ -317,7 +308,7 @@ export class FacturaService {
           FormatearCantidad(item.cantidad),
           { text: unitario.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotal(unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
+          { text: FormatearPrecioTotalBruto(unitario, item.cantidad), alignment: 'right' },
         ]);
       });
   

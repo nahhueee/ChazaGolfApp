@@ -1,13 +1,56 @@
 
-<p-confirmdialog key="confirmarDialog"/>
+<p-confirmdialog key="confirmarDialog">
+    <ng-template #message>
+        <div class="resumen-confirmacion">
+            @if(resumenAlerta){
+                <p class="resumen-alerta">{{ resumenAlerta }}</p>
+            }
 
-<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '600px' }" (onHide)="Cerrar()">
+            @for(pago of resumenPagos; track $index){
+                <div class="resumen-pago">
+                    <div class="resumen-pago-linea">
+                        <strong>{{ pago.metodo }}</strong>
+                        <span>${{ pago.monto | decimalFormat }}</span>
+                    </div>
+
+                    @if(pago.cheque){
+                        <div class="resumen-detalle">
+                            <span>Cheque N° {{ pago.cheque.numero }} - {{ pago.cheque.banco }} - Vence {{ pago.cheque.fechaCobro | date:'dd/MM/yyyy' }}</span>
+                            <p-button label="Editar" [text]="true" size="small" icon="pi pi-pencil" (onClick)="EditarDesdeResumen($index)" />
+                        </div>
+                    }
+
+                    @if(pago.retencion){
+                        <div class="resumen-detalle">
+                            <span>Retención {{ pago.retencion.tipo }}: ${{ pago.retencion.importe | decimalFormat }}</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </ng-template>
+</p-confirmdialog>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: desdeVenta ? '600px' : '760px' }" (onHide)="Cerrar()">
     <ng-template #header>
         <div class="modal-header">
             <i class="pi pi-dollar"></i>
             <span> Entrega de dinero</span>
         </div>
     </ng-template>
+
+    <!-- @if(!desdeVenta){
+        <div class="contexto-deuda">
+            <div class="contexto-item">
+                <span class="contexto-label">Deuda actual</span>
+                <strong class="contexto-valor contexto-deuda-valor">${{ deudaTotal | decimalFormat }}</strong>
+            </div>
+            <div class="contexto-item">
+                <span class="contexto-label">Saldo a favor</span>
+                <strong class="contexto-valor">${{ saldoAFavor | decimalFormat }}</strong>
+            </div>
+        </div>
+    } -->
 
     <form class="metodo-pago" [formGroup]="formPagos" (keyup.enter)='AgregarPago()'>
         @if(desdeVenta){
@@ -19,7 +62,7 @@
                 <p-floatlabel variant="in">
                     <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" [appendTo]="'body'" />
                     <label>Metodo Pago</label>
-                </p-floatlabel>  
+                </p-floatlabel>
 
                 <!-- Monto -->
                 <p-floatlabel variant="in">
@@ -27,15 +70,54 @@
                     <label>Monto</label>
                 </p-floatlabel>
 
-                <p-button label="Confirmar" [raised]="true" icon="pi pi-check" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
+                <p-button label="Confirmar" [raised]="true" icon="pi pi-check" [disabled]="metodoEsCheque && !chequeItemizadoCargado" (onClick)="AgregarPago()" class="btnConfirmarMetodo"/>
             </div>
-            
+
+            @if(metodoEsCheque){
+                <p class="seccion-titulo">Detalle adicional — Cheque</p>
+                <div class="seccion-caja">
+                    @if(!chequeItemizadoCargado){
+                        <div class="detalle-cheque-estado">
+                            <span class="detalle-cheque-pendiente">
+                                <i class="pi pi-exclamation-circle"></i>
+                                Todavía no cargaste los datos del cheque
+                            </span>
+                            <p-button label="Cargar datos del cheque" [outlined]="true" size="small" icon="pi pi-file-edit" (onClick)="AbrirDialogChequeItemizado()" />
+                        </div>
+                        <small class="error">Es obligatorio antes de poder confirmar este pago.</small>
+                    }@else{
+                        <div class="detalle-cheque-estado">
+                            <span class="detalle-cheque-ok">
+                                <i class="pi pi-check-circle"></i>
+                                Cheque cargado correctamente
+                            </span>
+                            <p-button label="Editar" [text]="true" size="small" icon="pi pi-pencil" (onClick)="AbrirDialogChequeItemizado()" />
+                        </div>
+                    }
+                </div>
+            }
+
+            @if(metodoPermiteRetencion){
+                <p class="seccion-titulo">Retención <span class="seccion-subtitulo">(opcional - Ganancias, Ing. Brutos o SUSS)</span></p>
+                <div class="seccion-caja horizontal">
+                    <p-floatlabel variant="in">
+                        <p-select [options]="tipoRetencionOpciones" formControlName="tipoRetencion" optionValue="value" optionLabel="label" [showClear]="true" [appendTo]="'body'" />
+                        <label>Tipo</label>
+                    </p-floatlabel>
+
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="importeRetencion" [imask]="decimal_mask" />
+                        <label>Importe retenido</label>
+                    </p-floatlabel>
+                </div>
+            }
+
             <p-table [value]="pagosRealizados">
                 <ng-template #header>
                     <tr>
                         <th>Metodo</th>
                         <th>Monto</th>
-                        <th>Quitar</th>
+                        <th>Acciones</th>
                     </tr>
                 </ng-template>
                 <ng-template #body let-pago let-rowIndex="rowIndex">
@@ -43,6 +125,9 @@
                         <td>{{ pago.metodo }}</td>
                         <td>${{ pago.monto | decimalFormat}}</td>
                         <td class="acciones-tabla">
+                            @if(pago.tipo === 'CHEQUE' && pago.id == 0){
+                                <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="EditarPago(rowIndex)" />
+                            }
                             <p-button severity="danger" [disabled]="pago.id != 0" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarPago(rowIndex)" />
                         </td>
                     </tr>
@@ -72,6 +157,7 @@
             </p-table>
         }@else{
 
+            <p class="seccion-titulo">Datos de la entrega</p>
             <div class="horizontal">
                 <!-- Empresa (solo entrega general) -->
                 <p-floatlabel variant="in" class="campo-empresa">
@@ -85,7 +171,7 @@
                 <p-floatlabel variant="in">
                     <p-select [options]="metodosPago" formControlName="metodo" optionLabel="descripcion" [appendTo]="'body'" />
                     <label>Metodo Pago</label>
-                </p-floatlabel>  
+                </p-floatlabel>
 
                 <!-- Monto -->
                 <p-floatlabel variant="in">
@@ -93,15 +179,64 @@
                     <label>Monto</label>
                 </p-floatlabel>
             </div>
+
+            @if(metodoEsCheque){
+                <p class="seccion-titulo">Detalle adicional — Cheque</p>
+                <div class="seccion-caja">
+                    @if(!chequeGeneralCargado){
+                        <div class="detalle-cheque-estado">
+                            <span class="detalle-cheque-pendiente">
+                                <i class="pi pi-exclamation-circle"></i>
+                                Todavía no cargaste los datos del cheque
+                            </span>
+                            <p-button label="Cargar datos del cheque" [outlined]="true" size="small" icon="pi pi-file-edit" (onClick)="AbrirDialogChequeGeneral()" />
+                        </div>
+                        <small class="error">Es obligatorio antes de poder registrar la entrega.</small>
+                    }@else{
+                        <div class="detalle-cheque-estado">
+                            <span class="detalle-cheque-ok">
+                                <i class="pi pi-check-circle"></i>
+                                Cheque cargado correctamente
+                            </span>
+                            <p-button label="Editar" [text]="true" size="small" icon="pi pi-pencil" (onClick)="AbrirDialogChequeGeneral()" />
+                        </div>
+                    }
+                </div>
+            }
+
+            @if(metodoPermiteRetencion){
+                <p class="seccion-titulo">Retención <span class="seccion-subtitulo">(opcional - Ganancias, Ing. Brutos o SUSS)</span></p>
+                <div class="seccion-caja horizontal">
+                    <p-floatlabel variant="in">
+                        <p-select [options]="tipoRetencionOpciones" formControlName="tipoRetencion" optionValue="value" optionLabel="label" [showClear]="true" [appendTo]="'body'" />
+                        <label>Tipo</label>
+                    </p-floatlabel>
+
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="importeRetencion" [imask]="decimal_mask" />
+                        <label>Importe retenido</label>
+                    </p-floatlabel>
+                </div>
+            }
+
             <!-- Observaciones -->
             <p-floatlabel variant="in">
-                <textarea pTextarea rows="5" cols="30" formControlName="observaciones" style="resize: none"></textarea>
-                <label>Observaciones</label>
+                <textarea pTextarea rows="3" cols="30" formControlName="observaciones" style="resize: none"></textarea>
+                <label>Observaciones (opcional)</label>
             </p-floatlabel>
         }
     </form>
 
     <div class="botones">
-        <p-button [label]="desdeVenta ? 'Registrar Pago' : 'Registrar Entrega'" severity="primary" [disabled]="((montoControl == '' || montoControl == '0') && desdeVenta == false) || (desdeVenta == true && pagosNuevos.length == 0)" (onClick)="Guardar()" icon="pi pi-save" />
+        <p-button [label]="desdeVenta ? 'Registrar Pago' : 'Registrar Entrega'" severity="primary" [disabled]="((montoControl == '' || montoControl == '0') && desdeVenta == false) || (desdeVenta == true && pagosNuevos.length == 0) || (desdeVenta == false && metodoEsCheque && !chequeGeneralCargado)" (onClick)="Guardar()" icon="pi pi-save" />
     </div>
 </p-dialog>
+
+<!-- Dialog Cheque -->
+<app-dialog-cheque
+  [(visible)]="dialogChequeVisible"
+  [importeDefault]="dialogChequeImporte"
+  [datosCheque]="dialogChequeDatos"
+  (confirmar)="onChequeConfirmado($event)"
+  (cancelar)="onChequeCancelado()"
+/>

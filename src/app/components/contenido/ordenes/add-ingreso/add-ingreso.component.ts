@@ -14,6 +14,8 @@ import { UsuariosService } from '../../../../services/usuarios.service';
 import { ProductoOrden, ProductoOrdenBaja } from '../../../../models/ProductoOrden';
 import { TooltipModule } from 'primeng/tooltip';
 import { TALLES_ESTANDAR } from '../../ventas/models/venta.constants';
+import { MiscService } from '../../../../services/misc.service';
+import { LineasTalle } from '../../../../models/Producto';
 
 @Component({
   selector: 'app-add-ingreso',
@@ -30,22 +32,26 @@ import { TALLES_ESTANDAR } from '../../ventas/models/venta.constants';
   templateUrl: './add-ingreso.component.html',
   styleUrls: ['./add-ingreso.component.scss']
 })
-export class AddIngresoComponent {
-  @Input() visible = false; 
-  @Output() cerrar = new EventEmitter<boolean>(); 
+export class AddIngresoComponent implements OnInit {
+  @Input() visible = false;
+  @Output() cerrar = new EventEmitter<boolean>();
 
   productos: ProductoOrden[] = [];
   idOrden:number = 0;
+  lineasTalles: LineasTalle[] = [];
 
   @Input()
   set _productosRecepcionar(value: OrdenIngreso | null | undefined) {
     if (!value?.productos) return;
     this.idOrden = value.id!;
-    
+
     const productosClon = JSON.parse(JSON.stringify(value.productos));
     this.productos = productosClon
     .filter(prod => prod.fechaBaja == null)
-    .filter(prod => this.talles.some((_, i) => (prod[this.getKeyByIndex(i)] || 0) > 0));
+    .filter(prod => this.talles.some((_, i) => (prod[this.getKeyByIndex(i)] || 0) > 0))
+    // Filas contiguas por idLineaTalle: lo requiere rowGroupMode/groupRowsBy de PrimeNG.
+    // .filter() ya devuelve un array nuevo, así que ordenar in-place acá es seguro.
+    .sort((a: ProductoOrden, b: ProductoOrden) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
 
     this.productos.forEach(p => {
       p._original = {};
@@ -66,8 +72,19 @@ export class AddIngresoComponent {
     private Notificaciones:NotificacionesService,
     private confirmationService: ConfirmationService,
     private ordenIngresoService:OrdenIngresoService,
-    private usuarioService:UsuariosService
+    private usuarioService:UsuariosService,
+    private miscService:MiscService
   ) {}
+
+  ngOnInit() {
+    this.miscService.ObtenerLineasTalle(true).subscribe(data => this.lineasTalles = data);
+  }
+
+  // Talles reales (en el mismo orden posicional que t1..t10) de la línea de talle del producto.
+  // Se usa en el groupheader de la tabla para mostrar el talle real de cada columna.
+  ObtenerTallesDeLinea(idLineaTalle?: number): string[] {
+    return this.lineasTalles.find(l => l.id === idLineaTalle)?.talles ?? [];
+  }
 
   inicializarForm(){
     this.form = this.fb.array(

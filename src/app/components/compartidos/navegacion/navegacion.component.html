@@ -2,6 +2,13 @@
 
 <div class="contenedor">
     <p-menubar [model]="items" class="menu-principal">
+        <ng-template #start>
+            @if(!esProduccion){
+                <span class="pill-entorno" pTooltip="Este ambiente no es de producción: los datos no son reales." tooltipPosition="bottom">
+                    {{ nombreEntorno }}
+                </span>
+            }
+        </ng-template>
         <ng-template #end>
             <div class="opciones">
                 <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>

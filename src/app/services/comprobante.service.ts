@@ -5,10 +5,12 @@ import { ParametrosService } from './parametros.service';
 import { NotificacionesService } from './notificaciones.service';
 import { VentasService } from './ventas.service';
 import { FilesService } from './files.service';
+import { MiscService } from './misc.service';
 import { firstValueFrom } from 'rxjs';
 import { Venta } from '../models/Factura';
 import { ObjTicketFactura } from '../models/ObjTicketFactura';
 import { ObjComprobante } from '../models/ObjComprobant';
+import { LineasTalle } from '../models/Producto';
 
 @Injectable({
   providedIn: 'root'
@@ -16,11 +18,17 @@ import { ObjComprobante } from '../models/ObjComprobant';
 export class ComprobanteService {
   private pdfMake: any;
 
+  // Fallback usado cuando un producto no tiene idLineaTalle o no matchea ninguna línea
+  // del catálogo (dato legacy/faltante) - preserva el comportamiento que tenía la tabla
+  // antes de agrupar por línea de talle, en vez de romper o dejar la fila en blanco.
+  private readonly TALLES_LEGACY = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
+
   constructor(
     private filesService:FilesService,
     private parametrosService:ParametrosService,
     private ventasService:VentasService,
-    private Notificaciones:NotificacionesService
+    private Notificaciones:NotificacionesService,
+    private miscService:MiscService
   ) { }
 
   // Método para inicializar pdfMake
@@ -58,12 +66,13 @@ export class ComprobanteService {
     }
   
     private async ArmarComprobante(venta: Venta) {
-      const comprobante:ObjComprobante = this.GenerarDatosComunes(venta);
+      const lineasTalle = await firstValueFrom(this.miscService.ObtenerLineasTalle(true));
+      const comprobante:ObjComprobante = this.GenerarDatosComunes(venta, lineasTalle);
       return this.ArmarInternoA4(comprobante);
     }
-  
+
     //Genera los datos comunes del documento y la estructura de la tabla
-    private GenerarDatosComunes(venta:Venta): ObjComprobante {
+    private GenerarDatosComunes(venta:Venta, lineasTalle:LineasTalle[]): ObjComprobante {
       let comprobante = new ObjComprobante();
   
       comprobante.papel = this.parametrosService.GetPapel();
@@ -94,19 +103,33 @@ export class ComprobanteService {
           : nombreProd;
       };
 
-      const FormatearPrecioTotal = (unitario, cantidad, descuento) => {
+      // Total de la fila en bruto (sin descuento): el descuento se muestra aparte
+      // en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
+      const FormatearPrecioTotalBruto = (unitario, cantidad) => {
         const nCantidad = Number(cantidad) || 0;
-        const nDescuento = parseFloat(descuento) || 0;
         const nUnitario = parseFloat(unitario) || 0;
 
         const totalBruto = nUnitario * nCantidad;
 
-        const totalConDescuento = totalBruto * (1 - (nDescuento / 100));
-
-        return totalConDescuento.toLocaleString('es-AR', {
+        return totalBruto.toLocaleString('es-AR', {
           minimumFractionDigits: 1,
           maximumFractionDigits: 1
         });
+      };
+
+      // Talles reales (en el mismo orden posicional que t1..t10) de una línea de talle.
+      // Fallback a TALLES_LEGACY si el producto no tiene idLineaTalle o no matchea el catálogo
+      // (dato legacy/faltante) - mismo criterio que vista-previa.component.ts (ObtenerTallesDeLinea).
+      const ObtenerTallesDeLinea = (idLineaTalle?: number): string[] => {
+        const talles = lineasTalle.find(l => l.id === idLineaTalle)?.talles;
+        return talles?.length ? talles : this.TALLES_LEGACY;
+      };
+
+      // Talle en 0 (slot no usado por esta línea) no se muestra (celda vacía) en vez de
+      // '0' o '–', para no generar ruido visual donde no hay talle.
+      const FormatearTalle = (valor: any): string => {
+        const n = Number(valor) || 0;
+        return n === 0 ? '' : n.toString();
       };
 
       //Productos
@@ -115,16 +138,8 @@ export class ComprobanteService {
           { text: 'Código', style: 'tableHeader', alignment: 'left' },
           { text: 'Producto', style: 'tableHeader', alignment: 'left' },
           { text: 'Color', style: 'tableHeader', alignment: 'left' },
-          { text: 'XS', style: 'tableHeader', alignment: 'center' },
-          { text: 'S', style: 'tableHeader', alignment: 'center' },
-          { text: 'M', style: 'tableHeader', alignment: 'center' },
-          { text: 'L', style: 'tableHeader', alignment: 'center' },
-          { text: 'XL', style: 'tableHeader', alignment: 'center' },
-          { text: 'XXL', style: 'tableHeader', alignment: 'center' },
-          { text: '3XL', style: 'tableHeader', alignment: 'center' },
-          { text: '4XL', style: 'tableHeader', alignment: 'center' },
-          { text: '5XL', style: 'tableHeader', alignment: 'center' },
-          { text: '6XL', style: 'tableHeader', alignment: 'center' },
+          { text: 'Talles', style: 'tableHeader', alignment: 'center', colSpan: 10 },
+          {}, {}, {}, {}, {}, {}, {}, {}, {},
           { text: 'Cant', style: 'tableHeader', alignment: 'center' },
           { text: 'Precio', style: 'tableHeader', alignment: 'right' },
           { text: 'Desc', style: 'tableHeader', alignment: 'right' },
@@ -133,7 +148,6 @@ export class ComprobanteService {
       ];
 
       const procesarItems = (items: any[]) => {
-        const esFacturaA = venta.idTipoComprobante === 1;
         const descuentoGeneral = Number(venta.descuento) || 0;
 
         return items?.reduce((acc, item) => {
@@ -174,28 +188,81 @@ export class ComprobanteService {
       const servicios = procesarItems(venta.servicios);
 
 
- 
-      venta.productos.forEach(item => {
+
+      // Agrupamos por línea de talle (idLineaTalle) para mostrar, en un subheader por grupo,
+      // los talles reales de esa línea (ej. 28-46 numérico vs XS-6XL letra) en vez de un único
+      // header global que no aplica a todos los productos. Clonamos antes de ordenar: no hay
+      // que mutar venta.productos, lo reutiliza el caller (mismo criterio que
+      // vista-previa.component.ts.ngOnChanges).
+      const productosOrdenados = [...(venta.productos ?? [])]
+        .sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
+
+      const gruposIdx: number[] = [];
+      const continuacionIdx: number[] = [];
+      let idLineaActual: number | undefined;
+      let esPrimerGrupo = true;
+      let itemAnterior: any = undefined;
+
+      productosOrdenados.forEach(item => {
+        if (esPrimerGrupo || item.idLineaTalle !== idLineaActual) {
+          idLineaActual = item.idLineaTalle;
+          esPrimerGrupo = false;
+          itemAnterior = undefined; // un nuevo grupo de talle nunca es "continuación" del anterior
+
+          const talles = ObtenerTallesDeLinea(item.idLineaTalle);
+          const tallesFila = Array.from({ length: 10 }, (_, i) => talles[i] ?? '');
+
+          gruposIdx.push(comprobante.filasProducto?.length ?? 0);
+          comprobante.filasProducto?.push([
+            '', '', '',
+            ...tallesFila.map(t => ({ text: t, alignment: 'center', bold: true })),
+            '', '', '', '',
+          ]);
+        }
+
+        // Mismo producto+color que la fila anterior (partido en 2+ líneas por tener precio
+        // distinto entre talles -ver AgregarProducto en addmod-ventas.component.ts-). No
+        // repetimos Código/Nombre/Color: dejamos solo un indicador para que se lea como la
+        // misma línea, no como un producto duplicado.
+        const esContinuacion = !!itemAnterior
+          && itemAnterior.idProducto === item.idProducto
+          && itemAnterior.idColor === item.idColor;
+
+        if (esContinuacion) {
+          continuacionIdx.push(comprobante.filasProducto?.length ?? 0);
+        }
+
         comprobante.filasProducto?.push([
-          { text: item.codProducto, alignment: 'left' },
-          CortarNombreProducto(item.nomProducto),
-          { text: item.color, alignment: 'left' },
-          { text: item.t1 ?? 0, alignment: 'center' },
-          { text: item.t2 ?? 0, alignment: 'center' },
-          { text: item.t3 ?? 0, alignment: 'center' },
-          { text: item.t4 ?? 0, alignment: 'center' },
-          { text: item.t5 ?? 0, alignment: 'center' },
-          { text: item.t6 ?? 0, alignment: 'center' },
-          { text: item.t7 ?? 0, alignment: 'center' },
-          { text: item.t8 ?? 0, alignment: 'center' },
-          { text: item.t9 ?? 0, alignment: 'center' },
-          { text: item.t10 ?? 0, alignment: 'center' },
-          FormatearCantidad(item.cantidad),
+          // '->' en vez de '↳': ese carácter (bloque Unicode "Arrows") no está en la fuente
+          // embebida de pdfMake y no renderiza (se ve vacío). '->' es ASCII, siempre renderiza,
+          // y va en el color/peso normal del texto (sin bold ni color propio) para que se lea
+          // como una continuación de la fila, no como un elemento destacado aparte.
+          esContinuacion
+            ? { text: '->', alignment: 'left' }
+            : { text: item.codProducto, alignment: 'left' },
+          esContinuacion ? '' : CortarNombreProducto(item.nomProducto),
+          esContinuacion ? '' : { text: item.color, alignment: 'left' },
+          { text: FormatearTalle(item.t1), alignment: 'center' },
+          { text: FormatearTalle(item.t2), alignment: 'center' },
+          { text: FormatearTalle(item.t3), alignment: 'center' },
+          { text: FormatearTalle(item.t4), alignment: 'center' },
+          { text: FormatearTalle(item.t5), alignment: 'center' },
+          { text: FormatearTalle(item.t6), alignment: 'center' },
+          { text: FormatearTalle(item.t7), alignment: 'center' },
+          { text: FormatearTalle(item.t8), alignment: 'center' },
+          { text: FormatearTalle(item.t9), alignment: 'center' },
+          { text: FormatearTalle(item.t10), alignment: 'center' },
+          { text: FormatearCantidad(item.cantidad), alignment: 'center' },
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotal(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
+          { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
         ]);
+
+        itemAnterior = item;
       });
+
+      comprobante.filasProductoGrupos = gruposIdx;
+      comprobante.filasProductoContinuacion = continuacionIdx;
   
       //Servicios
       comprobante.filasServicio = [
@@ -216,7 +283,7 @@ export class ComprobanteService {
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotal(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
+          { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
         ]);
       });
   
@@ -244,7 +311,7 @@ export class ComprobanteService {
     private ArmarInternoA4(comprobante:ObjComprobante){
       return {
         pageSize: 'A4',
-        pageOrientation: 'portrait',
+        pageOrientation: 'landscape',
         pageMargins: [10, 10, 10, 10],
         content: [
           {
@@ -283,20 +350,36 @@ export class ComprobanteService {
             },
             layout: {
               fillColor: function (rowIndex, node, columnIndex) {
-                return rowIndex === 0 ? '#CCCCCC' : null;
+                if (rowIndex === 0) return '#CCCCCC';
+                if (comprobante.filasProductoGrupos?.includes(rowIndex)) return '#E8E8E8';
+                // Continuación del mismo producto: mismo color de fondo que la fila anterior
+                // (si no, el zebra la pinta distinto y rompe la sensación de "misma línea").
+                const idxZebra = comprobante.filasProductoContinuacion?.includes(rowIndex) ? rowIndex - 1 : rowIndex;
+                return idxZebra % 2 === 0 ? '#F5F5F5' : null;
               },
               hLineWidth: function (i, node) {
-                // Línea después del header (i == 1) y después de la última fila (i == node.table.body.length)
-                return (i === 1 || i === node.table.body.length) ? 1 : 0;
+                // Sin línea arriba de una fila de continuación (mismo producto, precio
+                // distinto por talle): se tiene que leer pegada a la fila anterior.
+                if (comprobante.filasProductoContinuacion?.includes(i)) return 0;
+                // Línea después del header (i == 1), arriba de cada subheader de grupo,
+                // y después de la última fila (i == node.table.body.length)
+                return (i === 1 || i === node.table.body.length || comprobante.filasProductoGrupos?.includes(i)) ? 1 : 0.5;
               },
               vLineWidth: function (i, node) {
-                return 0;
+                return 0.5;
               },
               hLineColor: function (i, node) {
                 return i === 1 ? 'black' : '#CCCCCC';
               },
-              paddingTop: function (i, node) { return 2; },
-              paddingBottom: function (i, node) { return 2; },
+              vLineColor: function (i, node) {
+                return '#CCCCCC';
+              },
+              paddingTop: function (i, node) { return 3; },
+              paddingBottom: function (i, node) { return 3; },
+              // Un poco más de aire horizontal en las columnas de talle (3 a 12) para que no
+              // queden pegadas a la cuadrícula.
+              paddingLeft: function (i, node) { return (i >= 3 && i <= 12) ? 6 : 4; },
+              paddingRight: function (i, node) { return (i >= 3 && i <= 12) ? 6 : 4; },
             },
             style: 'tableStyle' // Aplicar el estilo a la tabla
           },
@@ -313,17 +396,21 @@ export class ComprobanteService {
               },
               layout: {
                 fillColor: function (rowIndex, node, columnIndex) {
-                  return rowIndex === 0 ? '#CCCCCC' : null;
+                  if (rowIndex === 0) return '#CCCCCC';
+                  return rowIndex % 2 === 0 ? '#F5F5F5' : null;
                 },
                 hLineWidth: function (i, node) {
                   // Línea después del header (i == 1) y después de la última fila (i == node.table.body.length)
-                  return (i === 1 || i === node.table.body.length) ? 1 : 0;
+                  return (i === 1 || i === node.table.body.length) ? 1 : 0.5;
                 },
                 vLineWidth: function (i, node) {
-                  return 0;
+                  return 0.5;
                 },
                 hLineColor: function (i, node) {
                   return i === 1 ? 'black' : '#CCCCCC';
+                },
+                vLineColor: function (i, node) {
+                  return '#CCCCCC';
                 },
                 paddingTop: function (i, node) { return 2; },
                 paddingBottom: function (i, node) { return 2; },

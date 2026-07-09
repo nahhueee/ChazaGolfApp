@@ -1,5 +1,7 @@
 <div class="contenido">
-    <app-encabezado-seccion titulo="Cuentas Corriente" icono="pi pi-wallet" />
+    <app-encabezado-seccion titulo="Cuentas Corriente" icono="pi pi-wallet">
+        <p-button label="Exportar" icon="pi pi-file-excel" raised pTooltip="Exportar saldos" tooltipPosition="bottom" (onClick)="DescargarResultados()"/>
+    </app-encabezado-seccion>
 
      <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">

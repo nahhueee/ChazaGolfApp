@@ -9,15 +9,29 @@
     </ng-template>
 
     <div class="contenido">
-      <p-table [value]="productos || []">     
+      <p-table [value]="productos || []" dataKey="codProducto" rowGroupMode="subheader" groupRowsBy="idLineaTalle">
         <ng-template pTemplate="header">
           <tr>
             <th>Código</th>
             <th>Nombre</th>
             <th>Color</th>
-            <th *ngFor="let t of talles" class="talle-col">{{t}}</th>
+            <th [attr.colspan]="talles.length" class="talle-col text-center">Talles</th>
             <th>Total</th>
             <th>Sin Rec.</th>
+          </tr>
+        </ng-template>
+
+        <!-- GROUPHEADER: talles reales de la línea de talle del producto (igual que addmod-ventas) -->
+        <ng-template pTemplate="groupheader" let-prod>
+          <tr class="grupo-linea-talle">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td *ngFor="let t of talles; let i = index" class="talle-col text-center">
+              <strong>{{ ObtenerTallesDeLinea(prod.idLineaTalle)[i] ?? '' }}</strong>
+            </td>
+            <td></td>
+            <td></td>
           </tr>
         </ng-template>
 

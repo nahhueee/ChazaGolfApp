@@ -128,7 +128,7 @@
     </div>
 </div>
 
-<app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada"></app-vista-previa>
+<app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada" [preciosNetos]="ItemsEnPreciosNetos()"></app-vista-previa>
 <app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
 
 <p-popover #op>

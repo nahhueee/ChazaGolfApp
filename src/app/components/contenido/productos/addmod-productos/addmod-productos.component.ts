@@ -249,7 +249,6 @@ export class AddmodProductosComponent {
     this.productosService.ObtenerProducto(idProducto)
     .subscribe(response => {
       this.producto = new Producto(response);
-      console.log(this.producto);
 
       this.formulario.get('empresa')?.setValue(this.producto.empresa);
       this.formulario.get('temporada')?.setValue(this.temporadas.find(t=> t.id == this.producto.temporada?.id) ?? new Temporada());
