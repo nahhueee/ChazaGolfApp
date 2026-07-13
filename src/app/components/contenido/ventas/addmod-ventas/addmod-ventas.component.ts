@@ -739,7 +739,12 @@ export class AddModVentasComponent {
         { total: 0, descuento: 0 } 
       );
 
-    const productos = calcularSubtotales(this.productosFactura);
+    // Mismo filtro que se aplica al persistir (ver ArmarObjetoVenta ~línea 2058):
+    // una fila de producto con cantidad=0 (ej. talle sin cargar) no se guarda, pero
+    // sin este filtro acá su `total` sí se sumaba al cálculo en pantalla -> totales.aPagar
+    // (y por lo tanto venta.total) quedaba mayor a la suma real de lo persistido.
+    // Root cause de ventas #15 ($10.000) y #69 ($4.000) - jul-2026.
+    const productos = calcularSubtotales(this.productosFactura.filter(p => (p.cantidad ?? 0) > 0));
     const servicios  = calcularSubtotales(this.serviciosFactura);
 
     const items = productos.total + servicios.total;
