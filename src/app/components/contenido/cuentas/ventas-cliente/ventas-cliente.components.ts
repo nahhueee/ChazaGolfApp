@@ -31,6 +31,8 @@ import { ReciboReporteService } from '../../../../services/recibo.service';
 import { EstadisticaClientes } from "../../clientes/estadistica-clientes/estadistica-clientes.component";
 import { Dialog } from 'primeng/dialog';
 import { UsuariosService } from '../../../../services/usuarios.service';
+import { TextareaModule } from 'primeng/textarea';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
 
 @Component({
   selector: 'app-ventas-cliente',
@@ -49,7 +51,8 @@ import { UsuariosService } from '../../../../services/usuarios.service';
     TagModule,
     PopoverModule,
     EstadisticaClientes,
-    Dialog
+    Dialog,
+    TextareaModule
 ],
   templateUrl: './ventas-cliente.components.html',
   styleUrl: './ventas-cliente.components.scss',
@@ -80,6 +83,10 @@ export class VentasClienteComponent {
   mostrarObs: boolean = false;
   observacionSeleccionada: string = '';
 
+  bajaVisible: boolean = false;
+  reciboBaja: number = 0;
+  motivoBaja: string = '';
+
   estados = [
     "A FAVOR", "PAGADA", "DEUDA"
   ]
@@ -98,7 +105,8 @@ export class VentasClienteComponent {
     private comprobanteService:ComprobanteService,
     private facturaService:FacturaService,
     private reciboService:ReciboReporteService,
-    private usuariosService:UsuariosService
+    private usuariosService:UsuariosService,
+    private notificaciones:NotificacionesService
   ){
     this.filtros = new FormGroup({
       estado: new FormControl(),
@@ -214,6 +222,31 @@ export class VentasClienteComponent {
   VerObservaciones(obs:string) {
     this.observacionSeleccionada = obs;
     this.mostrarObs = true;
+  }
+
+  AbrirDarBaja(idRecibo:number) {
+    this.reciboBaja = idRecibo;
+    this.motivoBaja = '';
+    this.bajaVisible = true;
+  }
+
+  ConfirmarDarBaja() {
+    if (!this.motivoBaja?.trim()) return;
+
+    this.cuentasService.DarBajaRecibo(this.reciboBaja, this.motivoBaja.trim(), this.cajaActiva)
+      .subscribe({
+        next: () => {
+          this.notificaciones.Success(`Recibo #${this.reciboBaja} dado de baja correctamente`);
+          this.bajaVisible = false;
+          this.Buscar();
+          this.ObtenerSaldoCliente();
+        },
+        // Igual patrón que main-fondos.component.ts (Acreditar/RechazarValor): el
+        // interceptor global ya muestra un toast genérico para el 400, este muestra
+        // además el motivo específico del bloqueo (cheque acreditado, saldo a favor
+        // consumido, etc.) que devuelve DarBajaRecibo.
+        error: (e) => this.notificaciones.Error(e?.error ?? 'No se pudo dar de baja el recibo.')
+      });
   }
 
   Cerrar(){

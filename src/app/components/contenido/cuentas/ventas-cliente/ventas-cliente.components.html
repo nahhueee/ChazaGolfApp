@@ -93,6 +93,9 @@
                             @if(venta.observaciones && venta.observaciones != ""){
                                 <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-info-circle" (onClick)="VerObservaciones(venta.observaciones)" pTooltip="Ver Observaciones" tooltipPosition="bottom"/>
                             }
+                            @if(venta.proceso == "RECIBO"){
+                                <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AbrirDarBaja(venta.id)" pTooltip="Dar de baja recibo" tooltipPosition="bottom"/>
+                            }
                         </div>
                     </td>
                 </tr>
@@ -144,6 +147,29 @@
 >
     <div style="white-space: pre-line;">
         {{ observacionSeleccionada }}
+    </div>
+</p-dialog>
+
+<p-dialog
+    header="Dar de baja recibo"
+    [(visible)]="bajaVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>
+        Se va a revertir el recibo #{{reciboBaja}} y todo lo que generó (fondos, cheques/créditos,
+        saldo a favor). Las ventas afectadas vuelven a Cuenta Corriente. Esta acción no se puede deshacer.
+    </p>
+    <br>
+    <p-floatlabel variant="in">
+        <textarea pTextarea rows="3" cols="30" [(ngModel)]="motivoBaja" style="resize: none; width: 100%"></textarea>
+        <label>Motivo (obligatorio)</label>
+    </p-floatlabel>
+    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="bajaVisible = false" />
+        <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
     </div>
 </p-dialog>
 

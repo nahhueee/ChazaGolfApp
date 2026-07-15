@@ -40,4 +40,8 @@ export class CuentasCorrientesService {
     return this.apiService.put('cuentas/entrega', {idCaja, idCliente, idEmpresa, idMetodo, monto, observaciones, cheque, retencion})
   }
 
+  DarBajaRecibo(idRecibo:number, motivo:string, idCaja:number): Observable<any> {
+    return this.apiService.put('cuentas/dar-baja-recibo', {idRecibo, motivo, idCaja})
+  }
+
 }
