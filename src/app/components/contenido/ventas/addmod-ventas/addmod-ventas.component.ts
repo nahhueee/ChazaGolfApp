@@ -462,6 +462,34 @@ export class AddModVentasComponent {
 
     return Math.max(this.totales.aPagar - entregado, 0);
   }
+
+  // Suma de TODOS los métodos de pago cargados, sin excluir Cuenta Corriente
+  // (a diferencia de pagoCompleto/getSaldoPendiente, que la excluyen a propósito
+  // por no ser plata real todavía). Se usa solo para chequear que lo cargado en
+  // pantalla siga coincidiendo con el total al momento de guardar.
+  get totalMetodosPagoCargados(): number {
+    return this.pagosFactura?.reduce((acc, item) => acc + (item.monto || 0), 0) || 0;
+  }
+
+  // AgregarPago() ya impide cargar de más contra montoRestante al momento de la
+  // carga, pero productos/servicios, descuento, redondeo o el tipo de comprobante
+  // pueden cambiar el total después (todos disparan CalcularTotalGeneral) sin que
+  // los montos ya cargados se actualicen solos. Tolerancia de 1 centavo por
+  // acumulación de redondeos entre ítems.
+  get pagosCoincidenConTotal(): boolean {
+    return Math.abs(this.totalMetodosPagoCargados - this.totales.aPagar) < 0.01;
+  }
+
+  // Condición de pago del cliente (dato maestro), no el método de pago elegido en
+  // la venta. Es el único criterio que exime la validación de coincidencia
+  // exacta de pagosCoincidenConTotal: cualquier cliente puede recibir el método
+  // "Cuenta Corriente" como uno más entre sus pagos (parcial o total) y ahí sigue
+  // aplicando la coincidencia exacta igual que con cualquier otro método - lo que
+  // se exime es solo al cliente cuya ficha ya lo define como CC, para el cual el
+  // saldo pendiente se autocompleta más abajo en Guardar().
+  get clienteEsCuentaCorriente(): boolean {
+    return this.clienteSeleccionado?.idCondicionPago === ID_CONDICION_PAGO.CUENTA_CORRIENTE;
+  }
   //#endregion
   
   //#region INICIALIZACION
@@ -1833,39 +1861,70 @@ export class AddModVentasComponent {
       this.venta.estado = ESTADO_VENTA.FINALIZADA;
 
 
-    //Control para clientes con cuenta corriente. Solo aplica a Factura/Cotización/NC/ND
-    // (tipo === 'factura'): Presupuesto/Pedido/Nota de Empaque no muestran el formulario
-    // de pago (pagosFactura siempre vacío), así que sin este filtro pagoCompleto daba
-    // siempre false y esto les armaba una línea de "Cuenta Corriente por el total"
-    // aunque todavía no sean una venta confirmada.
+    // Solo aplica a Factura/Cotización/NC/ND (tipo === 'factura'): Presupuesto/
+    // Pedido/Nota de Empaque no muestran el formulario de pago (pagosFactura
+    // siempre vacío).
     if (this.tipo === 'factura') {
-      const pendiente = this.getSaldoPendiente;
-      // ObtenerMetodosPago() de este componente (a diferencia del de
-      // entrega-dinero.component.ts) no excluye CUENTA_CORRIENTE del combo, así
-      // que el operador puede cargarla a mano como método de la venta. Como
-      // getSaldoPendiente la excluye siempre del cálculo de "ya pagado" (por
-      // diseño), "pendiente" da el total completo aunque ya haya una línea CC
-      // manual - sin este chequeo, se agregaba una SEGUNDA línea CC por el mismo
-      // importe y la deuda del cliente quedaba duplicada. Bug real: 2 ventas con
-      // servicios/Factura C el 08/07/2026, corregido el mismo día.
-      const yaTieneCuentaCorriente = this.pagosFactura.some(p => p.tipo === TIPO_METODO_PAGO.CUENTA_CORRIENTE);
-      if (!this.pagoCompleto && pendiente > 0 && !yaTieneCuentaCorriente) {
-        // Se busca el método "Cuenta Corriente" de la empresa actual por tipo,
-        // no por METODO_PAGO.CUENTA_CORRIENTE (id fijo que solo es correcto
-        // para la empresa 1) - con metodos_pago por empresa, ese id puede no
-        // existir o pertenecer a otro método en otra empresa. Si no aparece
-        // (dato faltante en metodos_pago para esta empresa), se cae al id fijo
-        // como último recurso para no romper el alta, pero queda logueado.
-        const metodoCC = this.metodoCuentaCorriente;
-        if (!metodoCC) {
-          console.warn(`No se encontró método CUENTA_CORRIENTE para la empresa actual - usando id fijo ${METODO_PAGO.CUENTA_CORRIENTE} como fallback.`);
+      // Alta automática de CC: SOLO para el cliente cuya ficha ya lo define con
+      // condición de pago Cuenta Corriente. Para cualquier otro cliente, vender a
+      // cuenta corriente es una decisión manual del operador (agregar el método
+      // "Cuenta Corriente" a mano) - no se le arma sola. El chequeo de
+      // coincidencia de más abajo es lo que obliga a esa carga manual.
+      if (this.clienteEsCuentaCorriente) {
+        const pendiente = this.getSaldoPendiente;
+        // ObtenerMetodosPago() de este componente (a diferencia del de
+        // entrega-dinero.component.ts) no excluye CUENTA_CORRIENTE del combo, así
+        // que el operador puede cargarla a mano como método de la venta. Como
+        // getSaldoPendiente la excluye siempre del cálculo de "ya pagado" (por
+        // diseño), "pendiente" da el total completo aunque ya haya una línea CC
+        // manual - sin este chequeo, se agregaba una SEGUNDA línea CC por el mismo
+        // importe y la deuda del cliente quedaba duplicada. Bug real: 2 ventas con
+        // servicios/Factura C el 08/07/2026, corregido el mismo día.
+        const yaTieneCuentaCorriente = this.pagosFactura.some(p => p.tipo === TIPO_METODO_PAGO.CUENTA_CORRIENTE);
+        if (!this.pagoCompleto && pendiente > 0 && !yaTieneCuentaCorriente) {
+          // Se busca el método "Cuenta Corriente" de la empresa actual por tipo,
+          // no por METODO_PAGO.CUENTA_CORRIENTE (id fijo que solo es correcto
+          // para la empresa 1) - con metodos_pago por empresa, ese id puede no
+          // existir o pertenecer a otro método en otra empresa. Si no aparece
+          // (dato faltante en metodos_pago para esta empresa), se cae al id fijo
+          // como último recurso para no romper el alta, pero queda logueado.
+          const metodoCC = this.metodoCuentaCorriente;
+          if (!metodoCC) {
+            console.warn(`No se encontró método CUENTA_CORRIENTE para la empresa actual - usando id fijo ${METODO_PAGO.CUENTA_CORRIENTE} como fallback.`);
+          }
+          this.venta.pagos.push(new PagosFactura({
+            idMetodo: metodoCC?.id ?? METODO_PAGO.CUENTA_CORRIENTE,
+            metodo:   metodoCC?.descripcion ?? "Cuenta Corriente",
+            tipo:     TIPO_METODO_PAGO.CUENTA_CORRIENTE,
+            monto:    pendiente,
+          }));
         }
-        this.venta.pagos.push(new PagosFactura({
-          idMetodo: metodoCC?.id ?? METODO_PAGO.CUENTA_CORRIENTE,
-          metodo:   metodoCC?.descripcion ?? "Cuenta Corriente",
-          tipo:     TIPO_METODO_PAGO.CUENTA_CORRIENTE,
-          monto:    pendiente,
-        }));
+      }
+
+      // Los métodos de pago se cargan en un momento dado, pero agregar/quitar un
+      // producto o servicio, aplicar un descuento, cambiar el redondeo o el tipo
+      // de comprobante recalculan el total (CalcularTotalGeneral) sin tocar los
+      // montos ya cargados. Sin este chequeo se guardaba una venta con el total y
+      // los pagos desincronizados, rompiendo la conciliación de caja. La regla es
+      // la misma sin importar qué método(s) se hayan elegido (incluida una línea
+      // de Cuenta Corriente cargada a mano) - lo único que exime la coincidencia
+      // exacta es que el cliente tenga condición de pago Cuenta Corriente en su
+      // ficha, caso en el que el bloque de arriba ya la deja saldada.
+      //
+      // Se salta cuando ya viene un `factura` (finalizando=true, llamado desde
+      // GuardarFacturar): en ese punto el comprobante YA se emitió en ARCA/AFIP
+      // -acción irreversible- así que bloquear el guardado dejaría una factura
+      // fiscal sin registro en el sistema, un problema mucho peor que el
+      // desajuste que se busca evitar. Para el flujo de Facturar, el mismo
+      // chequeo se hace antes en ConfirmarFacturacion(), antes de emitir.
+      if (!factura && !this.clienteEsCuentaCorriente && !this.pagosCoincidenConTotal) {
+        const diferencia = Number((this.totalMetodosPagoCargados - this.totales.aPagar).toFixed(2));
+        this.Notificaciones.Warn(
+          diferencia > 0
+            ? `Los métodos de pago superan el total en $${Math.abs(diferencia).toFixed(2)}. Corregí los montos antes de guardar.`
+            : `Los métodos de pago no cubren el total. Falta $${Math.abs(diferencia).toFixed(2)}.`
+        );
+        return;
       }
     }
 
@@ -1955,13 +2014,29 @@ export class AddModVentasComponent {
         return;
       };
 
-    if(this.clienteSeleccionado!.idCondicionPago != ID_CONDICION_PAGO.CUENTA_CORRIENTE){
-      if(this.pagosFactura.length == 0){
+    // Regla de coincidencia: la suma de los métodos de pago cargados tiene que
+    // ser exactamente igual al total, sin importar qué método(s) se hayan
+    // elegido (incluida una línea de Cuenta Corriente cargada a mano por el
+    // operador para CUALQUIER cliente). Lo único que exime esto es que el
+    // cliente tenga condición de pago Cuenta Corriente en su ficha - para ese
+    // caso el saldo se autocompleta en Guardar() (después de emitir acá abajo).
+    //
+    // Va ANTES de emitir el comprobante en ARCA/AFIP (Facturar() del modal se
+    // dispara después de este método): a diferencia del mismo chequeo en
+    // Guardar() post-emisión, acá todavía no se generó nada irreversible, así
+    // que sí corresponde cortar el flujo.
+    if (!this.clienteEsCuentaCorriente) {
+      if (this.pagosFactura.length == 0) {
         this.Notificaciones.Warn("No se registraron métodos de pago.");
         return;
       }
-      if(!this.pagoCompleto){
-        this.Notificaciones.Warn("Este cliente no admite cuenta corriente. Para continuar, debés registrar el pago total de la venta.");
+      if (!this.pagosCoincidenConTotal) {
+        const diferencia = Number((this.totalMetodosPagoCargados - this.totales.aPagar).toFixed(2));
+        this.Notificaciones.Warn(
+          diferencia > 0
+            ? `Los métodos de pago superan el total en $${Math.abs(diferencia).toFixed(2)}. Corregí los montos antes de facturar.`
+            : `Los métodos de pago no cubren el total. Falta $${Math.abs(diferencia).toFixed(2)}. Si la venta es a cuenta corriente, agregá ese método de pago por la diferencia.`
+        );
         return;
       }
     }
