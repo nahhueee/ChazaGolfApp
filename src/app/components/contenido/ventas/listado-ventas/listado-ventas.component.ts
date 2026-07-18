@@ -26,6 +26,7 @@ import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
+import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
@@ -49,6 +50,7 @@ import { esMayoristaConListaPropia } from '../models/venta.constants';
     SplitButtonModule,
     PopoverModule,
     NotasVentaComponent,
+    NotaCreditoXComponent,
     EncabezadoSeccionComponent
 ],
   templateUrl: './listado-ventas.component.html',
@@ -65,6 +67,7 @@ export class ListadoVentasComponent {
   primeraCarga = true;
   detalleVisible: boolean = false;
   notasVisible: boolean = false;
+  notaCreditoXVisible: boolean = false;
   ventaSeleccionada:Venta = new Venta();
   
   filtros:FormGroup;
@@ -202,6 +205,16 @@ export class ListadoVentasComponent {
   }
   Actualizar(actualiza){
     this.notasVisible = false;
+    if(actualiza)
+      this.Buscar();
+  }
+
+  AbrirNotaCreditoX(){
+    this.notaCreditoXVisible = true;
+  }
+
+  ActualizarNotaCreditoX(actualiza:boolean){
+    this.notaCreditoXVisible = false;
     if(actualiza)
       this.Buscar();
   }

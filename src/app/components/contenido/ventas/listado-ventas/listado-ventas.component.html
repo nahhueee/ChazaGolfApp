@@ -3,6 +3,9 @@
 <div class="contenido">
     <app-encabezado-seccion [titulo]="tipo == 'factura' ? 'Facturación' : 'Pre-Facturación'" icono="pi pi-money-bill">
         <p-button [label]="tipo == 'factura' ? 'Nueva Facturación' : 'Nueva Pre-Facturación'" icon="pi pi-plus" [routerLink]="['/ventas/administrar', 0]" [queryParams]="{tipo: tipo}"/>
+        @if(tipo == 'factura'){
+            <p-button label="Nota de Crédito X" icon="pi pi-replay" (onClick)="AbrirNotaCreditoX()"/>
+        }
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
     </app-encabezado-seccion>
 
@@ -130,6 +133,7 @@
 
 <app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada" [preciosNetos]="ItemsEnPreciosNetos()"></app-vista-previa>
 <app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
+<app-nota-credito-x [visible]="notaCreditoXVisible" (cerrar)="ActualizarNotaCreditoX($event)"></app-nota-credito-x>
 
 <p-popover #op>
     <div class="opciones-impresion">

@@ -1,0 +1,53 @@
+name: Deploy Web
+
+on:
+  push:
+    branches:
+      - main
+      - test
+
+concurrency:
+  group: deploy-web-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir variables según rama
+        id: vars
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "config=prod" >> "$GITHUB_OUTPUT"
+            echo "remote_path=/www/wwwroot/creationserver.com/apps/chazagolf" >> "$GITHUB_OUTPUT"
+          else
+            echo "config=test" >> "$GITHUB_OUTPUT"
+            echo "remote_path=/www/wwwroot/creationserver.com/apps/chazagolftest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        run: npx ng build --configuration=${{ steps.vars.outputs.config }}
+
+      # Con --delete: son estáticos servidos por Nginx, hay que limpiar los bundles
+      # con hash de builds anteriores. No hay estado de runtime que perder acá.
+      - name: Subir build al VPS
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avz --delete
+          path: build/${{ steps.vars.outputs.config }}/browser/
+          remote_path: ${{ steps.vars.outputs.remote_path }}/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_port: ${{ secrets.VPS_PORT }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_DEPLOY_KEY }}

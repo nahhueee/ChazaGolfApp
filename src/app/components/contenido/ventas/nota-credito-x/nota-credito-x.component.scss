@@ -1,0 +1,223 @@
+.contenido{
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.header-custom{
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.seccion{
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--surface-card);
+
+  h3{
+    font-size: 15px;
+    font-family: 'Poppins';
+    margin-bottom: 20px;
+  }
+}
+
+.cliente{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  // El autocomplete debe quedarse con todo el ancho sobrante - la card del
+  // cliente (a la derecha) tiene su propio max-width y no necesita crecer.
+  // ::ng-deep porque p-autocomplete arma su propio wrapper/input interno, que
+  // no hereda el 100% solo con el ancho del host.
+  .formCliente{
+    flex: 1;
+    min-width: 0; // evita que el input empuje el ancho del form más allá del contenedor
+
+    p-floatlabel{
+      display: block;
+      width: 100%;
+    }
+
+    ::ng-deep .p-autocomplete{
+      width: 100%;
+
+      .p-autocomplete-input{
+        width: 100%;
+      }
+    }
+  }
+}
+
+.cliente-card{
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  border: 1px solid var(--surface-border);
+  flex-shrink: 0;
+  max-width: 350px;
+}
+
+.cliente-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 15px;
+
+  .icon {
+    background: var(--surface-ground);
+    border-radius: 80%;
+    padding: 5px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  i {
+    color: var(--p-primary-color);
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+
+    h4 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    span {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+/*#region PRODUCTOS*/
+.formProducto{
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  margin-bottom: 30px;
+
+  .izq{
+    width: 100%;
+    flex: 1;
+
+    .campos{
+      display: flex;
+      gap: 20px;
+    }
+  }
+  .der{
+    width: 100%;
+    flex: 1;
+  }
+}
+
+.color-cell{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.box-color{
+  height: 20px;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.opcion-color {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cuadro-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+}
+
+.talles{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 5px;
+  flex: 2;
+
+  .talle, .NoTalle{
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+
+    width: 100%;
+    border-radius: 8px;
+    background-color: var(--surface-ground);
+
+    p{
+      font-family: 'Poppins';
+      font-size: 16px
+    }
+    span{
+      font-size: 13px;
+    }
+  }
+  .talle:hover{
+    color: var(--p-primary-color);
+    cursor: pointer;
+  }
+
+  .badge-flotante {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    z-index: 2;
+  }
+}
+
+// Subheader de grupo (rowGroupMode="subheader" por idLineaTalle)
+.grupo-linea-talle{
+  td{
+    background-color: color-mix(in srgb, var(--surface-card) 30%, transparent);
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border);
+  }
+}
+
+.fila-continuacion td{
+  border-top: none;
+}
+.precede-continuacion td{
+  border-bottom: none;
+}
+.indicador-continuacion{
+  color: var(--orange-400, #ffa726);
+  cursor: help;
+  font-size: 1.1rem;
+}
+/*#endregion */
+
+.text-center{
+  text-align: center;
+}
+
+// El footer de p-dialog viene alineado a la derecha por default (::ng-deep porque
+// .p-dialog-footer lo renderiza PrimeNG fuera del árbol de este componente).
+.botones{
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding-top: 10px;
+}
+

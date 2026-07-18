@@ -1,0 +1,226 @@
+<p-confirmdialog key="confirmarNC"/>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '90vw' }" [maximizable]="true" (onHide)="CerrarModal(false)">
+    <ng-template pTemplate="header">
+        <div class="header-custom">
+            <span>Nota de Crédito X</span>
+        </div>
+    </ng-template>
+
+    <div class="contenido">
+        <!-- Cliente -->
+        <div class="seccion">
+            <h3>Cliente</h3>
+
+            <div class="cliente">
+                <form [formGroup]="formCliente" autocomplete="off" class="formCliente">
+                    <p-floatlabel variant="in">
+                        <p-autocomplete
+                            formControlName="cliente"
+                            [suggestions]="clientesFiltrados"
+                            placeholder="Buscar por nombre o DNI"
+                            emptyMessage="No se encontraron resultados"
+                            (completeMethod)="FiltrarClientes($event)"
+                            (onSelect)="SeleccionarCliente();"
+                            optionLabel="nombre"
+                        >
+                            <ng-template let-cliente pTemplate="item">
+                                {{ cliente.nombre }} - {{ cliente.documento }} - {{cliente.razonSocial}}
+                            </ng-template>
+                        </p-autocomplete>
+                        <label>Cliente</label>
+                    </p-floatlabel>
+                </form>
+
+                @if(clienteSeleccionado){
+                    <div class="cliente-card">
+                        <div class="cliente-header">
+                            <div class="icon"><i class="pi pi-user"></i></div>
+                            <div class="info">
+                                <h4>{{ clienteSeleccionado.nombre }}</h4>
+                                <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+        </div>
+
+        <!-- Productos -->
+        <div class="seccion">
+            <h3>Productos</h3>
+
+            <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
+                <div class="izq">
+                    <div class="campos">
+                        <p-floatlabel variant="in">
+                            <input #inputCodigo pInputText formControlName="codigoBarras"/>
+                            <label>Codigo de Barras</label>
+                        </p-floatlabel>
+
+                        <p-floatlabel variant="in">
+                            <p-autocomplete
+                                formControlName="producto"
+                                [suggestions]="productosFiltrados"
+                                placeholder="Buscar por código o nombre"
+                                emptyMessage="No se encontraron resultados"
+                                (completeMethod)="FiltrarProductos($event)"
+                                (onSelect)="SeleccionarProducto();"
+                                optionLabel="nombre"
+                            >
+                                <ng-template let-producto pTemplate="item">
+                                    {{ producto.codigo }} - {{ producto.nombre }}
+                                </ng-template>
+                            </p-autocomplete>
+                            <label>Producto</label>
+                        </p-floatlabel>
+
+                        <p-floatlabel variant="in" class="selectorColores">
+                            <p-select
+                                [options]="coloresDisponibles"
+                                optionLabel="color"
+                                [showClear]="true"
+                                formControlName="colorSeleccionado"
+                                (onChange)="SeleccionarVariante($event.value.idProducto)"
+                            >
+                                <ng-template pTemplate="item" let-item>
+                                    <div class="opcion-color">
+                                        <div class="cuadro-color" [style.background]="item.hexa"></div>
+                                        <span>{{ item.color }}</span>
+                                    </div>
+                                </ng-template>
+                                <ng-template pTemplate="selectedItem" let-item>
+                                    <div class="opcion-color">
+                                        <div class="cuadro-color" [style.background]="item?.hexa"></div>
+                                        <span>{{ item?.color }}</span>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                            <label>Color</label>
+                        </p-floatlabel>
+                    </div>
+                    <p-button label="Confirmar Producto" type="submit" [raised]="true" icon="pi pi-check"/>
+                </div>
+
+                <div class="der">
+                    <div class="talles">
+                        @if(productoSeleccionado && productoSeleccionado.id != 0){
+                            @for (talle of tallesProducto; track talle) {
+                                <div class="talle" (click)="DefinirCantidadAgregarTalle(talle)">
+                                    @if(ObtenerCantidad(talle, 'agregar') != 0){
+                                        <p-badge [value]="ObtenerCantidad(talle, 'agregar')" badgeSize="small" severity="success" class="badge-flotante"/>
+                                    }
+                                    <p>{{ talle }}</p>
+                                    <span>Stock: {{ ObtenerCantidad(talle, 'stock') }}</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </form>
+
+            <p-table [value]="productosFactura"
+                     dataKey="codProducto"
+                     rowGroupMode="subheader"
+                     groupRowsBy="idLineaTalle"
+                     #tablaProductos>
+                <ng-template #header>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Color</th>
+                        <th colspan="10" class="text-center">Talles</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Quitar</th>
+                    </tr>
+                </ng-template>
+                <ng-template #groupheader let-producto>
+                    <tr class="grupo-linea-talle">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']; let i = index" class="text-center">
+                            <strong>{{ ObtenerTallesDeLinea(producto.idLineaTalle)[i] ?? '' }}</strong>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-producto let-rowIndex="rowIndex">
+                    <tr [class.fila-continuacion]="EsContinuacionMismoProducto(rowIndex)"
+                        [class.precede-continuacion]="PrecedeContinuacion(rowIndex)">
+                        <td>
+                            @if(EsContinuacionMismoProducto(rowIndex)){
+                                <span class="indicador-continuacion" pTooltip="Mismo producto que la fila anterior: tiene precio distinto según el talle." tooltipPosition="top">
+                                    <i class="pi pi-info-circle"></i>
+                                </span>
+                            } @else {
+                                {{ producto.codProducto }}
+                            }
+                        </td>
+                        <td>{{ EsContinuacionMismoProducto(rowIndex) ? '' : producto.nomProducto }}</td>
+                        <td>
+                            @if(!EsContinuacionMismoProducto(rowIndex)){
+                                <div class="color-cell">
+                                    <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
+                                    {{ producto.color }}
+                                </div>
+                            }
+                        </td>
+                        <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']"
+                            [pEditableColumn]="producto[t]"
+                            [pEditableColumnField]="t">
+                            <p-cellEditor>
+                                <ng-template pTemplate="input">
+                                    <input
+                                        pInputText
+                                        type="number"
+                                        [value]="producto[t]"
+                                        (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                        (keydown.tab)="ActualizarCantidad(producto, t, $event)"
+                                        (focus)="SelectContent($event)"
+                                        style="max-width: 50px;" />
+                                </ng-template>
+                                <ng-template pTemplate="output">
+                                    {{ producto[t] }}
+                                </ng-template>
+                            </p-cellEditor>
+                        </td>
+                        <td>{{ producto.cantidad }}</td>
+                        <td>{{ producto.unitario | decimalFormat }}</td>
+                        <td>{{ producto.total | decimalFormat }}</td>
+                        <td>
+                            <p-button icon="pi pi-trash" severity="danger" [text]="true" (onClick)="EliminarProducto($event, rowIndex)"/>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template #footer>
+                    <tr>
+                        <td colspan="13"></td>
+                        <td><strong>{{ totalUnidades }}</strong></td>
+                        <td></td>
+                        <td><strong>{{ total | decimalFormat }}</strong></td>
+                        <td></td>
+                    </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                    <tr>
+                        <td colspan="17" class="text-center">No hay productos cargados.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="botones">
+            <p-button label="Volver" icon="pi pi-angle-left" severity="secondary" (onClick)="CerrarModal(false)"/>
+            <p-button label="Guardar" icon="pi pi-save" [loading]="guardando" (onClick)="Guardar()"/>
+        </div>
+    </ng-template>
+</p-dialog>

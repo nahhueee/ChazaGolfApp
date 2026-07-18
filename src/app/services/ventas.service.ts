@@ -36,8 +36,8 @@ export class VentasService {
   //#endregion
 
   //#region ABM
-  Agregar(venta:Venta, desdeNotas:boolean = false): Observable<any>{
-    return this.apiService.post('ventas/agregar', {venta, desdeNotas})
+  Agregar(venta:Venta): Observable<any>{
+    return this.apiService.post('ventas/agregar', {venta})
   }
 
   Modificar(venta:Venta): Observable<any>{

@@ -246,7 +246,9 @@ export class NotasVentaComponent {
         if(this.venta.proceso != "COTIZACION")
           this.nuevaVenta.factura = factura;
 
-        this.ventasService.Agregar(this.nuevaVenta, true)
+        // idProceso ya viene seteado a NOTA_CREDITO (ver armarObjetoVenta): el backend
+        // decide devolver stock por ese campo, ya no hace falta pasar un flag aparte.
+        this.ventasService.Agregar(this.nuevaVenta)
         .subscribe(response => {
           if(response){
             this.Notificaciones.Success("Se agregó correctamente la nota de credito.");
