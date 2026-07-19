@@ -1,13 +1,13 @@
 {
   "name": "chaza-golf-app",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "build:prod": "ng build --configuration=prod",
-    "build:test": "ng build --configuration=test",
-    "watch": "ng build --watch --configuration development",
+    "start": "node scripts/generate-version.js && ng serve",
+    "build": "node scripts/generate-version.js && ng build",
+    "build:prod": "node scripts/generate-version.js && ng build --configuration=prod",
+    "build:test": "node scripts/generate-version.js && ng build --configuration=test",
+    "watch": "node scripts/generate-version.js && ng build --watch --configuration development",
     "test": "ng test"
   },
   "prettier": {

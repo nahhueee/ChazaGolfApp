@@ -8,6 +8,8 @@ import { UsuariosService } from '../../../services/usuarios.service';
 import { ParametrosService } from '../../../services/parametros.service';
 import { FORMS_IMPORTS } from '../../../imports/forms.import';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { APP_VERSION } from '../../../version';
 
 @Component({
   selector: 'app-login.component',
@@ -44,6 +46,11 @@ export class LoginComponent {
   background:string;
   pathIcon:string;
   formulario: FormGroup;
+
+  // Versión del build actual + ambiente (mismo criterio que el pill de navegacion.component.ts:
+  // no usar environment.production para distinguir test, ver environment.envName).
+  version = APP_VERSION;
+  entorno = environment.envName !== 'production' ? environment.envName.toUpperCase() : '';
  
   usuario:Usuario;
   esAdmin:boolean;
