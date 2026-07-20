@@ -122,6 +122,9 @@
                                 @if(venta.idProceso == 7 && venta.estado == "Pendiente"){
                                     <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="Aprobar(venta)" pTooltip="Aprobar" tooltipPosition="bottom"/>
                                 }
+                                @if(PuedeDarseDeBaja(venta)){
+                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AbrirDarBaja(venta)" pTooltip="Dar de baja" tooltipPosition="bottom"/>
+                                }
                             }
                         </div>
                     </td>
@@ -134,6 +137,28 @@
 <app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada" [preciosNetos]="ItemsEnPreciosNetos()"></app-vista-previa>
 <app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
 <app-nota-credito-x [visible]="notaCreditoXVisible" (cerrar)="ActualizarNotaCreditoX($event)"></app-nota-credito-x>
+
+<p-dialog
+    header="Dar de baja"
+    [(visible)]="bajaVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>
+        Se va a dar de baja la venta #{{ventaBaja}}. Esta acción no se puede deshacer.
+    </p>
+    <br>
+    <p-floatlabel variant="in">
+        <textarea pTextarea rows="3" cols="30" [(ngModel)]="motivoBaja" style="resize: none; width: 100%"></textarea>
+        <label>Motivo (obligatorio)</label>
+    </p-floatlabel>
+    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="bajaVisible = false" />
+        <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
+    </div>
+</p-dialog>
 
 <p-popover #op>
     <div class="opciones-impresion">

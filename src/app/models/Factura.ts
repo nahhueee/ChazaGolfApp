@@ -39,6 +39,9 @@ import { TallesProducto } from "./Producto";
 
     nroRelacionado?:number;
     tipoRelacionado?:string;
+    // Texto libre a nivel de venta (ej. motivo de una Nota de Crédito sin
+    // productos: "Adelanto de producción"/"Saldo orden de compra").
+    observacion?:string;
     estado?:string;
     impaga:number = 0;
     entregado:number = 0;

@@ -44,10 +44,36 @@
                     </div>
                 }
             </div>
-            
+
+            <!-- Sin productos: adelanto de producción / saldo de orden de compra. -->
+            <div class="sinProductos">
+                <p-checkbox
+                    [(ngModel)]="sinProductos"
+                    [ngModelOptions]="{standalone: true}"
+                    (onChange)="ToggleSinProductos()"
+                    [binary]="true"
+                    inputId="sinProductosCheck"
+                />
+                <label for="sinProductosCheck">Sin productos</label>
+
+                @if(sinProductos){
+                    <form [formGroup]="formSinProductos" class="formSinProductos" autocomplete="off">
+                        <p-floatlabel variant="in">
+                            <p-select [options]="motivos" formControlName="motivo"/>
+                            <label>Motivo</label>
+                        </p-floatlabel>
+
+                        <p-floatlabel variant="in">
+                            <input pInputText type="text" formControlName="total" [imask]="decimal_mask"/>
+                            <label>Total</label>
+                        </p-floatlabel>
+                    </form>
+                }
+            </div>
         </div>
 
-        <!-- Productos -->
+        <!-- Productos: no aplica cuando la NC es "sin productos" (adelanto/saldo). -->
+        @if(!sinProductos){
         <div class="seccion">
             <h3>Productos</h3>
 
@@ -215,6 +241,17 @@
                 </ng-template>
             </p-table>
         </div>
+        }
+
+        <!-- Resumen del total cuando la NC es "sin productos" (la tabla de arriba no se muestra). -->
+        @if(sinProductos){
+        <div class="seccion">
+            <div class="resumen-sin-productos">
+                <span>Total</span>
+                <strong>{{ total | decimalFormat }}</strong>
+            </div>
+        </div>
+        }
     </div>
 
     <ng-template pTemplate="footer">

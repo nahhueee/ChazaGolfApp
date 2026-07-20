@@ -54,4 +54,7 @@ export class VentasService {
   AprobarVenta(idVenta:number): Observable<any>{
     return this.apiService.put(`ventas/aprobar`, {idVenta})
   }
+  DarBajaVenta(idVenta:number, motivo:string): Observable<any>{
+    return this.apiService.put(`ventas/dar-baja`, {idVenta, motivo})
+  }
 }

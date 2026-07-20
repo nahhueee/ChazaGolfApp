@@ -268,6 +268,24 @@ export const estadoVenta = {
 } as const;
 
 /**
+ * Estados "abiertos" en los que se permite dar de baja un Presupuesto/Pedido/
+ * Nota de Empaque (decisión 19/07/2026). Espejo del mismo mapa en el backend
+ * (ventaEstados.ts) - se usa acá solo para habilitar/deshabilitar el botón en
+ * el front; la validación real (la que importa) la hace el backend.
+ */
+const ESTADOS_ABIERTOS_BAJA: Partial<Record<IdProceso, EstadoVenta[]>> = {
+  [ID_PROCESO.PRESUPUESTO]:  [ESTADO_VENTA.APROBADO],
+  [ID_PROCESO.PEDIDO]:       [ESTADO_VENTA.APROBADO],
+  [ID_PROCESO.NOTA_EMPAQUE]: [ESTADO_VENTA.PENDIENTE, ESTADO_VENTA.APROBADA],
+};
+
+export function puedeDarseDeBaja(idProceso?: number, estado?: string): boolean {
+  const estadosAbiertos = ESTADOS_ABIERTOS_BAJA[idProceso as IdProceso];
+  if (!estadosAbiertos) return false;
+  return estadosAbiertos.includes(estado as EstadoVenta);
+}
+
+/**
  * Tipos de método de pago (string, tal como viene del backend).
  * Usado para detectar comportamientos especiales (ej: abrir diálogo cheque).
  */

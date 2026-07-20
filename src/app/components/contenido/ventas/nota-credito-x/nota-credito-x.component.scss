@@ -51,6 +51,35 @@
   }
 }
 
+.sinProductos{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+
+  label{
+    cursor: pointer;
+  }
+
+  .formSinProductos{
+    display: flex;
+    gap: 20px;
+    margin-left: 10px;
+  }
+}
+
+.resumen-sin-productos{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 15px;
+  font-size: 16px;
+
+  strong{
+    font-size: 18px;
+  }
+}
+
 .cliente-card{
   border-radius: 10px;
   display: flex;

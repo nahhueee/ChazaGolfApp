@@ -24,13 +24,15 @@ import { Popover, PopoverModule } from 'primeng/popover';
 import { FacturaService } from '../../../../services/factura.service';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { Dialog } from 'primeng/dialog';
+import { TextareaModule } from 'primeng/textarea';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
 import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { esMayoristaConListaPropia } from '../models/venta.constants';
+import { esMayoristaConListaPropia, puedeDarseDeBaja } from '../models/venta.constants';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -38,6 +40,8 @@ import { esMayoristaConListaPropia } from '../models/venta.constants';
   imports: [
     ...FORMS_IMPORTS,
     ConfirmDialogModule,
+    Dialog,
+    TextareaModule,
     TableModule,
     Button,
     RouterLink,
@@ -69,6 +73,12 @@ export class ListadoVentasComponent {
   notasVisible: boolean = false;
   notaCreditoXVisible: boolean = false;
   ventaSeleccionada:Venta = new Venta();
+
+  // Dar de baja (Presupuesto/Pedido/Nota de Empaque) - mismo patrón que
+  // DarBajaRecibo en ventas-cliente.components.ts.
+  bajaVisible: boolean = false;
+  ventaBaja: number = 0;
+  motivoBaja: string = '';
   
   filtros:FormGroup;
   clientes:Cliente[]=[];
@@ -257,6 +267,37 @@ export class ListadoVentasComponent {
           });
         },
         reject: () => {},
+      });
+  }
+
+  // Solo Presupuesto/Pedido/Nota de Empaque en su estado "abierto" (ver
+  // ESTADOS_ABIERTOS_BAJA en venta.constants.ts). La validación real la hace
+  // el backend igual - esto es solo para no mostrar el botón habilitado
+  // cuando ya se sabe que va a rechazar.
+  PuedeDarseDeBaja(venta: Venta): boolean {
+    return puedeDarseDeBaja(venta.idProceso, venta.estado);
+  }
+
+  AbrirDarBaja(venta: Venta) {
+    this.ventaBaja = venta.id!;
+    this.motivoBaja = '';
+    this.bajaVisible = true;
+  }
+
+  ConfirmarDarBaja() {
+    if (!this.motivoBaja?.trim()) return;
+
+    this.ventasService.DarBajaVenta(this.ventaBaja, this.motivoBaja.trim())
+      .subscribe({
+        next: () => {
+          this.Notificaciones.Success(`Venta #${this.ventaBaja} dada de baja correctamente.`);
+          this.bajaVisible = false;
+          this.Buscar();
+        },
+        // Mismo patrón que ConfirmarDarBaja en ventas-cliente.components.ts: el
+        // backend tira { status, message } con el motivo específico del bloqueo
+        // (proceso no válido, estado no abierto, motivo faltante).
+        error: (e) => this.Notificaciones.Error(e?.error ?? 'No se pudo dar de baja.')
       });
   }
 
