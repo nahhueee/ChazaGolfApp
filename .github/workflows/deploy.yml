@@ -41,8 +41,11 @@ jobs:
             echo "remote_path=/www/wwwroot/creationserver.com/apps/chazagolftest" >> "$GITHUB_OUTPUT"
           fi
 
+      # npm run build:test / build:prod (no "ng build" directo): esos scripts
+      # corren generate-version.js antes del build, que es lo que actualiza
+      # src/app/version.ts con la versión de package.json.
       - name: Build
-        run: npx ng build --configuration=${{ steps.vars.outputs.config }}
+        run: npm run build:${{ steps.vars.outputs.config }}
 
       # Con --delete: son estáticos servidos por Nginx, hay que limpiar los bundles
       # con hash de builds anteriores. No hay estado de runtime que perder acá.
