@@ -253,7 +253,7 @@
           <div class="metodo-col"
             *ngIf="item.total_manual !== 0"
             [class.metodo-col--inactivo]="false">
-            <span class="metodo-col__label">Ajustes manuales</span>
+            <span class="metodo-col__label">Otros movimientos</span>
             <span class="metodo-col__valor" [class.metodo-col__valor--negativo]="item.total_manual < 0">
               {{ item.total_manual | decimalFormat }}
             </span>

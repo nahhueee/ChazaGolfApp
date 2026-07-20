@@ -82,10 +82,18 @@ export class FacturaService {
 
       const productos = procesarItems(venta.productos);
       productos.total += totalAjuste;
-      
+
       const servicios = procesarItems(venta.servicios);
 
+      // NC X "sin productos" (ver nota-credito-x.component.ts): la venta no tiene
+      // productos ni servicios, el importe es el total que cargó el usuario a mano
+      // (venta.total). Sin este chequeo, subtotalBruto/subtotalSinComprobante dan 0
+      // y el comprobante imprime todos los totales en $0 aunque venta.total sea > 0.
+      const sinItems = (!venta.productos || venta.productos.length === 0)
+        && (!venta.servicios || venta.servicios.length === 0);
+
       const comprobante:ObjComprobante = this.GenerarDatosComunes(venta);
+      comprobante.sinItems = sinItems;
       
       //Obtenemos los datos de la venta facturada
       let datosFactura:ObjTicketFactura = new ObjTicketFactura();
@@ -190,6 +198,13 @@ export class FacturaService {
         comprobante.totalIva = venta.factura.iva ?? 0;
         comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
         comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
+      } else if (sinItems) {
+        // NC X sin productos: no hay ítems de los que partir, el total es el que
+        // cargó el usuario en nota-credito-x.component.ts (venta.total).
+        comprobante.subTotal = venta.total ?? 0;
+        comprobante.totalIva = 0;
+        comprobante.totalFinal = venta.total ?? 0;
+        comprobante.totalAPagar = (venta.total ?? 0) + comprobante.redondeo;
       } else {
         // Sin comprobante fiscal (cotización, etc.) → sin IVA
         comprobante.subTotal = subtotalBruto;
@@ -504,8 +519,11 @@ export class FacturaService {
             margin: [0, 10, 0, 10]
           },
           
-          //Tabla de productos
+          //Tabla de productos (o label "Sin productos" para NC X sin ítems - ver sinItems)
           { text: `Detalle Productos`, style: 'recargaDescuento', alignment: 'left', bold:true },
+          comprobante.sinItems ? [
+            { text: 'Sin productos', style: 'totalProducto', alignment: 'left', italics: true, margin: [3, 2, 3, 6] },
+          ] : [
           {
             table: {
               widths: ['*', 'auto', 'auto', 'auto', 'auto'],
@@ -532,6 +550,7 @@ export class FacturaService {
           },
           { text: `Cantidad: ${comprobante.cantProductos}`, style: 'totalProducto', alignment: 'right' },
           // { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
+          ],
 
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios

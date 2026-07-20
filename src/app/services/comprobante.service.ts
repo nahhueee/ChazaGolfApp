@@ -187,7 +187,12 @@ export class ComprobanteService {
       const productos = procesarItems(venta.productos);
       const servicios = procesarItems(venta.servicios);
 
-
+      // NC X "sin productos" (ver nota-credito-x.component.ts): sin ítems, el importe
+      // real es el total que cargó el usuario a mano (venta.total) - mismo criterio
+      // que factura.service.ts (comprobante.sinItems).
+      const sinItems = (!venta.productos || venta.productos.length === 0)
+        && (!venta.servicios || venta.servicios.length === 0);
+      comprobante.sinItems = sinItems;
 
       // Agrupamos por línea de talle (idLineaTalle) para mostrar, en un subheader por grupo,
       // los talles reales de esa línea (ej. 28-46 numérico vs XS-6XL letra) en vez de un único
@@ -297,9 +302,17 @@ export class ComprobanteService {
       comprobante.totalFinal = comprobante.subTotal! - comprobante.descuento!;
 
       //Definimos totales
-      comprobante.subTotal = subtotalBruto;
-      comprobante.descuento = totalDescuento;
-      comprobante.totalFinal = subtotalBruto - totalDescuento;
+      if (sinItems) {
+        // NC X sin productos: no hay ítems de los que partir, el total es el que
+        // cargó el usuario en nota-credito-x.component.ts (venta.total).
+        comprobante.subTotal = venta.total ?? 0;
+        comprobante.descuento = 0;
+        comprobante.totalFinal = venta.total ?? 0;
+      } else {
+        comprobante.subTotal = subtotalBruto;
+        comprobante.descuento = totalDescuento;
+        comprobante.totalFinal = subtotalBruto - totalDescuento;
+      }
       comprobante.redondeo = venta.redondeo;
       comprobante.totalAPagar = comprobante.totalFinal + comprobante.redondeo;
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
@@ -343,6 +356,9 @@ export class ComprobanteService {
           },
 
           { text: `Productos`, style: 'recargaDescuento', alignment: 'left' },
+          comprobante.sinItems ? [
+            { text: 'Sin productos', style: 'totalProducto', alignment: 'left', italics: true, margin: [3, 2, 3, 6] },
+          ] : [
           {
             table: {
               widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
@@ -385,7 +401,7 @@ export class ComprobanteService {
           },
           { text: `Cantidad: ${comprobante.cantProductos}`, style: 'totalProducto', alignment: 'right' },
           // { text: `Total: $${comprobante.totalProductos?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'totalProducto', alignment: 'right' },
-
+          ],
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios
             { text: `Servicios`, style: 'recargaDescuento', alignment: 'left' },

@@ -25,7 +25,11 @@ export class ObjComprobante {
     totalIva?:number;
     totalFinal?:number;
     totalAPagar?:number;
-  
+    // true cuando la venta no tiene productos ni servicios (ej. NC X "sin productos"
+    // cargada por un total libre - ver nota-credito-x.component.ts). Se usa para
+    // mostrar un label en vez de la tabla/contador vacíos en el comprobante impreso.
+    sinItems?:boolean;
+
     constructor(data?: any) {
         if (data) {
           this.nroRemito = data.nroRemito;
