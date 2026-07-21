@@ -170,6 +170,9 @@ export class FacturaService {
         case 15:
           datosFactura.condCliente = 'IVA No Alcanzado';
           break;
+        case 4:
+          datosFactura.condCliente = 'IVA Sujeto Exento';
+          break;
       }
 
       //Importes base locales (suma de ítems, incluye ajuste de transferencia si aplica).

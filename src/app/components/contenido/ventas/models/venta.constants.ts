@@ -44,6 +44,7 @@ export const CONDICION_IVA = {
   MONOTRIBUTO: 6,
   MONOTRIBUTO_SOCIAL: 13,
   IVA_NO_ALCANZADO: 15,
+  EXENTO: 4,
   SIN_CLIENTE: 99,
 } as const;
 
@@ -145,6 +146,13 @@ export const COMPROBANTE_POR_CONDICION_IVA:
     TIPO_COMPROBANTE.FACTURA_A,
 
   [CONDICION_IVA.MONOTRIBUTO_SOCIAL]:
+    TIPO_COMPROBANTE.FACTURA_A,
+
+  // Exento se factura igual que Responsable Inscripto (decisión jul-2026):
+  // RI→Exento = Factura A. Cuando la empresa emisora es Mono, PrepararFacturacionCliente
+  // fuerza Factura C sin importar la condición del cliente, así que este default
+  // solo aplica cuando la empresa es RI.
+  [CONDICION_IVA.EXENTO]:
     TIPO_COMPROBANTE.FACTURA_A,
 
   [CONDICION_IVA.IVA_NO_ALCANZADO]:
