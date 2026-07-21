@@ -265,11 +265,20 @@
       </div>
     </ng-container>
 
-    <!-- Desglose por empresa -->
+    <!-- Desglose por empresa: arqueo de caja por razón social (ventas cobradas +
+         otros movimientos manuales/ajustes con empresa asignada), NO es "ventas por
+         empresa" - un ajuste o egreso manual grande puede hacer que el total de una
+         empresa sea muy negativo sin que eso implique nada sobre sus ventas. -->
     @if (desglosePorEmpresa.length > 0) {
       <div class="fondo-detalle__desglose">
         <div class="desglose__header">
-          <span class="desglose__titulo">Desglose por empresa</span>
+          <span class="desglose__titulo">
+            Desglose por empresa (arqueo)
+            <i class="pi pi-info-circle"
+              pTooltip="Es el arqueo de caja de cada empresa en este fondo: incluye ventas cobradas MÁS otros movimientos (manuales, ajustes) cargados a nombre de esa empresa. No es un reporte de ventas por empresa - un ajuste o egreso manual grande puede hacer que el total dé negativo sin que eso refleje ventas."
+              tooltipPosition="top"
+              style="margin-left: 4px; cursor: help;"></i>
+          </span>
           <span class="desglose__total">Período seleccionado</span>
         </div>
         <div class="desglose__metodos">
@@ -277,6 +286,9 @@
             <div class="metodo-col">
               <span class="metodo-col__label">{{ item.empresa }}</span>
               <span class="metodo-col__valor">{{ item.total | decimalFormat }}</span>
+              <span class="metodo-col__pct">
+                Ventas: {{ item.ventas | decimalFormat }} · Otros: {{ item.otros | decimalFormat }}
+              </span>
             </div>
           }
         </div>

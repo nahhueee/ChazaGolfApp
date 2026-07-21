@@ -77,5 +77,11 @@ export interface TotalesValores {
 
 export interface DesglosePorEmpresa {
   empresa: string;
+  // Ventas cobradas (ventas_pagos) vs "otros" (manuales/ajustes/etc. con empresa
+  // asignada) - separados para que cada uno reconcilie con los totales del
+  // desglose por método (Ventas: X / Otros movimientos: Y) y no genere confusión
+  // cuando "otros" es grande (ver conversación jul-2026, caso SUCEDE SRL).
+  ventas:  number;
+  otros:   number;
   total:   number;
 }
