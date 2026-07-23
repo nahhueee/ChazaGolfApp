@@ -8,6 +8,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 
 import { FondosService } from '../../../../services/fondos.service';
 import { Caja } from '../../../../models/Caja';
@@ -18,6 +19,18 @@ import { NotificacionesService } from '../../../../services/notificaciones.servi
 
 type Paso = 'cajas' | 'fondos';
 
+// Mismo criterio que movimiento-manual-dialog.component.ts: una transferencia
+// entre fondos no tiene empresa objetiva de la que derivarla, así que se pide
+// en el formulario cuando alguno de los dos fondos (origen o destino) es
+// bancario/digital - se copia la constante en vez de compartirla porque hoy es
+// el único otro lugar que la necesita (mismo criterio que nota-credito-x.component.ts).
+const FONDOS_CON_EMPRESA: string[] = ['BANCARIO', 'DIGITAL'];
+
+interface Empresa {
+  id: number;
+  nombre: string;
+}
+
 @Component({
   selector: 'app-add-transferencia',
   standalone: true,
@@ -25,7 +38,7 @@ type Paso = 'cajas' | 'fondos';
     CommonModule, ReactiveFormsModule,
     DialogModule, InputNumberModule,
     InputTextModule, ButtonModule, MessageModule,
-    DecimalFormatPipe
+    SelectModule, DecimalFormatPipe
   ],
   templateUrl: './add-transferencia.component.html',
   styleUrl: './add-transferencia.component.scss',
@@ -52,9 +65,14 @@ export class AddTransferencia {
   origen:      SeleccionFondo | null = null;
   destino:     SeleccionFondo | null = null;
 
+  // ── empresa (solo si origen y/o destino son fondos bancarios/digitales) ────
+  empresas: Empresa[] = [];
+  sinEmpresasDisponibles = false;
+
   readonly formulario = new FormGroup({
     monto:       new FormControl(null, [Validators.required, Validators.min(0.01)]),
-    descripcion: new FormControl('', { nonNullable: true, validators: Validators.maxLength(255) })
+    descripcion: new FormControl('', { nonNullable: true, validators: Validators.maxLength(255) }),
+    empresa:     new FormControl<Empresa | null>(null)
   });
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
@@ -95,6 +113,9 @@ export class AddTransferencia {
     this.paso    = 'cajas';
     this.origen  = null;
     this.destino = null;
+    this.empresas = [];
+    this.sinEmpresasDisponibles = false;
+    this.formulario.controls.empresa.setValue(null, { emitEvent: false });
   }
 
   // ── paso 2: fondos ────────────────────────────────────────────────────────
@@ -109,6 +130,7 @@ export class AddTransferencia {
       icono:       fondo.icono,
       saldo:       fondo.saldo
     };
+    this.actualizarEmpresasDisponibles();
   }
 
   seleccionarDestino(fondo: FondoConSaldo): void {
@@ -122,6 +144,48 @@ export class AddTransferencia {
       tipo:        fondo.tipo,
       icono:       fondo.icono
     };
+    this.actualizarEmpresasDisponibles();
+  }
+
+  // ── empresa ───────────────────────────────────────────────────────────────
+  get mostrarEmpresa(): boolean {
+    return (!!this.origen && FONDOS_CON_EMPRESA.includes(this.origen.tipo))
+        || (!!this.destino && FONDOS_CON_EMPRESA.includes(this.destino.tipo));
+  }
+
+  // Prioriza el fondo de origen (de dónde sale la plata) si ambos son
+  // bancarios/digitales - es el más relevante para saber "de qué empresa es esta
+  // transferencia". Se resetea la selección de empresa cada vez que cambia el
+  // fondo relevante, para no arrastrar una empresa de un fondo distinto.
+  private actualizarEmpresasDisponibles(): void {
+    const empresaCtrl = this.formulario.controls.empresa;
+    empresaCtrl.setValue(null, { emitEvent: false });
+    this.empresas = [];
+    this.sinEmpresasDisponibles = false;
+
+    if (!this.mostrarEmpresa) {
+      empresaCtrl.setValidators([]);
+      empresaCtrl.updateValueAndValidity({ emitEvent: false });
+      return;
+    }
+
+    const idFondoRelevante = (this.origen && FONDOS_CON_EMPRESA.includes(this.origen.tipo))
+      ? this.origen.idFondo
+      : this.destino!.idFondo;
+
+    empresaCtrl.setValidators([Validators.required]);
+    empresaCtrl.updateValueAndValidity({ emitEvent: false });
+
+    this.fondosService.ObtenerEmpresasPorFondo(idFondoRelevante).subscribe({
+      next: (lista) => {
+        this.empresas = lista ?? [];
+        this.sinEmpresasDisponibles = this.empresas.length === 0;
+      },
+      error: () => {
+        this.empresas = [];
+        this.sinEmpresasDisponibles = true;
+      }
+    });
   }
 
   esOrigen(idFondo: number): boolean {
@@ -155,6 +219,7 @@ export class AddTransferencia {
       && !!this.origen
       && !!this.destino
       && !this.saldoInsuficiente
+      && !(this.mostrarEmpresa && this.sinEmpresasDisponibles)
       && this.formulario.valid;
   }
 
@@ -172,7 +237,8 @@ export class AddTransferencia {
       idFondoDestino: this.destino.idFondo,
       monto:          this.formulario.controls.monto.value!,
       descripcion:    this.formulario.controls.descripcion.value || undefined,
-      usuario:        this.usuario
+      usuario:        this.usuario,
+      idEmpresa:      this.formulario.controls.empresa.value?.id ?? null
     };
 
     this.fondosService.RegistrarTransferencia(payload).subscribe({
@@ -195,6 +261,8 @@ export class AddTransferencia {
     this.cajaDestino = null;
     this.origen      = null;
     this.destino     = null;
+    this.empresas    = [];
+    this.sinEmpresasDisponibles = false;
     this.guardando   = false;
     this.errorMsg    = '';
     this.formulario.reset();

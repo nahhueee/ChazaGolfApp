@@ -127,6 +127,30 @@
         </span>
       </div>
 
+      <!-- Empresa: solo si origen y/o destino son fondos bancarios/digitales -
+           una transferencia no tiene empresa "objetiva", se la pide acá para
+           poder atribuirla en el arqueo por empresa. -->
+      <div class="campo-grupo" *ngIf="mostrarEmpresa">
+        <label class="campo-label">Empresa</label>
+        <small class="campo-error" *ngIf="sinEmpresasDisponibles">
+          Este fondo no tiene empresas asociadas. Verificá los métodos de pago.
+        </small>
+        <p-select
+          *ngIf="!sinEmpresasDisponibles"
+          [formControl]="formulario.controls.empresa"
+          [options]="empresas"
+          optionLabel="nombre"
+          [appendTo]="'body'"
+          placeholder="Seleccioná la empresa"
+          [fluid]="true"
+          [ngClass]="{ 'ng-invalid ng-dirty': formulario.controls.empresa.invalid && formulario.controls.empresa.touched }">
+        </p-select>
+        <small class="campo-error"
+          *ngIf="formulario.controls.empresa.invalid && formulario.controls.empresa.touched">
+          Seleccioná una empresa
+        </small>
+      </div>
+
       <!-- Monto -->
       <div class="campo-grupo">
         <label class="campo-label">Monto</label>
