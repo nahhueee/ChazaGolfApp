@@ -148,12 +148,13 @@ export const COMPROBANTE_POR_CONDICION_IVA:
   [CONDICION_IVA.MONOTRIBUTO_SOCIAL]:
     TIPO_COMPROBANTE.FACTURA_A,
 
-  // Exento se factura igual que Responsable Inscripto (decisión jul-2026):
-  // RI→Exento = Factura A. Cuando la empresa emisora es Mono, PrepararFacturacionCliente
-  // fuerza Factura C sin importar la condición del cliente, así que este default
-  // solo aplica cuando la empresa es RI.
+  // RI→Exento = Factura B (regla AFIP estándar: A solo aplica si el receptor
+  // también es RI/Mono/MonoSocial). Corregido jul-2026 - se había asumido por
+  // error que Exento se facturaba igual que Responsable Inscripto (Factura A).
+  // Cuando la empresa emisora es Mono, PrepararFacturacionCliente fuerza
+  // Factura C sin importar la condición del cliente.
   [CONDICION_IVA.EXENTO]:
-    TIPO_COMPROBANTE.FACTURA_A,
+    TIPO_COMPROBANTE.FACTURA_B,
 
   [CONDICION_IVA.IVA_NO_ALCANZADO]:
     TIPO_COMPROBANTE.FACTURA_B,
