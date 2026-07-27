@@ -32,11 +32,29 @@
                             <label>Fecha</label>
                         </p-floatlabel>
                     </div>
-                    <!-- Puntos -->
-                    <p-floatlabel variant="in">
-                        <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" />
-                        <label>Punto de Venta</label>
-                    </p-floatlabel>
+                    <div class="horizontal">
+                        <!-- Puntos -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" />
+                            <label>Punto de Venta</label>
+                        </p-floatlabel>
+
+                        @if(tipo === 'pre'){
+                            <!-- Fecha de Entrega -->
+                            <p-floatlabel variant="in">
+                                <p-datepicker formControlName="fechaEntrega" showIcon iconDisplay="input" />
+                                <label>Fecha de Entrega</label>
+                            </p-floatlabel>
+                        }
+                    </div>
+
+                    @if(tipo === 'pre'){
+                        <!-- Observaciones -->
+                        <p-floatlabel variant="in" style="width: 100%;">
+                            <textarea pTextarea formControlName="observacion" rows="2" autoResize="true" style="width: 100%;"></textarea>
+                            <label>Observaciones</label>
+                        </p-floatlabel>
+                    }
                 </div>
                 <div class="centro">
                     <p-inputgroup>

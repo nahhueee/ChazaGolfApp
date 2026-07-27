@@ -11,6 +11,7 @@ import { ComprobanteService } from '../../../../services/comprobante.service';
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { MiscService } from '../../../../services/misc.service';
 import { LineasTalle } from '../../../../models/Producto';
+import { ID_PROCESO } from '../models/venta.constants';
 
 @Component({
   selector: 'app-vista-previa',
@@ -115,6 +116,14 @@ export class VistaPreviaComponent implements OnInit {
 
   get hayFilasContinuacion(): boolean {
     return (this.venta.productos ?? []).some((_, i) => this.EsContinuacionMismoProducto(i));
+  }
+
+  // Presupuesto/Pedido/Nota de Empaque no tienen Empresa/Tipo Comprobante/Tipo
+  // Descuento (esos datos recién se cargan al facturar) - en ese recuadro se
+  // muestra Fecha de Entrega/Observaciones en su lugar.
+  get esProcesoPre(): boolean {
+    return [ID_PROCESO.PRESUPUESTO, ID_PROCESO.PEDIDO, ID_PROCESO.NOTA_EMPAQUE]
+      .includes(this.venta.idProceso as any);
   }
 
   CalcularTotalGeneral() {

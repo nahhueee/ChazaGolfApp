@@ -175,46 +175,63 @@
 
             <div class="enLinea">
                 <div class="facturacion">
-                    <div class="enLinea">
-                        <div class="recuadro">
-                            <p>{{venta.empresa}}</p>
-                            <p-divider />
-                            <span>Empresa</span>
+                    @if(esProcesoPre){
+                        <div class="enLinea">
+                            <div class="recuadro">
+                                <p>{{venta.fechaEntrega ? (venta.fechaEntrega | date:'dd-MM-yyyy') : '-'}}</p>
+                                <p-divider />
+                                <span>Fecha de Entrega</span>
+                            </div>
+                            <div class="recuadro">
+                                <p>{{venta.observacion || '-'}}</p>
+                                <p-divider />
+                                <span>Observaciones</span>
+                            </div>
                         </div>
-                        <div class="recuadro">
-                            <p>{{venta.tipoComprobante}}</p>
-                            <p-divider />
-                            <span>Tipo Comprobante</span>
+                    }@else{
+                        <div class="enLinea">
+                            <div class="recuadro">
+                                <p>{{venta.empresa}}</p>
+                                <p-divider />
+                                <span>Empresa</span>
+                            </div>
+                            <div class="recuadro">
+                                <p>{{venta.tipoComprobante}}</p>
+                                <p-divider />
+                                <span>Tipo Comprobante</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="enLinea">
-                        <div class="recuadro">
-                            <p>{{venta.tipoDescuento}}</p>
-                            <p-divider />
-                            <span>Tipo Descuento</span>
+                        <div class="enLinea">
+                            <div class="recuadro">
+                                <p>{{venta.tipoDescuento}}</p>
+                                <p-divider />
+                                <span>Tipo Descuento</span>
+                            </div>
+                            <div class="recuadro">
+                                <p>{{venta.descuento}}%</p>
+                                <p-divider />
+                                <span>Descuento</span>
+                            </div>
                         </div>
-                        <div class="recuadro">
-                            <p>{{venta.descuento}}%</p>
-                            <p-divider />
-                            <span>Descuento</span>
-                        </div>
-                    </div>
+                    }
                 </div>
                 
-                <p-table [value]="venta.pagos" size="small" showGridlines class="pagos-tabla">
-                    <ng-template #header>
-                        <tr>
-                            <th>Metodo</th>
-                            <th>Monto</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template #body let-pago>
-                        <tr>
-                            <td>{{ pago.metodo }}</td>
-                            <td>{{ pago.monto | decimalFormat}}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
+                @if(!esProcesoPre){
+                    <p-table [value]="venta.pagos" size="small" showGridlines class="pagos-tabla">
+                        <ng-template #header>
+                            <tr>
+                                <th>Metodo</th>
+                                <th>Monto</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template #body let-pago>
+                            <tr>
+                                <td>{{ pago.metodo }}</td>
+                                <td>{{ pago.monto | decimalFormat}}</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                }
 
                 <div class="resumen">
                     <div class="fila">

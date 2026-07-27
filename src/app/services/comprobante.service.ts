@@ -86,6 +86,13 @@ export class ComprobanteService {
       comprobante.fechaVenta = fecha.toLocaleDateString('es-ES', {
         day: '2-digit', month: '2-digit', year: '2-digit'
       });
+
+      if (venta.fechaEntrega) {
+        comprobante.fechaEntrega = new Date(venta.fechaEntrega).toLocaleDateString('es-ES', {
+          day: '2-digit', month: '2-digit', year: '2-digit'
+        });
+      }
+      comprobante.observacion = venta.observacion;
   
       const FormatearCantidad = (cantidad) => {
         const cantNumero = parseFloat(cantidad);
@@ -354,6 +361,20 @@ export class ComprobanteService {
             ],
             style: 'cliente'
           },
+          comprobante.fechaEntrega ? {
+            text: [
+              { text: 'Fecha de Entrega: ', bold: true },
+              { text: comprobante.fechaEntrega }
+            ],
+            style: 'cliente'
+          } : [],
+          comprobante.observacion ? {
+            text: [
+              { text: 'Observaciones: ', bold: true },
+              { text: comprobante.observacion }
+            ],
+            style: 'cliente'
+          } : [],
 
           { text: `Productos`, style: 'recargaDescuento', alignment: 'left' },
           comprobante.sinItems ? [

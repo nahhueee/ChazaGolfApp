@@ -17,6 +17,7 @@ import { MovimientoFondo } from '../../../../models/Movimiento';
 import { AddmodMovimientoManualComponent } from '../addmod-movimiento-manual/movimiento-manual-dialog.component';
 import { Button } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { FilesService } from '../../../../services/files.service';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Usuario } from '../../../../models/Usuario';
@@ -77,6 +78,7 @@ export class MainFondosComponent implements OnInit {
     { label: 'Ayer',          value: 'ayer'   },
     { label: 'Últimos 7 días', value: '7dias' },
     { label: 'Últimos 30 días', value: '30dias'},
+    { label: 'Todo',          value: 'todo'   },
     { label: 'Personalizado', value: 'custom' }
   ];
 
@@ -100,7 +102,8 @@ export class MainFondosComponent implements OnInit {
   constructor(
     private fondosService:    FondosService,
     private usuariosService:  UsuariosService,
-    private notificaciones:   NotificacionesService
+    private notificaciones:   NotificacionesService,
+    private filesService:     FilesService
   ) {
     this.filtrosForm = new FormGroup({
       caja:    new FormControl(),
@@ -247,6 +250,45 @@ export class MainFondosComponent implements OnInit {
     });
   }
 
+  // ── exportar ─────────────────────────────────────────────────────────────────
+
+  // Solo exige fechaHasta (siempre viene seteada salvo en "Personalizado" sin
+  // fechas elegidas todavía). fechaDesde puede faltar a propósito: es lo que
+  // pasa con el período "Todo" (sin límite inferior) y es válido - el backend
+  // solo bloquea el caso de "no se eligió ningún período todavía".
+  get puedeExportarExcel(): boolean {
+    return !!this.filtros.fechaHasta;
+  }
+
+  descargarMovimientosExcel() {
+    if (!this.puedeExportarExcel) {
+      this.notificaciones.Warn('Seleccioná un rango de fechas para exportar.');
+      return;
+    }
+
+    this.filesService.DescargarFondosExcel(
+      this.filtros,
+      this.cajaSeleccionada?.nombre,
+      this.fondoSeleccionado?.nombre
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const fecha = new Date();
+        const dd = String(fecha.getDate()).padStart(2, '0');
+        const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+        const yy = String(fecha.getFullYear()).slice(-2);
+
+        a.href = url;
+        a.download = `MovimientosFondos_${dd}-${mm}-${yy}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.notificaciones.Error('Error al generar el excel de movimientos.')
+    });
+  }
+
   // ── modales ──────────────────────────────────────────────────────────────────
 
   abrirMovimiento(tipo: 'INGRESO' | 'EGRESO' | 'AJUSTE') {
@@ -322,6 +364,9 @@ export class MainFondosComponent implements OnInit {
       case 'ayer':   const a = new Date(); a.setDate(hoy.getDate()-1); return { desde: a, hasta: a };
       case '7dias':  const s = new Date(); s.setDate(hoy.getDate()-7); return { desde: s, hasta: hoy };
       case '30dias': const t = new Date(); t.setDate(hoy.getDate()-30); return { desde: t, hasta: hoy };
+      // Sin límite inferior: no hay movimientos antes del primero real, así que
+      // "sin fechaDesde" ya es equivalente a "desde que se empezó a usar el fondo".
+      case 'todo':   return { desde: null, hasta: hoy };
       case 'custom': const f = this.filtrosForm.value.fechas; return { desde: f?.[0], hasta: f?.[1] };
       default:       return null;
     }

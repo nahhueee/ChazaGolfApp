@@ -6,6 +6,12 @@ export class MovimientoFondo {
   fecha: string;
   fondo: string;
   empresa?: string;
+  // Cliente o proveedor asociado al movimiento (derivado en el backend según
+  // origen/tipoReferencia). Puede venir null: hay orígenes que nunca lo tienen
+  // (TRANSFERENCIA, manuales sin referencia) y filas históricas de AJUSTE/
+  // PAGO_CC_PROVEEDOR sin tipoReferencia poblado - no se adivina, ver
+  // fondosRepository.ts.
+  clienteProveedor?: string | null;
   tipo: 'INGRESO' | 'EGRESO';
   origen:
       | 'VENTA'
@@ -16,7 +22,9 @@ export class MovimientoFondo {
       | 'TRANSFERENCIA'
       | 'INGRESO_MANUAL'
       | 'EGRESO_MANUAL'
-      | 'NOTA_CREDITO';
+      | 'NOTA_CREDITO'
+      | 'ACREDITACION_VALOR'
+      | 'PAGO_CC_PROVEEDOR';
 
   descripcion: string | null;
   monto: number;

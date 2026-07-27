@@ -43,6 +43,7 @@ import { combineLatest, firstValueFrom, forkJoin, of, Subject, switchMap, take, 
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { CheckboxModule } from 'primeng/checkbox';
+import { TextareaModule } from 'primeng/textarea';
 
 import {
   METODO_PAGO,
@@ -95,6 +96,7 @@ interface SubtotalAcumulado {
     VistaPreviaComponent,
     CheckboxModule,
     DialogChequeComponent,
+    TextareaModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './addmod-ventas.component.html',
@@ -348,6 +350,10 @@ export class AddModVentasComponent {
       punto: new FormControl('', [Validators.required]),
       nroNota: new FormControl({ value: '', disabled: true }),
       fecha: new FormControl(new Date(), [Validators.required]),
+      // Fecha de entrega y observaciones: solo aplican a tipo === 'pre'
+      // (Presupuesto/Pedido/Nota de Empaque), opcionales.
+      fechaEntrega: new FormControl(null),
+      observacion: new FormControl(''),
       cliente: new FormControl([null], [Validators.required]),
     });
 
@@ -1025,6 +1031,8 @@ export class AddModVentasComponent {
     this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id == this.venta.idProceso));
     this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
     this.formGenerales.get('fecha')?.setValue(new Date(this.venta.fecha ?? ''));
+    this.formGenerales.get('fechaEntrega')?.setValue(this.venta.fechaEntrega ? new Date(this.venta.fechaEntrega) : null);
+    this.formGenerales.get('observacion')?.setValue(this.venta.observacion ?? '');
     this.formFacturacion.get('empresa')?.setValue(this.venta.idEmpresa);
     this.formFacturacion.get('tDescuento')?.setValue(this.venta.idTipoDescuento);
     this.formFacturacion.get('descuento')?.setValue(this.venta.descuento);
@@ -2082,6 +2090,11 @@ export class AddModVentasComponent {
     this.venta.idPunto = this.formGenerales.get('punto')?.value.id;
     this.venta.punto = this.formGenerales.get('punto')?.value.descripcion;
     this.venta.fecha = this.formGenerales.get('fecha')?.value;
+    // Fecha de entrega/observación solo tienen UI para tipo === 'pre'; para
+    // 'factura' los controles quedan en su valor por defecto (null/'') y no
+    // se persiste nada.
+    this.venta.fechaEntrega = this.formGenerales.get('fechaEntrega')?.value ?? undefined;
+    this.venta.observacion = this.formGenerales.get('observacion')?.value || undefined;
     this.venta.ajuste = this.formFacturacion.get('ajuste')?.value == true ? 1 : 0;
     
     this.venta.cliente = this.clienteSeleccionado;

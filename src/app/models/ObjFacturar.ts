@@ -40,5 +40,6 @@ export enum TipoComprobante {
   NC_C = 13,
 
   COTIZACION = 99,
-  NC_X = 100
+  NC_X = 100,
+  ND_X = 101
 }
