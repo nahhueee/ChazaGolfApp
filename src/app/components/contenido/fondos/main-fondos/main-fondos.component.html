@@ -326,8 +326,10 @@
         <th>Fondo</th>
         <th>Tipo</th>
         <th>Origen</th>
+        <th>Cliente/Proveedor</th>
         <th>Descripción</th>
         <th>Monto</th>
+        <th>Empresa</th>
         @if(sesion.cargo == 'ADMINISTRADOR'){
           <th>Usuario</th>
         }
@@ -345,12 +347,14 @@
           </p-tag>
         </td>
         <td>{{ mov.origen }}</td>
+        <td>{{ mov.clienteProveedor || '-' }}</td>
         <td>{{ mov.descripcion }}</td>
         <td
           [class.ingreso]="mov.tipo === 'INGRESO'"
           [class.egreso]="mov.tipo === 'EGRESO'">
           ${{ mov.monto | decimalFormat }}
         </td>
+        <td>{{ mov.empresa || '-' }}</td>
         @if(sesion.cargo == 'ADMINISTRADOR'){
           <td>{{ mov.usuario }}</td>
         }

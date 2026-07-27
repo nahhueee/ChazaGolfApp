@@ -78,6 +78,7 @@ export class MainFondosComponent implements OnInit {
     { label: 'Ayer',          value: 'ayer'   },
     { label: 'Últimos 7 días', value: '7dias' },
     { label: 'Últimos 30 días', value: '30dias'},
+    { label: 'Todo',          value: 'todo'   },
     { label: 'Personalizado', value: 'custom' }
   ];
 
@@ -251,10 +252,12 @@ export class MainFondosComponent implements OnInit {
 
   // ── exportar ─────────────────────────────────────────────────────────────────
 
-  // Solo habilitado con rango de fechas seleccionado: el backend lo exige para
-  // no traer todo el histórico de movimientos_fondos sin paginar.
+  // Solo exige fechaHasta (siempre viene seteada salvo en "Personalizado" sin
+  // fechas elegidas todavía). fechaDesde puede faltar a propósito: es lo que
+  // pasa con el período "Todo" (sin límite inferior) y es válido - el backend
+  // solo bloquea el caso de "no se eligió ningún período todavía".
   get puedeExportarExcel(): boolean {
-    return !!this.filtros.fechaDesde && !!this.filtros.fechaHasta;
+    return !!this.filtros.fechaHasta;
   }
 
   descargarMovimientosExcel() {
@@ -361,6 +364,9 @@ export class MainFondosComponent implements OnInit {
       case 'ayer':   const a = new Date(); a.setDate(hoy.getDate()-1); return { desde: a, hasta: a };
       case '7dias':  const s = new Date(); s.setDate(hoy.getDate()-7); return { desde: s, hasta: hoy };
       case '30dias': const t = new Date(); t.setDate(hoy.getDate()-30); return { desde: t, hasta: hoy };
+      // Sin límite inferior: no hay movimientos antes del primero real, así que
+      // "sin fechaDesde" ya es equivalente a "desde que se empezó a usar el fondo".
+      case 'todo':   return { desde: null, hasta: hoy };
       case 'custom': const f = this.filtrosForm.value.fechas; return { desde: f?.[0], hasta: f?.[1] };
       default:       return null;
     }
