@@ -17,6 +17,7 @@ import { MovimientoFondo } from '../../../../models/Movimiento';
 import { AddmodMovimientoManualComponent } from '../addmod-movimiento-manual/movimiento-manual-dialog.component';
 import { Button } from 'primeng/button';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { FilesService } from '../../../../services/files.service';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Usuario } from '../../../../models/Usuario';
@@ -100,7 +101,8 @@ export class MainFondosComponent implements OnInit {
   constructor(
     private fondosService:    FondosService,
     private usuariosService:  UsuariosService,
-    private notificaciones:   NotificacionesService
+    private notificaciones:   NotificacionesService,
+    private filesService:     FilesService
   ) {
     this.filtrosForm = new FormGroup({
       caja:    new FormControl(),
@@ -244,6 +246,43 @@ export class MainFondosComponent implements OnInit {
       this.movimientos  = r.registros;
       this.totalRecords = r.total;
       this.loading      = false;
+    });
+  }
+
+  // ── exportar ─────────────────────────────────────────────────────────────────
+
+  // Solo habilitado con rango de fechas seleccionado: el backend lo exige para
+  // no traer todo el histórico de movimientos_fondos sin paginar.
+  get puedeExportarExcel(): boolean {
+    return !!this.filtros.fechaDesde && !!this.filtros.fechaHasta;
+  }
+
+  descargarMovimientosExcel() {
+    if (!this.puedeExportarExcel) {
+      this.notificaciones.Warn('Seleccioná un rango de fechas para exportar.');
+      return;
+    }
+
+    this.filesService.DescargarFondosExcel(
+      this.filtros,
+      this.cajaSeleccionada?.nombre,
+      this.fondoSeleccionado?.nombre
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const fecha = new Date();
+        const dd = String(fecha.getDate()).padStart(2, '0');
+        const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+        const yy = String(fecha.getFullYear()).slice(-2);
+
+        a.href = url;
+        a.download = `MovimientosFondos_${dd}-${mm}-${yy}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.notificaciones.Error('Error al generar el excel de movimientos.')
     });
   }
 

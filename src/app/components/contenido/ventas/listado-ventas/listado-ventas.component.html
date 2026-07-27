@@ -5,6 +5,7 @@
         <p-button [label]="tipo == 'factura' ? 'Nueva Facturación' : 'Nueva Pre-Facturación'" icon="pi pi-plus" [routerLink]="['/ventas/administrar', 0]" [queryParams]="{tipo: tipo}"/>
         @if(tipo == 'factura'){
             <p-button label="Nota de Crédito X" icon="pi pi-replay" (onClick)="AbrirNotaCreditoX()"/>
+            <p-button label="Nota de Débito X" icon="pi pi-replay" severity="danger" (onClick)="AbrirNotaDebitoX()"/>
         }
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
     </app-encabezado-seccion>
@@ -28,6 +29,14 @@
                 <p-datepicker formControlName="fechas" selectionMode="range"/>
                 <label>Rango de Fecha</label>
             </p-floatlabel>
+
+            @if(tipo != "factura"){
+                <!-- Fecha de Entrega -->
+                <p-floatlabel variant="on">
+                    <p-datepicker formControlName="fechasEntrega" selectionMode="range"/>
+                    <label>Rango de Entrega</label>
+                </p-floatlabel>
+            }
 
             <!-- Cliente -->
             <p-floatlabel variant="on">
@@ -73,6 +82,7 @@
                     <th>Proceso</th>
                     <th>Nro</th>
                     <th>Fecha</th>
+                    @if(tipo != "factura"){<th>Entrega</th>}
                     <th>Cliente</th>
                     <th>Total</th>
                     @if(tipo == "factura"){<th>Factura</th>}
@@ -85,6 +95,7 @@
                     <td>{{ venta.proceso }}</td>
                     <td>{{ venta.nroProceso }}</td>
                     <td>{{ venta.fecha | date:'dd-MM-yyyy' }} | {{ venta.hora }}</td>
+                    @if(tipo != "factura"){<td>{{ venta.fechaEntrega ? (venta.fechaEntrega | date:'dd-MM-yyyy') : '--' }}</td>}
                     <td>{{ venta.cliente.nombre }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
                     
@@ -137,6 +148,7 @@
 <app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada" [preciosNetos]="ItemsEnPreciosNetos()"></app-vista-previa>
 <app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
 <app-nota-credito-x [visible]="notaCreditoXVisible" (cerrar)="ActualizarNotaCreditoX($event)"></app-nota-credito-x>
+<app-nota-debito-x [visible]="notaDebitoXVisible" (cerrar)="ActualizarNotaDebitoX($event)"></app-nota-debito-x>
 
 <p-dialog
     header="Dar de baja"

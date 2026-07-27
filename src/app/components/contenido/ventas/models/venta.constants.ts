@@ -31,6 +31,10 @@ export const TIPO_COMPROBANTE = {
   // Nota de Crédito interna (no fiscal, no pasa por AFIP/ARCA). Mismo id que
   // TipoComprobante.NC_X en el backend (objFacturar.ts) - no cambiar sin migración.
   NC_X: 100,
+  // Nota de Débito interna (no fiscal, no pasa por AFIP/ARCA) - análoga a NC_X
+  // pero genera saldo deudor. Mismo id que TipoComprobante.ND_X en el backend
+  // (objFacturar.ts) - no cambiar sin migración.
+  ND_X: 101,
 } as const;
 
 export type TipoComprobante = ValueOf<typeof TIPO_COMPROBANTE>;

@@ -9,6 +9,9 @@ export class FiltroVenta{
   idProceso = 0;
   nroProceso = 0;
   fechas = "";
+  // Filtro por rango de fecha de entrega prometida. Solo aplica a
+  // Presupuesto/Pedido/Nota de Empaque (tipo === 'pre').
+  fechasEntrega = "";
   cliente = 0;
   impagas = 0;
   desdeCuenta = false;
@@ -25,6 +28,7 @@ export class FiltroVenta{
       this.idProceso = data.idProceso;
       this.nroProceso = data.nroProceso;
       this.fechas = data.fechas;
+      this.fechasEntrega = data.fechasEntrega;
       this.cliente = data.cliente;
       this.impagas = data.impagas;
       this.desdeCuenta = data.desdeCuenta

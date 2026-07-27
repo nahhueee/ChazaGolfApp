@@ -7,6 +7,11 @@ export class ObjComprobante {
     cliente?:string;
     fechaVenta?:string;
     horaVenta?:string;
+    // Fecha de entrega prometida y observaciones (Presupuesto/Pedido/Nota de
+    // Empaque). Undefined/vacío cuando la venta no las tiene cargadas - el
+    // remito las omite en ese caso (ver ArmarInternoA4).
+    fechaEntrega?:string;
+    observacion?:string;
     descuento?:number;
     redondeo?:number;
     filasProducto?:any[];
@@ -38,6 +43,8 @@ export class ObjComprobante {
           this.nombreLocal = data.nombreLocal;
           this.fechaVenta = data.fechaVenta;
           this.horaVenta = data.horaVenta;
+          this.fechaEntrega = data.fechaEntrega;
+          this.observacion = data.observacion;
           this.descuento = data.descuento;
           this.redondeo = data.redondeo;
           this.filasProducto = data.filasProducto;

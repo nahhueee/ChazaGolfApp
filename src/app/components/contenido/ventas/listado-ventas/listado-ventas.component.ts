@@ -29,6 +29,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { NotasVentaComponent } from "../notas-venta/notas-venta.component";
 import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.component";
+import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
@@ -55,6 +56,7 @@ import { esMayoristaConListaPropia, puedeDarseDeBaja } from '../models/venta.con
     PopoverModule,
     NotasVentaComponent,
     NotaCreditoXComponent,
+    NotaDebitoXComponent,
     EncabezadoSeccionComponent
 ],
   templateUrl: './listado-ventas.component.html',
@@ -72,6 +74,7 @@ export class ListadoVentasComponent {
   detalleVisible: boolean = false;
   notasVisible: boolean = false;
   notaCreditoXVisible: boolean = false;
+  notaDebitoXVisible: boolean = false;
   ventaSeleccionada:Venta = new Venta();
 
   // Dar de baja (Presupuesto/Pedido/Nota de Empaque) - mismo patrón que
@@ -104,6 +107,7 @@ export class ListadoVentasComponent {
       proceso: new FormControl(),
       nroProceso: new FormControl(),
       fechas: new FormControl(),
+      fechasEntrega: new FormControl(),
       cliente: new FormControl()
     })
   }
@@ -144,6 +148,7 @@ export class ListadoVentasComponent {
         idProceso: this.filtros.value.proceso?.id ?? 0,
         nroProceso: this.filtros.value.nroProceso,
         fechas: this.filtros.value.fechas,
+        fechasEntrega: this.filtros.value.fechasEntrega,
         cliente: this.filtros.value.cliente?.id ?? 0
       });
     }
@@ -225,6 +230,16 @@ export class ListadoVentasComponent {
 
   ActualizarNotaCreditoX(actualiza:boolean){
     this.notaCreditoXVisible = false;
+    if(actualiza)
+      this.Buscar();
+  }
+
+  AbrirNotaDebitoX(){
+    this.notaDebitoXVisible = true;
+  }
+
+  ActualizarNotaDebitoX(actualiza:boolean){
+    this.notaDebitoXVisible = false;
     if(actualiza)
       this.Buscar();
   }

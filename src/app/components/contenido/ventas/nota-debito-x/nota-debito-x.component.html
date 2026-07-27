@@ -1,0 +1,73 @@
+<p-confirmdialog key="confirmarND"/>
+
+<p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '600px' }" (onHide)="CerrarModal(false)">
+    <ng-template pTemplate="header">
+        <div class="header-custom">
+            <span>Nota de Débito X</span>
+        </div>
+    </ng-template>
+
+    <div class="contenido">
+        <!-- Cliente -->
+        <div class="seccion">
+            <h3>Cliente</h3>
+
+            <div class="cliente">
+                <form [formGroup]="formCliente" autocomplete="off" class="formCliente">
+                    <p-floatlabel variant="in">
+                        <p-autocomplete
+                            formControlName="cliente"
+                            [suggestions]="clientesFiltrados"
+                            placeholder="Buscar por nombre o DNI"
+                            emptyMessage="No se encontraron resultados"
+                            (completeMethod)="FiltrarClientes($event)"
+                            (onSelect)="SeleccionarCliente();"
+                            optionLabel="nombre"
+                        >
+                            <ng-template let-cliente pTemplate="item">
+                                {{ cliente.nombre }} - {{ cliente.documento }} - {{cliente.razonSocial}}
+                            </ng-template>
+                        </p-autocomplete>
+                        <label>Cliente</label>
+                    </p-floatlabel>
+                </form>
+
+                @if(clienteSeleccionado){
+                    <div class="cliente-card">
+                        <div class="cliente-header">
+                            <div class="icon"><i class="pi pi-user"></i></div>
+                            <div class="info">
+                                <h4>{{ clienteSeleccionado.nombre }}</h4>
+                                <span>{{ clienteSeleccionado.tipoDocumento }} {{ clienteSeleccionado.documento }}</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Cargo: motivo + importe. Siempre visible (no hay sección de productos, ver componente). -->
+        <div class="seccion">
+            <h3>Cargo</h3>
+
+            <form [formGroup]="formCargo" class="formCargo" autocomplete="off">
+                <p-floatlabel variant="in">
+                    <p-select [options]="motivos" formControlName="motivo"/>
+                    <label>Motivo</label>
+                </p-floatlabel>
+
+                <p-floatlabel variant="in">
+                    <input pInputText type="text" formControlName="total" [imask]="decimal_mask"/>
+                    <label>Total</label>
+                </p-floatlabel>
+            </form>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="botones">
+            <p-button label="Volver" icon="pi pi-angle-left" severity="secondary" (onClick)="CerrarModal(false)"/>
+            <p-button label="Guardar" icon="pi pi-save" [loading]="guardando" (onClick)="Guardar()"/>
+        </div>
+    </ng-template>
+</p-dialog>

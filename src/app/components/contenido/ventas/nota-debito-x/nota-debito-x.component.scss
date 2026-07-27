@@ -1,0 +1,111 @@
+.contenido{
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.header-custom{
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.seccion{
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--surface-card);
+
+  h3{
+    font-size: 15px;
+    font-family: 'Poppins';
+    margin-bottom: 20px;
+  }
+}
+
+.cliente{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  // El autocomplete debe quedarse con todo el ancho sobrante - mismo criterio
+  // que nota-credito-x.component.scss.
+  .formCliente{
+    flex: 1;
+    min-width: 0;
+
+    p-floatlabel{
+      display: block;
+      width: 100%;
+    }
+
+    ::ng-deep .p-autocomplete{
+      width: 100%;
+
+      .p-autocomplete-input{
+        width: 100%;
+      }
+    }
+  }
+}
+
+.formCargo{
+  display: flex;
+  gap: 20px;
+}
+
+.cliente-card{
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  border: 1px solid var(--surface-border);
+  flex-shrink: 0;
+  max-width: 350px;
+}
+
+.cliente-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 15px;
+
+  .icon {
+    background: var(--surface-ground);
+    border-radius: 80%;
+    padding: 5px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  i {
+    color: var(--p-primary-color);
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+
+    h4 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    span {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// El footer de p-dialog viene alineado a la derecha por default (::ng-deep porque
+// .p-dialog-footer lo renderiza PrimeNG fuera del árbol de este componente).
+.botones{
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding-top: 10px;
+}

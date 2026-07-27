@@ -94,6 +94,11 @@ export class FacturaService {
 
       const comprobante:ObjComprobante = this.GenerarDatosComunes(venta);
       comprobante.sinItems = sinItems;
+      // Motivo elegido en NC X / ND X "sin productos" (ver ventas.observacion) -
+      // se imprime en el bloque sinItems del comprobante en vez del genérico
+      // "Sin productos" (pedido del cliente, jul-2026: quería ver acá qué motivo
+      // se eligió, ej. "Adelanto de producción" o "CARGO POR DEPÓSITO").
+      comprobante.observacion = venta.observacion;
       
       //Obtenemos los datos de la venta facturada
       let datosFactura:ObjTicketFactura = new ObjTicketFactura();
@@ -106,7 +111,7 @@ export class FacturaService {
 
       let esNota:boolean = false;
 
-      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100){
+      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.idTipoComprobante != 101){
         datosFactura.puntoVta = venta.factura?.ptoVenta?.toString().padStart(5, '0');
         datosFactura.ticket = venta.factura?.ticket?.toString().padStart(8, '0');
         datosFactura.neto = venta.factura?.neto;
@@ -139,7 +144,9 @@ export class FacturaService {
         });
       }else{
         datosFactura.tipoComprobante = venta.idTipoComprobante;
-        datosFactura.desComprobante = venta.idTipoComprobante == 99 ? 'X' : 'NC X';
+        datosFactura.desComprobante = venta.idTipoComprobante == 99
+          ? 'X'
+          : (venta.idTipoComprobante == 101 ? 'ND X' : 'NC X');
       }
       
       //Obtenemos datos grabados para la facturacion
@@ -190,7 +197,7 @@ export class FacturaService {
       // incluido) que no aplica a todos los clientes (ver EsMayoristaConListaPropia en
       // addmod-ventas) y podía mostrar, en este Detalle de Totales, un número distinto al
       // Neto/IVA Total que se imprime más abajo en el pie del mismo comprobante.
-      if (venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.factura) {
+      if (venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.idTipoComprobante != 101 && venta.factura) {
         // venta.factura.neto es el importe YA NETO DE DESCUENTO (y de IVA) que confirmó AFIP.
         // Para que el "Subtotal" impreso sea el bruto (antes de descuento, como ahora se
         // muestran los ítems) y la cuenta Subtotal - Descuento = Total General cierre en la
@@ -202,8 +209,9 @@ export class FacturaService {
         comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
         comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
       } else if (sinItems) {
-        // NC X sin productos: no hay ítems de los que partir, el total es el que
-        // cargó el usuario en nota-credito-x.component.ts (venta.total).
+        // NC X / ND X sin productos: no hay ítems de los que partir, el total es
+        // el que cargó el usuario en nota-credito-x.component.ts / nota-debito-x.component.ts
+        // (venta.total).
         comprobante.subTotal = venta.total ?? 0;
         comprobante.totalIva = 0;
         comprobante.totalFinal = venta.total ?? 0;
@@ -220,7 +228,7 @@ export class FacturaService {
       comprobante.cantProductos = venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
       comprobante.cantServicios = venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
   
-      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100){
+      if(venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.idTipoComprobante != 101){
         //Obtenemos el codigo QR
         datosFactura.qr = await firstValueFrom(this.ventasService.ObtenerQR(venta.id!));
       }
@@ -395,7 +403,7 @@ export class FacturaService {
                     stack: [
                       { text: datosFactura.desFactura, style: 'titulo', alignment: 'center' },
 
-                      (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X") ? [
+                      (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
                         {
                           text: [
                             { text: 'Nro Comp: ', bold: true },
@@ -522,10 +530,13 @@ export class FacturaService {
             margin: [0, 10, 0, 10]
           },
           
-          //Tabla de productos (o label "Sin productos" para NC X sin ítems - ver sinItems)
+          //Tabla de productos (o el motivo cargado para NC X/ND X sin ítems - ver sinItems/observacion)
           { text: `Detalle Productos`, style: 'recargaDescuento', alignment: 'left', bold:true },
           comprobante.sinItems ? [
-            { text: 'Sin productos', style: 'totalProducto', alignment: 'left', italics: true, margin: [3, 2, 3, 6] },
+            {
+              text: comprobante.observacion ? `Motivo: ${comprobante.observacion}` : 'Sin productos',
+              style: 'totalProducto', alignment: 'left', italics: true, margin: [3, 2, 3, 6]
+            },
           ] : [
           {
             table: {
@@ -626,8 +637,12 @@ export class FacturaService {
             style: 'totales'
           },
 
-          //Pie de página
-          (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X") ? [ 
+          //Pie de página con QR/ARCA: solo para comprobantes fiscales reales. "X" (Sin
+          //Comprobante), "NC X" y "ND X" son internos, nunca tienen datosFactura.qr (ver
+          //ArmarComprobante) - sin esta exclusión, pdfMake arma la columna de imagen con
+          //qr=undefined y tira "Unrecognized document structure" (bug real jul-2026, visto
+          //al ver el comprobante de una ND X, que quedó afuera de este chequeo).
+          (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
             {
               columns: [
 

@@ -14,6 +14,9 @@ import { TallesProducto } from "./Producto";
     punto?:string;
     fecha?:Date;
     hora?:string;
+    // Fecha de entrega prometida al cliente. Opcional, solo se carga/muestra para
+    // Presupuesto/Pedido/Nota de Empaque (tipo === 'pre').
+    fechaEntrega?:Date;
     cliente?:Cliente;
     // idCliente?:number;
     // cliente?:string;

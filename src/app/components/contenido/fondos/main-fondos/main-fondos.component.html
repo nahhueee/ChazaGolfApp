@@ -298,6 +298,16 @@
   </div>
 
   @if (fondoSeleccionado?.tipo !== 'VALOR_PENDIENTE') {
+  <div class="movimientos-toolbar">
+    <p-button
+      label="Exportar Movimientos"
+      icon="pi pi-file-excel"
+      [outlined]="true"
+      [disabled]="!puedeExportarExcel"
+      pTooltip="Exporta los movimientos con los filtros actuales (requiere rango de fechas)"
+      tooltipPosition="bottom"
+      (onClick)="descargarMovimientosExcel()"/>
+  </div>
   <p-table
     class="movimientos"
     [value]="movimientos"
