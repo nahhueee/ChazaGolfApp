@@ -25,9 +25,8 @@ import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO } 
 
 // Motivos fijos para una NC "sin productos" (ver checkbox homónimo): un importe
 // que se acredita como saldo a favor sin devolución de mercadería real. Pedido
-// del cliente (jul-2026) - no hay tabla maestra atrás, son solo estas dos
-// opciones por ahora.
-const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra'];
+// del cliente (jul-2026) - no hay tabla maestra atrás, son opciones fijas.
+const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra', 'Embajadores-premios'];
 
 // Nota de Crédito "X": nota de crédito interna, no fiscal (no pasa por AFIP/ARCA),
 // cargada libremente (sin partir de una venta existente) desde el listado de
