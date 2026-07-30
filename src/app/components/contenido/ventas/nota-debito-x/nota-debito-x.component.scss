@@ -24,19 +24,28 @@
 }
 
 .cliente{
+  // Columna en vez de fila (a diferencia de nota-credito-x.component.scss):
+  // el dialog de ND X es más angosto (600px, ver [style] en el html) y con la
+  // card de cliente al lado los inputs de Cliente/Punto de Venta quedaban muy
+  // comprimidos. Acá la card va debajo, ocupando todo el ancho.
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 20px;
 
   // El autocomplete debe quedarse con todo el ancho sobrante - mismo criterio
   // que nota-credito-x.component.scss.
   .formCliente{
-    flex: 1;
+    width: 100%;
     min-width: 0;
 
-    p-floatlabel{
-      display: block;
-      width: 100%;
+    .campos-generales{
+      display: flex;
+      gap: 20px;
+
+      p-floatlabel{
+        flex: 1;
+        min-width: 0;
+      }
     }
 
     ::ng-deep .p-autocomplete{
@@ -57,18 +66,18 @@
 .cliente-card{
   border-radius: 10px;
   display: flex;
-  align-items: center;
-  flex-direction: column;
+  align-items: stretch;
   border: 1px solid var(--surface-border);
   flex-shrink: 0;
-  max-width: 350px;
+  width: 100%;
 }
 
 .cliente-header {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 15px;
+  padding: 20px 24px;
+  width: 100%;
 
   .icon {
     background: var(--surface-ground);

@@ -16,6 +16,8 @@ import { MiscService } from '../../../../services/misc.service';
 import { CondicionesIva } from '../../../../models/CondicionesIva';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { FilesService } from '../../../../services/files.service';
+import { TextareaModule } from 'primeng/textarea';
+import { NotificacionesService } from '../../../../services/notificaciones.service';
 @Component({
   selector: 'app-listado-clientes',
   standalone: true,
@@ -28,6 +30,7 @@ import { FilesService } from '../../../../services/files.service';
     EncabezadoSeccionComponent,
     TooltipModule,
     AutoCompleteModule,
+    TextareaModule,
     ...FORMS_IMPORTS,
   ],
   templateUrl: './listado-clientes.component.html',
@@ -53,12 +56,17 @@ export class ListadoClientesComponent {
   clienteSeleccionado!: Cliente | undefined;
   mostrarmodalAddMod: boolean = false;
 
+  bajaVisible: boolean = false;
+  clienteBaja!: Cliente;
+  motivoBaja: string = '';
+
   filtros:FormGroup;
 
   constructor(
     private clientesService:ClientesService,
     private miscService:MiscService,
     private filesService:FilesService,
+    private notificaciones:NotificacionesService,
     private router:Router
   ){
     this.filtros = new FormGroup({
@@ -115,6 +123,28 @@ export class ListadoClientesComponent {
       this.Buscar(undefined, true);
 
     this.mostrarmodalAddMod = false;
+  }
+
+  AbrirDarBaja(cliente:Cliente){
+    this.clienteBaja = cliente;
+    this.motivoBaja = '';
+    this.bajaVisible = true;
+  }
+
+  ConfirmarDarBaja(){
+    if (!this.motivoBaja?.trim()) return;
+
+    this.clientesService.DarBaja(this.clienteBaja.id, this.motivoBaja.trim())
+      .subscribe({
+        next: () => {
+          this.notificaciones.Success(`Cliente ${this.clienteBaja.nombre} dado de baja correctamente`);
+          this.bajaVisible = false;
+          this.Buscar(undefined, true);
+        },
+        // El interceptor global ya muestra un toast genérico para el 400; este agrega
+        // el motivo específico del bloqueo que devuelve DarBajaCliente.
+        error: (e) => this.notificaciones.Error(e?.error ?? 'No se pudo dar de baja el cliente.')
+      });
   }
 
   VerEstadistica(id:number, cliente:string){

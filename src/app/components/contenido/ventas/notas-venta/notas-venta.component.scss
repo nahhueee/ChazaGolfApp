@@ -41,6 +41,14 @@ p-divider {
   margin:4px 0px;
 }
 
+// Selector de Punto de Venta dentro del recuadro (ver comentario en el .ts) -
+// mismo layout que los demás recuadros, pero con un p-select en vez de texto.
+.recuadro-punto{
+  ::ng-deep .p-select{
+    width: 100%;
+  }
+}
+
 
 ::ng-deep input[type="number"]#editable::-webkit-inner-spin-button {
   -webkit-appearance: none;

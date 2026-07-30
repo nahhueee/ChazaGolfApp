@@ -16,6 +16,7 @@ import { Venta } from '../../../../models/Factura';
 import { VentasService } from '../../../../services/ventas.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Empresa } from '../../../../models/Empresa';
+import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, LISTA_PRECIO } from '../models/venta.constants';
 
 // Motivos fijos para una ND "X" (cargo interno, no fiscal). Hoy el cliente solo
@@ -83,6 +84,10 @@ export class NotaDebitoXComponent {
   formCargo: FormGroup;
 
   empresas: Empresa[] = [];
+  // Punto de Venta: canal de venta interno (tabla puntos_venta), sin relación con
+  // el punto de venta fiscal de AFIP (esta ND no es fiscal). Mismo criterio que
+  // nota-credito-x.component.ts. Pedido del cliente (jul-2026).
+  puntos: PuntoVenta[] = [];
 
   get total(): number {
     // Mismo criterio que NC X: el valor crudo del FormControl queda como string
@@ -117,6 +122,7 @@ export class NotaDebitoXComponent {
   private ArmarFormularios(): void {
     this.formCliente = new FormGroup({
       cliente: new FormControl('', [Validators.required]),
+      punto: new FormControl('', [Validators.required]),
     });
 
     this.formCargo = new FormGroup({
@@ -137,6 +143,14 @@ export class NotaDebitoXComponent {
     this.miscService.ObtenerEmpresas()
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => this.empresas = response);
+
+    this.miscService.ObtenerPuntosVenta()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(response => {
+        this.puntos = response;
+        // Default "Otros" (id 7), mismo valor que se usaba hardcodeado antes.
+        this.formCliente.get('punto')?.setValue(this.puntos.find(p => p.id === 7));
+      });
   }
 
   private ReiniciarTodo(): void {
@@ -176,6 +190,12 @@ export class NotaDebitoXComponent {
       return;
     }
 
+    if (!this.formCliente.get('punto')?.value) {
+      this.formCliente.get('punto')?.markAsTouched();
+      this.Notificaciones.Warn("Seleccioná un punto de venta.");
+      return;
+    }
+
     if (!this.formCargo.get('motivo')?.value) {
       this.formCargo.get('motivo')?.markAsTouched();
       this.Notificaciones.Warn("Seleccioná un motivo.");
@@ -206,7 +226,9 @@ export class NotaDebitoXComponent {
     nuevaVenta.idProceso = ID_PROCESO.NOTA_DEBITO;
     nuevaVenta.proceso = "Nota de Débito";
     nuevaVenta.idTipoComprobante = TIPO_COMPROBANTE.ND_X;
-    nuevaVenta.idPunto = 7; // Otros - mismo criterio que NC X (no usa un punto de venta real)
+    // Canal de venta interno elegido en el selector (default "Otros" - ver
+    // Inicializar). No es el punto de venta fiscal de AFIP, ver comentario en `puntos`.
+    nuevaVenta.idPunto = this.formCliente.get('punto')?.value?.id;
     nuevaVenta.idCaja = this.sesion?.idCaja;
     nuevaVenta.idEmpresa = this.empresas[0]?.id;
     nuevaVenta.fecha = new Date();

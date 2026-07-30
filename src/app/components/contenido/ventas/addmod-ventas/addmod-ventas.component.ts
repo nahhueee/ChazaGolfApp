@@ -791,9 +791,14 @@ export class AddModVentasComponent {
     // IVA aplica solo cuando hay un comprobante fiscal real (A o B).
     // No depende de ProcesoControl porque ese valor puede estar stale
     // cuando valueChanges dispara antes que CambioTipoComprobante() del template.
+    // OJO: antes exigía productosFactura.length > 0, lo que dejaba sin discriminar
+    // IVA a toda venta 100% servicio facturada A/B (bug real, no solo un tema de
+    // reporte - ver Venta #230, jul-2026: AFIP sí discriminó IVA en el CAE real,
+    // pero acá quedaba neto=total/iva=0 porque nunca entraba a este cálculo).
+    // El IVA no depende de si el ítem es producto o servicio, solo del tipo de
+    // comprobante - por eso se saca la condición de productos.
     const esFacturaConIva =
       this.tipo === 'factura' &&
-      this.productosFactura.length > 0 &&
       this.TipoComprobanteControl !== TIPO_COMPROBANTE.SIN_COMPROBANTE;
 
     // Nota: usamos variable local para no depender del orden de evaluación

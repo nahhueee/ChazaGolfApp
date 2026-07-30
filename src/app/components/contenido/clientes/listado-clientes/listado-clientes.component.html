@@ -72,6 +72,7 @@
                     <td>
                         <div class="acciones">
                             <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(cliente.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="AbrirDarBaja(cliente)" pTooltip="Dar de baja" tooltipPosition="bottom"/>
                             <!-- <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-chart-line" (onClick)="VerEstadistica(cliente.id, cliente.nombre)" pTooltip="Estadisticas" tooltipPosition="bottom"/> -->
                         </div>
                     </td>
@@ -92,4 +93,27 @@
         </div>
     </ng-template>
     <app-addmod-clientes [clienteEditar]="clienteSeleccionado" (cerrar)="Actualizar($event)"/>
+</p-dialog>
+
+<!-- Modal Dar de baja -->
+<p-dialog
+    header="Dar de baja cliente"
+    [(visible)]="bajaVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>
+        ¿Dar de baja al cliente <strong>{{clienteBaja?.nombre}}</strong>? Esta acción no se puede revertir desde la aplicación.
+    </p>
+    <br>
+    <p-floatlabel variant="in">
+        <textarea pTextarea rows="3" cols="30" [(ngModel)]="motivoBaja" style="resize: none; width: 100%"></textarea>
+        <label>Motivo (obligatorio)</label>
+    </p-floatlabel>
+    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="bajaVisible = false" />
+        <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
+    </div>
 </p-dialog>
