@@ -14,22 +14,29 @@
 
             <div class="cliente">
                 <form [formGroup]="formCliente" autocomplete="off" class="formCliente">
-                    <p-floatlabel variant="in">
-                        <p-autocomplete
-                            formControlName="cliente"
-                            [suggestions]="clientesFiltrados"
-                            placeholder="Buscar por nombre o DNI"
-                            emptyMessage="No se encontraron resultados"
-                            (completeMethod)="FiltrarClientes($event)"
-                            (onSelect)="SeleccionarCliente();"
-                            optionLabel="nombre"
-                        >
-                            <ng-template let-cliente pTemplate="item">
-                                {{ cliente.nombre }} - {{ cliente.documento }} - {{cliente.razonSocial}}
-                            </ng-template>
-                        </p-autocomplete>
-                        <label>Cliente</label>
-                    </p-floatlabel>
+                    <div class="campos-generales">
+                        <p-floatlabel variant="in">
+                            <p-autocomplete
+                                formControlName="cliente"
+                                [suggestions]="clientesFiltrados"
+                                placeholder="Buscar por nombre o DNI"
+                                emptyMessage="No se encontraron resultados"
+                                (completeMethod)="FiltrarClientes($event)"
+                                (onSelect)="SeleccionarCliente();"
+                                optionLabel="nombre"
+                            >
+                                <ng-template let-cliente pTemplate="item">
+                                    {{ cliente.nombre }} - {{ cliente.documento }} - {{cliente.razonSocial}}
+                                </ng-template>
+                            </p-autocomplete>
+                            <label>Cliente</label>
+                        </p-floatlabel>
+
+                        <p-floatlabel variant="in">
+                            <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" />
+                            <label>Punto de Venta</label>
+                        </p-floatlabel>
+                    </div>
                 </form>
 
                 @if(clienteSeleccionado){

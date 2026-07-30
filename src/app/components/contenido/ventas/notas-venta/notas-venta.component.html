@@ -37,6 +37,17 @@
                     <span>Cliente</span>
                 </div>
 
+                <div class="recuadro recuadro-punto">
+                    <p-select
+                        [options]="puntos"
+                        [(ngModel)]="puntoSeleccionado"
+                        [ngModelOptions]="{standalone: true}"
+                        optionLabel="descripcion"
+                    />
+                    <p-divider />
+                    <span>Punto de Venta</span>
+                </div>
+
                 <div class="recuadro">
                     <p>{{venta.cliente?.condicionIva}}</p>
                     <p-divider />

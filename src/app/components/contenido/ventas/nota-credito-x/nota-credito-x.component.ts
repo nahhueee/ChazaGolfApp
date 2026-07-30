@@ -20,6 +20,7 @@ import { ProductosFactura, Venta } from '../../../../models/Factura';
 import { VentasService } from '../../../../services/ventas.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Empresa } from '../../../../models/Empresa';
+import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO } from '../models/venta.constants';
 
@@ -103,6 +104,11 @@ export class NotaCreditoXComponent {
   productosFactura: ProductosFactura[] = [];
 
   empresas: Empresa[] = [];
+  // Punto de Venta: canal de venta interno (tabla puntos_venta - ECOMMERCE,
+  // SHOWROOM, MAYORISTA, OTROS, etc.), sin relación con el punto de venta fiscal
+  // de AFIP (esta NC no es fiscal). Pedido del cliente (jul-2026): antes quedaba
+  // fijo en "Otros" sin mostrarse en pantalla.
+  puntos: PuntoVenta[] = [];
 
   get total(): number {
     if (this.sinProductos) {
@@ -147,6 +153,7 @@ export class NotaCreditoXComponent {
   private ArmarFormularios(): void {
     this.formCliente = new FormGroup({
       cliente: new FormControl('', [Validators.required]),
+      punto: new FormControl('', [Validators.required]),
     });
 
     this.formProductos = new FormGroup({
@@ -188,6 +195,15 @@ export class NotaCreditoXComponent {
     this.miscService.ObtenerEmpresas()
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => this.empresas = response);
+
+    this.miscService.ObtenerPuntosVenta()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(response => {
+        this.puntos = response;
+        // Default "Otros" (id 7), mismo valor que se usaba hardcodeado antes -
+        // el usuario lo puede cambiar desde el selector.
+        this.formCliente.get('punto')?.setValue(this.puntos.find(p => p.id === 7));
+      });
   }
 
   private ReiniciarTodo(): void {
@@ -482,6 +498,12 @@ export class NotaCreditoXComponent {
       return;
     }
 
+    if (!this.formCliente.get('punto')?.value) {
+      this.formCliente.get('punto')?.markAsTouched();
+      this.Notificaciones.Warn("Seleccioná un punto de venta.");
+      return;
+    }
+
     if (this.sinProductos) {
       if (!this.formSinProductos.get('motivo')?.value) {
         this.formSinProductos.get('motivo')?.markAsTouched();
@@ -519,7 +541,9 @@ export class NotaCreditoXComponent {
     nuevaVenta.idProceso = ID_PROCESO.NOTA_CREDITO;
     nuevaVenta.proceso = "Nota de Crédito";
     nuevaVenta.idTipoComprobante = TIPO_COMPROBANTE.NC_X;
-    nuevaVenta.idPunto = 7; // Otros - mismo criterio que notas-venta.component (NC no usa un punto de venta real)
+    // Canal de venta interno elegido en el selector (default "Otros" - ver
+    // Inicializar). No es el punto de venta fiscal de AFIP, ver comentario en `puntos`.
+    nuevaVenta.idPunto = this.formCliente.get('punto')?.value?.id;
     nuevaVenta.idCaja = this.sesion?.idCaja;
     nuevaVenta.idEmpresa = this.empresas[0]?.id;
     nuevaVenta.fecha = new Date();

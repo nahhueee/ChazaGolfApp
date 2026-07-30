@@ -4,16 +4,21 @@ import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
 import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { VentasService } from '../../../../services/ventas.service';
+import { MiscService } from '../../../../services/misc.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
+import { Subject, takeUntil } from 'rxjs';
 import { Cliente } from '../../../../models/Cliente';
 import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
+import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { esMayoristaConListaPropia, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
@@ -21,12 +26,14 @@ import { esMayoristaConListaPropia, TALLES_ESTANDAR } from '../models/venta.cons
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     Dialog,
     DividerModule,
     DecimalFormatPipe,
     DatePipe,
     TableModule,
     ButtonModule,
+    SelectModule,
     ConfirmDialogModule,
     FacturarVentaComponent
   ],
@@ -57,18 +64,42 @@ export class NotasVentaComponent {
   nuevaVenta:Venta = new Venta();
   proximoNroProceso: number = 0;
 
+  private destroy$ = new Subject<void>();
+
+  // Punto de Venta: canal de venta interno (tabla puntos_venta), sin relación con
+  // el punto de venta fiscal de AFIP (ese lo determina la empresa, no esta
+  // pantalla - ver comprobanteAsociado en armarObjetoFactura). Pedido del cliente
+  // (jul-2026): antes quedaba fijo en "Otros" sin mostrarse en pantalla, mismo
+  // criterio que nota-credito-x/nota-debito-x.
+  puntos: PuntoVenta[] = [];
+  puntoSeleccionado?: PuntoVenta;
+
   constructor(
     private Notificaciones: NotificacionesService,
     private ventasService: VentasService,
+    private miscService: MiscService,
     private confirmationService: ConfirmationService,
   ){}
-  
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
       this.productosSeleccionados = [];
       this.serviciosSeleccionados = [];
-      this.CalcularTotalGeneral()
+      this.CalcularTotalGeneral();
+
+      this.miscService.ObtenerPuntosVenta()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(response => {
+          this.puntos = response;
+          // Default "Otros" (id 7), mismo valor que se usaba hardcodeado antes.
+          this.puntoSeleccionado = this.puntos.find(p => p.id === 7);
+        });
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   CerrarModal(actualizar:boolean) {
@@ -226,6 +257,11 @@ export class NotasVentaComponent {
       return;
     }
 
+    if(!this.puntoSeleccionado){
+      this.Notificaciones.Warn("Seleccioná un punto de venta.");
+      return;
+    }
+
     this.ventasService.ObtenerProximoNroProceso(3)
       .subscribe(response => {
         this.proximoNroProceso = response;
@@ -268,7 +304,9 @@ export class NotasVentaComponent {
     this.nuevaVenta.idProceso = 3; //Nota de credito
     this.nuevaVenta.nroProceso = this.proximoNroProceso;
     this.nuevaVenta.proceso = "Nota de Crédito";
-    this.nuevaVenta.idPunto = 7; //Otros
+    // Canal de venta interno elegido en el selector (default "Otros" - ver
+    // ngOnChanges). No es el punto de venta fiscal de AFIP, ver comentario en `puntos`.
+    this.nuevaVenta.idPunto = this.puntoSeleccionado?.id;
     this.nuevaVenta.fecha = new Date();
     this.nuevaVenta.descuento = this.venta.descuento;
     this.nuevaVenta.tipoDescuento = this.venta.tipoDescuento;

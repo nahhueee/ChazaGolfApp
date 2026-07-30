@@ -36,9 +36,14 @@
     flex: 1;
     min-width: 0; // evita que el input empuje el ancho del form más allá del contenedor
 
-    p-floatlabel{
-      display: block;
-      width: 100%;
+    .campos-generales{
+      display: flex;
+      gap: 20px;
+
+      p-floatlabel{
+        flex: 1;
+        min-width: 0;
+      }
     }
 
     ::ng-deep .p-autocomplete{
@@ -87,6 +92,7 @@
   flex-direction: column;
   border: 1px solid var(--surface-border);
   flex-shrink: 0;
+  min-width: 260px;
   max-width: 350px;
 }
 
@@ -94,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 15px;
+  padding: 20px 24px;
 
   .icon {
     background: var(--surface-ground);

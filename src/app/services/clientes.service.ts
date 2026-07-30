@@ -34,8 +34,8 @@ export class ClientesService {
     return this.apiService.put('clientes/modificar', cli)
   }
 
-  Eliminar(id:number): Observable<any>{
-    return this.apiService.delete(`clientes/eliminar/${id}`)
+  DarBaja(idCliente:number, motivo:string): Observable<any>{
+    return this.apiService.put('clientes/dar-baja', { idCliente, motivo })
   }
   //#endregion
 }
