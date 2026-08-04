@@ -16,11 +16,13 @@ import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { GlobalesService } from '../../../../services/globales.service';
-import { ProductosFactura, Venta } from '../../../../models/Factura';
+import { ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { VentasService } from '../../../../services/ventas.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { Empresa } from '../../../../models/Empresa';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
+import { Servicio } from '../../../../models/Servicio';
+import { ServiciosService } from '../../../../services/servicios.service';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO } from '../models/venta.constants';
 
@@ -31,16 +33,23 @@ const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra
 
 // Nota de Crédito "X": nota de crédito interna, no fiscal (no pasa por AFIP/ARCA),
 // cargada libremente (sin partir de una venta existente) desde el listado de
-// Facturación. A diferencia de addmod-ventas, acá NO hay servicios, forma de pago,
-// ni selección de comprobante/empresa: solo cliente + productos, y el propio
-// guardado ya implica devolución de stock + saldo a favor (ver
-// ventasRepository.Agregar/RegistrarMovimientoNotaCredito en el backend).
+// Facturación. A diferencia de addmod-ventas, acá NO hay forma de pago ni
+// selección de comprobante/empresa: solo cliente + productos y/o servicios, y el
+// propio guardado ya implica devolución de stock (solo por productos) + saldo a
+// favor por el total (ver ventasRepository.Agregar/RegistrarMovimientoNotaCredito
+// en el backend).
 //
-// La carga de productos (búsqueda, talles, colores, línea de talle) es una copia
-// deliberada y recortada de la misma lógica de addmod-ventas.component.ts (sin
-// las ramas de Presupuesto/Pedido/Nota de Empaque, que no aplican acá). Se copia
-// en vez de extraerse a un componente compartido porque hoy es el único otro lugar
-// que necesita esta UI - si aparece un tercer caso, ahí sí se justifica extraer.
+// La carga de productos (búsqueda, talles, colores, línea de talle) y de
+// servicios es una copia deliberada y recortada de la misma lógica de
+// addmod-ventas.component.ts (sin las ramas de Presupuesto/Pedido/Nota de
+// Empaque, ni los guards de itemsSoloLectura/estadoVenta, que no aplican acá:
+// esta NC siempre se carga desde cero). Se copia en vez de extraerse a un
+// componente compartido porque hoy es el único otro lugar que necesita esta UI -
+// si aparece un tercer caso, ahí sí se justifica extraer.
+//
+// "Sin productos" es el modo excluyente: cuando está tildado no se cargan ni
+// productos ni servicios (ver ToggleSinProductos). Destildado, se puede cargar
+// solo productos, solo servicios, o ambos (decisión del usuario, ago-2026).
 @Component({
   selector: 'app-nota-credito-x',
   standalone: true,
@@ -102,6 +111,12 @@ export class NotaCreditoXComponent {
   lineasTalles: LineasTalle[] = [];
   productosFactura: ProductosFactura[] = [];
 
+  // SERVICIOS
+  formServicios: FormGroup;
+  servicios: Servicio[] = [];
+  serviciosFiltrado: Servicio[] = [];
+  serviciosFactura: ServiciosFactura[] = [];
+
   empresas: Empresa[] = [];
   // Punto de Venta: canal de venta interno (tabla puntos_venta - ECOMMERCE,
   // SHOWROOM, MAYORISTA, OTROS, etc.), sin relación con el punto de venta fiscal
@@ -116,7 +131,8 @@ export class NotaCreditoXComponent {
       // formateado, no como number, hay que reparsearlo.
       return this.globalesService.EstandarizarDecimal(this.formSinProductos?.get('total')?.value ?? '');
     }
-    return this.productosFactura.reduce((acc, p) => acc + (p.total ?? 0), 0);
+    return this.productosFactura.reduce((acc, p) => acc + (p.total ?? 0), 0)
+         + this.serviciosFactura.reduce((acc, s) => acc + (s.total ?? 0), 0);
   }
 
   // Mismo formato es-AR que usa decimalFormat.pipe.ts, para que el mensaje de
@@ -126,13 +142,37 @@ export class NotaCreditoXComponent {
     return valor.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  // Arma el mensaje de confirmación según lo que efectivamente haya cargado: los
+  // servicios NO revierten stock (a diferencia de los productos), así que el
+  // mensaje no puede ser un texto genérico o queda engañoso.
+  private MensajeConfirmacion(): string {
+    const hayProductos = this.productosFactura.length > 0;
+    const hayServicios = this.serviciosFactura.length > 0;
+    const favor = `se va a generar un saldo a favor de $${this.formatoMoneda(this.total)} para ${this.clienteSeleccionado!.nombre}`;
+
+    if (hayProductos && hayServicios) {
+      return `Se va a revertir el stock de los ${this.totalUnidades} producto(s) cargados (los servicios no mueven stock) y ${favor}. ¿Confirmar?`;
+    }
+    if (hayProductos) {
+      return `Se va a revertir el stock de los ${this.totalUnidades} producto(s) cargados y ${favor}. ¿Confirmar?`;
+    }
+    return `Se va a generar un saldo a favor de $${this.formatoMoneda(this.total)} para ${this.clienteSeleccionado!.nombre} por los servicios cargados. No se mueve stock. ¿Confirmar?`;
+  }
+
   get totalUnidades(): number {
     return this.productosFactura.reduce((acc, p) => acc + (p.cantidad ?? 0), 0);
   }
 
+  get totalUnidadesServicios(): number {
+    return this.serviciosFactura.reduce((acc, s) => acc + (s.cantidad ?? 0), 0);
+  }
+
+  get ServicioControl() { return this.formServicios.get('servicio')?.value ?? ''; }
+
   constructor(
     private clientesService: ClientesService,
     private productosService: ProductosService,
+    private serviciosService: ServiciosService,
     private miscService: MiscService,
     private usuariosService: UsuariosService,
     private ventasService: VentasService,
@@ -161,6 +201,12 @@ export class NotaCreditoXComponent {
       colorSeleccionado: new FormControl(''),
     });
 
+    this.formServicios = new FormGroup({
+      servicio: new FormControl(''),
+      cantidad: new FormControl(''),
+      precio: new FormControl(''),
+    });
+
     this.formSinProductos = new FormGroup({
       motivo: new FormControl(''),
       total: new FormControl(''),
@@ -168,12 +214,17 @@ export class NotaCreditoXComponent {
   }
 
   // Al tildar/destildar "Sin productos" se limpia lo cargado en la sección que
-  // se oculta, para no arrastrar datos de un modo al otro por accidente.
+  // se oculta, para no arrastrar datos de un modo al otro por accidente. "Sin
+  // productos" es excluyente con TODO ítem (productos y servicios): o se carga
+  // un importe libre con motivo, o se cargan ítems (cualquier combinación de
+  // productos/servicios, ver decisión en el header del componente).
   ToggleSinProductos(): void {
     if (this.sinProductos) {
       this.productosFactura = [];
       this.productoSeleccionado = new Producto();
       this.formProductos.reset();
+      this.serviciosFactura = [];
+      this.formServicios.reset();
     } else {
       this.formSinProductos.reset();
     }
@@ -190,6 +241,10 @@ export class NotaCreditoXComponent {
     this.clientesService.SelectorClientes()
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => this.clientes = response);
+
+    this.serviciosService.Selector()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(response => this.servicios = response);
 
     this.miscService.ObtenerEmpresas()
       .pipe(takeUntil(this.destroy$))
@@ -209,9 +264,11 @@ export class NotaCreditoXComponent {
     this.clienteSeleccionado = undefined;
     this.productosFactura = [];
     this.productoSeleccionado = new Producto();
+    this.serviciosFactura = [];
     this.sinProductos = false;
     this.formCliente.reset();
     this.formProductos.reset();
+    this.formServicios.reset();
     this.formSinProductos.reset();
   }
 
@@ -489,6 +546,54 @@ export class NotaCreditoXComponent {
   }
   //#endregion
 
+  //#region SERVICIOS
+  FiltrarServicios(event: any) {
+    const query = (event.query ?? '').toLowerCase();
+    this.serviciosFiltrado = this.servicios.filter(s => {
+      const nombre = (s.descripcion ?? '').toLowerCase();
+      const codigo = (s.codigo ?? '').toLowerCase();
+      return nombre.includes(query) || codigo.includes(query);
+    });
+  }
+
+  AgregarServicio(): void {
+    const seleccionado = this.formServicios.get('servicio')?.value;
+    if (!seleccionado?.id) return;
+
+    const nuevoServicio = new ServiciosFactura();
+    nuevoServicio.idServicio = seleccionado.id;
+    nuevoServicio.codServicio = seleccionado.codigo;
+    nuevoServicio.nomServicio = seleccionado.descripcion;
+    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value || 1;
+    nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value ?? '');
+    if (nuevoServicio.unitario === 0) {
+      nuevoServicio.unitario = seleccionado.sugerido;
+    }
+    nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
+    nuevoServicio.topeDescuento = seleccionado.topeDescuento;
+
+    // Reasignar referencia: p-table no detecta la fila nueva si se muta el array
+    // in-place (mismo problema que en addmod-ventas, ver AgregarProducto ahí).
+    this.serviciosFactura = [...this.serviciosFactura, nuevoServicio];
+    this.formServicios.reset();
+  }
+
+  EliminarServicio(event: Event, indice: number): void {
+    this.confirmationService.confirm({
+      key: 'confirmarNC',
+      header: 'Confirmación',
+      message: '¿Quitar el servicio?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectButtonProps: { severity: 'secondary', outlined: true },
+      accept: () => {
+        this.serviciosFactura = this.serviciosFactura.filter((_, i) => i !== indice);
+      },
+    });
+  }
+  //#endregion
+
   //#region GUARDAR
   Guardar(): void {
     if (!this.clienteSeleccionado) {
@@ -509,8 +614,8 @@ export class NotaCreditoXComponent {
         this.Notificaciones.Warn("Seleccioná un motivo.");
         return;
       }
-    } else if (this.productosFactura.length === 0) {
-      this.Notificaciones.Warn("Cargá al menos un producto.");
+    } else if (this.productosFactura.length === 0 && this.serviciosFactura.length === 0) {
+      this.Notificaciones.Warn("Cargá al menos un producto o servicio.");
       return;
     }
 
@@ -521,7 +626,7 @@ export class NotaCreditoXComponent {
 
     const mensaje = this.sinProductos
       ? `Se va a generar un saldo a favor de $${this.formatoMoneda(this.total)} para ${this.clienteSeleccionado!.nombre} (${this.formSinProductos.get('motivo')?.value}). No se mueve stock. ¿Confirmar?`
-      : `Se va a revertir el stock de los ${this.totalUnidades} producto(s) cargados y se va a generar un saldo a favor de $${this.formatoMoneda(this.total)} para ${this.clienteSeleccionado!.nombre}. ¿Confirmar?`;
+      : this.MensajeConfirmacion();
 
     this.confirmationService.confirm({
       key: 'confirmarNC',
@@ -568,11 +673,13 @@ export class NotaCreditoXComponent {
       // Sin productos reales: no hay nada que devolver a stock (por eso
       // productos=[] - Agregar() en el backend simplemente no itera nada), y el
       // motivo elegido queda como observación de la venta (ver migración
-      // 20260719120000_add_observacion_ventas).
+      // 20260719120000_add_observacion_ventas). Tampoco hay servicios en este modo.
       nuevaVenta.productos = [];
+      nuevaVenta.servicios = [];
       nuevaVenta.observacion = this.formSinProductos.get('motivo')?.value;
     } else {
       nuevaVenta.productos = this.productosFactura;
+      nuevaVenta.servicios = this.serviciosFactura;
     }
 
     // Sin pagos: no hay venta de origen de la que prorratear (ver

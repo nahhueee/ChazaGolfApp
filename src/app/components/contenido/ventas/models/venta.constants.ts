@@ -91,6 +91,32 @@ export const ID_PROCESO = {
 export type IdProceso = ValueOf<typeof ID_PROCESO>;
 
 /**
+ * Origen del `idProducto` de cada línea de venta (columna `ventas_productos.tipoItem`).
+ * Se persiste en BD, no cambiar los valores sin migración. Espejo de TipoItemVenta
+ * en el backend (ventaEstados.ts).
+ *
+ * `idProducto` es una FK polimórfica: puede apuntar a `productos` (catálogo real) o a
+ * `productos_presupuesto` (ítems libres). Antes se adivinaba mirando el proceso de la
+ * venta, heurística que se rompía justo al facturar un Presupuesto (la venta deja de
+ * ser presupuesto pero las líneas siguen apuntando a la otra tabla).
+ *
+ * Un ítem PRESUPUESTO no mueve stock, no tiene talles ni color, y NO entra en el
+ * descuento general de la venta (decisión de negocio, ago-2026: el precio ya viene
+ * pactado a mano en el presupuesto, aplicarle otro descuento encima sería doble).
+ */
+export const TIPO_ITEM = {
+  CATALOGO: 'CATALOGO',
+  PRESUPUESTO: 'PRESUPUESTO',
+} as const;
+
+export type TipoItem = ValueOf<typeof TIPO_ITEM>;
+
+/** true si la línea NO es del catálogo real (sin stock, sin talles, sin descuento). */
+export function esItemNoCatalogado(tipoItem?: string | null): boolean {
+  return tipoItem === TIPO_ITEM.PRESUPUESTO;
+}
+
+/**
  * IDs internos de condiciones de pago.
  */
 export const ID_CONDICION_PAGO = {
@@ -233,10 +259,11 @@ export const ESTADO_VENTA = {
   ASOCIADO: 'Asociado',
   ASOCIADA: 'Asociada',
 
-  // Estado de cierre exclusivo del Presupuesto: a diferencia de Pedido/Nota
-  // de Empaque, el Presupuesto no tiene un "Facturado" propio (no es un
-  // documento que se facture). Una vez usado para armar un Pedido/Nota, o
-  // facturado directo, queda en RELACIONADO y no vuelve a aparecer para elegir.
+  // Estado "en uso" del Presupuesto cuando se usó para armar un Pedido/Nota de
+  // Empaque (circuito abierto en otro documento, todavía no hay comprobante ni
+  // cobro). Si se factura directo, pasa a FACTURADO/A en vez de quedar acá (ver
+  // RELACION_CIERRE en el backend, ventaEstados.ts) - ago-2026. En los dos casos
+  // no vuelve a aparecer para elegir (ver ESTADOS_ASOCIADO más abajo).
   RELACIONADO: 'Relacionado',
 
   PENDIENTE: 'Pendiente',

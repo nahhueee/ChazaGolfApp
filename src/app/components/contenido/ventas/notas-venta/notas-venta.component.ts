@@ -19,7 +19,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
-import { esMayoristaConListaPropia, TALLES_ESTANDAR } from '../models/venta.constants';
+import { esMayoristaConListaPropia, esItemNoCatalogado, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -193,6 +193,13 @@ export class NotasVentaComponent {
     }
   }
 
+  // true si el producto es un ítem de presupuesto (sin talles, sin color, sin
+  // stock) - ver TIPO_ITEM/esItemNoCatalogado. Usado en el template para mostrar
+  // un único input de cantidad en vez del desglose por talle.
+  EsItemNoCatalogado(producto: any): boolean {
+    return esItemNoCatalogado(producto.tipoItem);
+  }
+
   ActualizarCantidad(producto: any, field: string, event: any) {
     const input = event.target as HTMLInputElement;
     const value = Number(input.value) || 0;
@@ -220,6 +227,35 @@ export class NotasVentaComponent {
     producto.total = producto.cantidad * (producto.precioMostrar ?? producto.unitario);
 
     // Prorratea el descuento a la cantidad efectivamente devuelta, no a la original.
+    producto.importeDescuento = producto.total * ((producto.descuentoAplicado ?? 0) / 100);
+    producto.totalMostrar = producto.total - producto.importeDescuento;
+
+    this.CalcularTotalGeneral();
+  }
+
+  // Análogo a ActualizarCantidad/RecalcularProducto, pero para ítems de presupuesto:
+  // no tienen talles, así que la cantidad se edita directo (un solo input) en vez de
+  // sumar t1..t10, y el tope es cantidadOriginal en vez de stockInicial (mismo
+  // patrón que ActualizarCantidadServicio/RecalcularServicio, ver ahí abajo).
+  ActualizarCantidadProducto(producto: any, event: any) {
+    const input = event.target as HTMLInputElement;
+    const value = Number(input.value) || 0;
+
+    const cantidadDisponible = Number(producto.cantidadOriginal) || 0;
+    if (value > cantidadDisponible) {
+      this.Notificaciones.Warn(
+        `La cantidad ingresada supera la cantidad original (${cantidadDisponible}).`
+      );
+      input.value = producto.cantidad;
+      return;
+    }
+
+    producto.cantidad = value;
+    this.RecalcularProductoPresupuesto(producto);
+  }
+
+  private RecalcularProductoPresupuesto(producto: any) {
+    producto.total = producto.cantidad * (producto.precioMostrar ?? producto.unitario);
     producto.importeDescuento = producto.total * ((producto.descuentoAplicado ?? 0) / 100);
     producto.totalMostrar = producto.total - producto.importeDescuento;
 

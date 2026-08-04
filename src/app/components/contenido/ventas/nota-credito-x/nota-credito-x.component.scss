@@ -154,6 +154,28 @@
   }
 }
 
+/*#region SERVICIOS*/
+.formServicio{
+  margin-bottom: 20px;
+
+  .horizontal{
+    display: flex;
+    gap: 20px;
+
+    p-floatlabel{
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+
+.acciones{
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+/*#endregion*/
+
 .color-cell{
   display: flex;
   align-items: center;

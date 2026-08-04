@@ -101,28 +101,54 @@
                             {{ producto.color }}
                         </div>
                     </td>
-                    <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']" 
-                        [pEditableColumn]="producto[t]" 
-                        [pEditableColumnField]="t">
-                        <p-cellEditor>
-                        <ng-template pTemplate="input">
-                            <input 
-                            pInputText 
-                            id="editable"
-                            type="number" 
-                            [value]="producto[t]"
-                            [disabled]="!EstaSeleccionado(producto)"
-                            (keydown.enter)="ActualizarCantidad(producto, t, $event)"
-                            (keydown.tab)="ActualizarCantidad(producto, t, $event)"
-                            (focus)="SelectContent($event)"
-                            style="max-width: 50px;" />
-                        </ng-template>
-                        <ng-template pTemplate="output">
-                            {{ producto[t] }}
-                        </ng-template>
-                        </p-cellEditor>
-                    </td>
-                    
+                    @if(EsItemNoCatalogado(producto)){
+                        <!-- Ítem de presupuesto: sin talles, un único input de cantidad
+                             (ver ActualizarCantidadProducto) en vez del desglose t1..t10. -->
+                        <td [attr.colspan]="talles.length"
+                            [pEditableColumn]="producto.cantidad"
+                            pEditableColumnField="cantidad">
+                            <p-cellEditor>
+                            <ng-template pTemplate="input">
+                                <input
+                                pInputText
+                                id="editable"
+                                type="number"
+                                [value]="producto.cantidad"
+                                [disabled]="!EstaSeleccionado(producto)"
+                                (keydown.enter)="ActualizarCantidadProducto(producto, $event)"
+                                (keydown.tab)="ActualizarCantidadProducto(producto, $event)"
+                                (focus)="SelectContent($event)"
+                                style="max-width: 60px;" />
+                            </ng-template>
+                            <ng-template pTemplate="output">
+                                {{ producto.cantidad }}
+                            </ng-template>
+                            </p-cellEditor>
+                        </td>
+                    } @else {
+                        <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']"
+                            [pEditableColumn]="producto[t]"
+                            [pEditableColumnField]="t">
+                            <p-cellEditor>
+                            <ng-template pTemplate="input">
+                                <input
+                                pInputText
+                                id="editable"
+                                type="number"
+                                [value]="producto[t]"
+                                [disabled]="!EstaSeleccionado(producto)"
+                                (keydown.enter)="ActualizarCantidad(producto, t, $event)"
+                                (keydown.tab)="ActualizarCantidad(producto, t, $event)"
+                                (focus)="SelectContent($event)"
+                                style="max-width: 50px;" />
+                            </ng-template>
+                            <ng-template pTemplate="output">
+                                {{ producto[t] }}
+                            </ng-template>
+                            </p-cellEditor>
+                        </td>
+                    }
+
                     <td>{{ producto.cantidad }}</td>
                     <td>{{ producto.precioMostrar | decimalFormat }}</td>
                     <td>{{ producto.descuentoAplicado ?? 0 | decimalFormat }}%</td>

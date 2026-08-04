@@ -33,7 +33,7 @@ import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { esMayoristaConListaPropia, puedeDarseDeBaja } from '../models/venta.constants';
+import { esMayoristaConListaPropia, esItemNoCatalogado, puedeDarseDeBaja } from '../models/venta.constants';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -395,10 +395,17 @@ export class ListadoVentasComponent {
     this.ventaSeleccionada.productos.forEach(producto => {
       this.calcularPrecioItem(producto, esTipoA, esMayorista);
 
-      producto.stockInicial = Object.fromEntries(
-        Object.entries(producto)
-          .filter(([key]) => /^t\d+$/.test(key))
-      );
+      if (esItemNoCatalogado(producto.tipoItem)) {
+        // Ítem de presupuesto: no tiene talles, así que el tope de cantidad para
+        // la NC se guarda en cantidadOriginal (igual que en servicios) en vez de
+        // stockInicial, que quedaría vacío (sin claves t1..t10).
+        producto.cantidadOriginal = producto.cantidad;
+      } else {
+        producto.stockInicial = Object.fromEntries(
+          Object.entries(producto)
+            .filter(([key]) => /^t\d+$/.test(key))
+        );
+      }
     });
 
     // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar).

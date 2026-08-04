@@ -162,7 +162,7 @@
         <h3>Productos</h3>
 
         @if(ProcesoControl){
-            @if(!soloLecturaPorEdicion){
+            @if(!itemsSoloLectura){
             <form [formGroup]="formProductos" class="formProducto" autocomplete="off" (ngSubmit)="AgregarProducto()">
                 <div class="izq">
                     <div class="campos">
@@ -275,9 +275,9 @@
 
                             <!-- Precio -->
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="precio" type="text" 
-                                [imask]="decimal_mask" 
-                                [placeholder]="ProductoControl.sugerido != undefined ? 'Precio Sugerido: $' + ProductoControl.sugerido : 'Precio Sugerido:'"/>
+                                <input pInputText formControlName="precio" type="text"
+                                [imask]="decimal_mask"
+                                [placeholder]="ProductoControl.sugerido != undefined ? 'Precio Sugerido: $' + (ProductoControl.sugerido | decimalFormat) : 'Precio Sugerido:'"/>
                                 <label>Precio</label>
                             </p-floatlabel>
                         </div>
@@ -316,7 +316,7 @@
                         <th>Cant.</th>
                         <th>Precio</th>
                         <th>Total</th>
-                        @if(!soloLecturaPorEdicion){
+                        @if(!itemsSoloLectura){
                             <th>Quitar</th>
                         }
                         </tr>
@@ -332,7 +332,7 @@
                         <td></td>
                         <td></td>
                         <td></td>
-                        @if(!soloLecturaPorEdicion){
+                        @if(!itemsSoloLectura){
                             <td></td>
                         }
                     </tr>
@@ -360,9 +360,9 @@
                                 }
                             </td>
                             <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']"
-                                [pEditableColumn]="soloLecturaPorEdicion ? null : producto[t]"
+                                [pEditableColumn]="itemsSoloLectura ? null : producto[t]"
                                 [pEditableColumnField]="t">
-                                <ng-container *ngIf="!soloLecturaPorEdicion; else soloLecturaTalle">
+                                <ng-container *ngIf="!itemsSoloLectura; else soloLecturaTalle">
                                 <p-cellEditor>
                                 <ng-template pTemplate="input">
                                     <input
@@ -387,10 +387,10 @@
 
                         }
                         
-                        <td [pEditableColumn]="(esPresupuesto && !soloLecturaPorEdicion) ? producto.unitario : null"
+                        <td [pEditableColumn]="(esPresupuesto && !itemsSoloLectura) ? producto.unitario : null"
                             pEditableColumnField="cantidad">
 
-                            <ng-container *ngIf="esPresupuesto && !soloLecturaPorEdicion; else soloLecturaCant">
+                            <ng-container *ngIf="esPresupuesto && !itemsSoloLectura; else soloLecturaCant">
                                 <p-cellEditor>
 
                                     <ng-template pTemplate="input">
@@ -420,10 +420,10 @@
                             </ng-template>
                         </td>
 
-                        <td [pEditableColumn]="(permiteEditarPrecio && !soloLecturaPorEdicion) ? producto.unitario : null"
+                        <td [pEditableColumn]="(permiteEditarPrecio && !itemsSoloLectura) ? producto.unitario : null"
                             pEditableColumnField="unitario">
 
-                            <ng-container *ngIf="permiteEditarPrecio && !soloLecturaPorEdicion; else soloLecturaPrecio">
+                            <ng-container *ngIf="permiteEditarPrecio && !itemsSoloLectura; else soloLecturaPrecio">
                                 <p-cellEditor>
 
                                     <ng-template pTemplate="input">
@@ -455,7 +455,7 @@
                         </td>
 
                         <td>{{ producto.total | decimalFormat }}</td>
-                        @if(!soloLecturaPorEdicion){
+                        @if(!itemsSoloLectura){
                             <td class="acciones-tabla">
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
                             </td>
@@ -474,7 +474,7 @@
                             <td><strong>{{ totalUnidadesProductos }}</strong></td>
                             <td></td>
                             <td></td>
-                            @if(!soloLecturaPorEdicion){
+                            @if(!itemsSoloLectura){
                                 <td></td>
                             }
                         </tr>
@@ -496,7 +496,7 @@
     <div class="seccion">
         <h3>Servicios</h3>
 
-        @if(!soloLecturaPorEdicion){
+        @if(!itemsSoloLectura){
         <form [formGroup]="formServicios" class="formServicio" autocomplete="off" (keyup.enter)='AgregarServicio()'>
             <div class="horizontal">
                 <!-- Codigo - Nombre -->
@@ -526,7 +526,7 @@
 
                 <!-- Precio -->
                 <p-floatlabel variant="in">
-                    <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + ServicioControl.sugerido : 'Precio Sugerido:'"/>
+                    <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + (ServicioControl.sugerido | decimalFormat) : 'Precio Sugerido:'"/>
                     <label>Precio</label>
                 </p-floatlabel>
             </div>
@@ -544,7 +544,7 @@
                     <th>Cant.</th>
                     <th>Precio</th>
                     <th>Total</th>
-                    @if(!soloLecturaPorEdicion){
+                    @if(!itemsSoloLectura){
                         <th>Quitar</th>
                     }
                 </tr>
@@ -556,7 +556,7 @@
                     <td>{{ servicio.cantidad }}</td>
                     <td>{{ servicio.unitario | decimalFormat}}</td>
                     <td>{{ servicio.total | decimalFormat }}</td>
-                    @if(!soloLecturaPorEdicion){
+                    @if(!itemsSoloLectura){
                         <td class="acciones-tabla">
                             <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
                         </td>
@@ -571,7 +571,7 @@
                         <td><strong>{{ totalUnidadesServicios }}</strong></td>
                         <td></td>
                         <td></td>
-                        @if(!soloLecturaPorEdicion){
+                        @if(!itemsSoloLectura){
                             <td></td>
                         }
                     </tr>
