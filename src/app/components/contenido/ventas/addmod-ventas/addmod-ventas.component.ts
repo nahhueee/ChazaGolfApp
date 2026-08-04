@@ -576,6 +576,16 @@ export class AddModVentasComponent {
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
 
+    // Bug real (ago-2026): estos dos campos no se reseteaban acá. Al reutilizar
+    // la misma instancia del componente para "nueva venta" sin recargar la
+    // página (ver switchMap de paramMap/queryParams en ngAfterViewInit), el
+    // nroRelacionado/tipoRelacionado de la venta relacionada anterior quedaba
+    // pegado y se colaba en la siguiente venta aunque el operador nunca haya
+    // tocado el selector de relación. Ver diagnóstico de Facturas mal
+    // relacionadas a Pedidos de otro cliente.
+    this.nroRelacionado = 0;
+    this.tipoRelacionado = "";
+
     this.ArmarFormularios();
     this.CalcularTotalGeneral();
   }
