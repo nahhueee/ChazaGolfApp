@@ -193,6 +193,9 @@ import { TallesProducto } from "./Producto";
     idNotaVenta:number = 0;
     nroProceso:number = 0;
     total:number = 0;
+    // 3/8/13 = fiscal (NC A/B/C), 100 = interna/X. Ver TipoComprobante en
+    // ObjFacturar.ts y tieneNotaFiscal/tieneNotaInterna en venta.constants.ts.
+    idTipoComprobante:number = 0;
   }
   
   export class VentasClienteCuenta{

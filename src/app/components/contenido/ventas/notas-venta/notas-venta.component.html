@@ -62,6 +62,34 @@
             </div>
         </div>
 
+        @if(hayNotasExistentes){
+            <div class="alerta alerta-warn">
+                <span class="alerta-icon">⚠️</span>
+                <div class="alerta-texto">
+                    Ya existe{{ venta.notas!.length > 1 ? 'n' : '' }} {{ venta.notas!.length }} nota{{ venta.notas!.length > 1 ? 's' : '' }} de crédito sobre esta venta
+                    ({{ yaTieneNotaFiscal ? 'fiscal' : '' }}{{ yaTieneNotaFiscal && yaTieneNotaInterna ? ' + ' : '' }}{{ yaTieneNotaInterna ? 'interna' : '' }}).
+                    Podés emitir el otro tipo, pero no repetir el mismo.
+                </div>
+            </div>
+        }
+
+        @if(puedeElegirFiscal){
+            <div class="tipo-nota">
+                <span>Tipo de Nota de Crédito:</span>
+                <p-selectbutton
+                    [options]="opcionesTipoNota"
+                    [(ngModel)]="tipoNotaElegida"
+                    [ngModelOptions]="{standalone: true}"
+                    optionLabel="label"
+                    optionValue="value"
+                    optionDisabled="disabled"
+                />
+                @if(tipoNotaElegida === 'INTERNA'){
+                    <span class="aclaracion">No pide CAE a ARCA ni modifica la factura original.</span>
+                }
+            </div>
+        }
+
         <div class="alerta alerta-warn">
             <span class="alerta-icon">⚠️</span>
             <div class="alerta-texto">

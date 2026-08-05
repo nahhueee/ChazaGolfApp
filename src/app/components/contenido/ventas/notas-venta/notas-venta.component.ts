@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { VentasService } from '../../../../services/ventas.service';
 import { MiscService } from '../../../../services/misc.service';
@@ -19,7 +20,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
-import { esMayoristaConListaPropia, esItemNoCatalogado, TALLES_ESTANDAR } from '../models/venta.constants';
+import { esMayoristaConListaPropia, esItemNoCatalogado, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -34,6 +35,7 @@ import { esMayoristaConListaPropia, esItemNoCatalogado, TALLES_ESTANDAR } from '
     TableModule,
     ButtonModule,
     SelectModule,
+    SelectButtonModule,
     ConfirmDialogModule,
     FacturarVentaComponent
   ],
@@ -41,9 +43,13 @@ import { esMayoristaConListaPropia, esItemNoCatalogado, TALLES_ESTANDAR } from '
   styleUrl: './notas-venta.component.scss',
 })
 export class NotasVentaComponent {
-  @Input() visible = false; 
-  @Input() tipo:string = ""; 
+  @Input() visible = false;
+  @Input() tipo:string = "";
   @Input() venta: Venta = new Venta();
+  // Elegido desde el popover de listado-ventas (ver ElegirTipoNotaCredito ahí).
+  // Se usa como valor inicial de tipoNotaElegida; si no llega nada, sigue
+  // arrancando en Fiscal como antes.
+  @Input() tipoNotaPreseleccionada: TipoNotaCredito = 'FISCAL';
   @Output() cerrar = new EventEmitter<boolean>();
 
   objFacturar:ObjFacturar = new ObjFacturar();
@@ -74,6 +80,48 @@ export class NotasVentaComponent {
   puntos: PuntoVenta[] = [];
   puntoSeleccionado?: PuntoVenta;
 
+  // Fiscal (pide CAE de NC A/B a ARCA) vs Interna/NC X (no pasa por ARCA, no
+  // anula ni modifica la venta original - mismo comportamiento que ya usaba
+  // esta pantalla cuando la venta origen era una Cotización, ver
+  // armarObjetoVenta). Pedido del cliente (ago-2026): se puede emitir una de
+  // cada tipo sobre la misma venta, pero no repetir el mismo tipo dos veces
+  // (ver yaTieneNotaFiscal/yaTieneNotaInterna y el guard en Confirmar()).
+  tipoNotaElegida: TipoNotaCredito = 'FISCAL';
+
+  // Opciones del selector con el disable ya resuelto por tipo (optionDisabled
+  // en el template) - evita ofrecer una opción que Confirmar() va a rechazar.
+  get opcionesTipoNota() {
+    return [
+      { label: 'Fiscal', value: 'FISCAL', disabled: this.yaTieneNotaFiscal },
+      { label: 'Interna (NC X)', value: 'INTERNA', disabled: this.yaTieneNotaInterna },
+    ];
+  }
+
+  // Solo se puede pedir CAE de NC A/B si la venta origen tiene un comprobante
+  // fiscal real que asociar (Factura A o B). Si no (Cotización, Ticket X,
+  // etc.), la única opción es la interna - no se muestra el selector.
+  get puedeElegirFiscal(): boolean {
+    return this.venta.idTipoComprobante == 1 || this.venta.idTipoComprobante == 6;
+  }
+
+  get emiteFiscal(): boolean {
+    return this.puedeElegirFiscal && this.tipoNotaElegida === 'FISCAL';
+  }
+
+  // venta.notas ya viene cargado desde el backend (ObtenerNotasVenta), con el
+  // idTipoComprobante de cada NC previa - permite distinguir fiscal de interna.
+  get yaTieneNotaFiscal(): boolean {
+    return tieneNotaFiscal(this.venta.notas);
+  }
+
+  get yaTieneNotaInterna(): boolean {
+    return tieneNotaInterna(this.venta.notas);
+  }
+
+  get hayNotasExistentes(): boolean {
+    return (this.venta.notas?.length ?? 0) > 0;
+  }
+
   constructor(
     private Notificaciones: NotificacionesService,
     private ventasService: VentasService,
@@ -85,14 +133,18 @@ export class NotasVentaComponent {
     if (changes['visible']?.currentValue === true) {
       this.productosSeleccionados = [];
       this.serviciosSeleccionados = [];
+      this.tipoNotaElegida = this.tipoNotaPreseleccionada;
       this.CalcularTotalGeneral();
 
       this.miscService.ObtenerPuntosVenta()
         .pipe(takeUntil(this.destroy$))
         .subscribe(response => {
           this.puntos = response;
-          // Default "Otros" (id 7), mismo valor que se usaba hardcodeado antes.
-          this.puntoSeleccionado = this.puntos.find(p => p.id === 7);
+          // Hereda el punto de venta de la venta origen; si no matchea ninguno
+          // (venta vieja sin idPunto, etc.) cae a "Otros" (id 7) como antes.
+          // Sigue siendo editable desde el selector.
+          this.puntoSeleccionado = this.puntos.find(p => p.id === this.venta.idPunto)
+            ?? this.puntos.find(p => p.id === 7);
         });
     }
   }
@@ -298,6 +350,18 @@ export class NotasVentaComponent {
       return;
     }
 
+    // Bloqueo real (no solo cosmético en el selector): no repetir el mismo
+    // tipo de NC sobre la misma venta. El otro tipo sí está permitido -
+    // pedido del cliente, ago-2026.
+    if (this.emiteFiscal && this.yaTieneNotaFiscal) {
+      this.Notificaciones.Warn("Ya existe una Nota de Crédito fiscal sobre esta venta.");
+      return;
+    }
+    if (!this.emiteFiscal && this.yaTieneNotaInterna) {
+      this.Notificaciones.Warn("Ya existe una Nota de Crédito interna (X) sobre esta venta.");
+      return;
+    }
+
     this.ventasService.ObtenerProximoNroProceso(3)
       .subscribe(response => {
         this.proximoNroProceso = response;
@@ -315,7 +379,11 @@ export class NotasVentaComponent {
     if(factura && factura!=undefined){
       if(factura.estado == "Aprobado" || factura.estado == "Cotizacion"){
 
-        if(this.venta.proceso != "COTIZACION")
+        // Solo se persisten datos de comprobante (CAE/ticket) cuando la NC
+        // efectivamente pidió uno real a ARCA. Una NC interna (X) - elegida a
+        // mano, o porque la venta origen no tiene comprobante fiscal - nunca
+        // tiene CAE que guardar (ver armarObjetoVenta).
+        if(this.emiteFiscal)
           this.nuevaVenta.factura = factura;
 
         // idProceso ya viene seteado a NOTA_CREDITO (ver armarObjetoVenta): el backend
@@ -362,16 +430,20 @@ export class NotasVentaComponent {
     this.nuevaVenta.idEmpresa = this.venta.idEmpresa;
     this.nuevaVenta.total = this.totalGeneral;
 
-    if(this.venta.idTipoComprobante == 6) {//FACTURA B
+    if(this.emiteFiscal && this.venta.idTipoComprobante == 6) {//FACTURA B
       this.nuevaVenta.idTipoComprobante = 8;
       this.nuevaVenta.estado = "Facturada";
     }
-    else if(this.venta.idTipoComprobante == 1) {//FACTURA A
+    else if(this.emiteFiscal && this.venta.idTipoComprobante == 1) {//FACTURA A
       this.nuevaVenta.idTipoComprobante = 3;
       this.nuevaVenta.estado = "Facturada";
     }
     else{
-      this.nuevaVenta.idTipoComprobante = 100; //COTIZACION
+      // NC interna (X): elegida a mano, o la venta origen no tiene comprobante
+      // fiscal para asociar (Cotización, Ticket X, etc.). facturar-venta.component
+      // ya trata este id igual que una Cotización - no pide CAE a ARCA (ver
+      // Facturar() ahí), así que no hace falta ninguna otra rama acá.
+      this.nuevaVenta.idTipoComprobante = 100; //NC X
       this.nuevaVenta.estado = "Finalizada";
     }
 

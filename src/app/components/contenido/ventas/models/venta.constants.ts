@@ -1,3 +1,8 @@
+// Alias: este archivo ya exporta su propio tipo/const `TipoComprobante` (ids de
+// comprobante fiscal internos, distinto de este enum). Se importa con otro
+// nombre para no chocar - ver tieneNotaFiscal/tieneNotaInterna más abajo.
+import { TipoComprobante as TipoComprobanteAfip } from '../../../../models/ObjFacturar';
+
 /**
  * Helper genérico:
  * Permite obtener un union type a partir de un objeto const.
@@ -114,6 +119,34 @@ export type TipoItem = ValueOf<typeof TIPO_ITEM>;
 /** true si la línea NO es del catálogo real (sin stock, sin talles, sin descuento). */
 export function esItemNoCatalogado(tipoItem?: string | null): boolean {
   return tipoItem === TIPO_ITEM.PRESUPUESTO;
+}
+
+/**
+ * Fiscal (pide CAE a ARCA) vs Interna/NC X (no pasa por ARCA, no anula ni
+ * modifica la venta original). Ver notas-venta.component.ts.
+ */
+export type TipoNotaCredito = 'FISCAL' | 'INTERNA';
+
+const COMPROBANTES_NC_FISCAL = new Set<number>([
+  TipoComprobanteAfip.NC_A,
+  TipoComprobanteAfip.NC_B,
+  TipoComprobanteAfip.NC_C,
+]);
+
+/**
+ * true si entre las NC ya emitidas sobre una venta (venta.notas, ver
+ * ObtenerNotasVenta en el backend) hay alguna fiscal (NC A/B/C). Se usa para
+ * bloquear una segunda NC fiscal sobre la misma venta - la interna sí se
+ * puede seguir emitiendo (ago-2026, pedido del cliente: puede querer las dos,
+ * solo no repetir el mismo tipo).
+ */
+export function tieneNotaFiscal(notas?: Array<{ idTipoComprobante?: number }>): boolean {
+  return !!notas?.some(n => COMPROBANTES_NC_FISCAL.has(n.idTipoComprobante!));
+}
+
+/** Análogo a tieneNotaFiscal, para la NC interna (X). */
+export function tieneNotaInterna(notas?: Array<{ idTipoComprobante?: number }>): boolean {
+  return !!notas?.some(n => n.idTipoComprobante === TipoComprobanteAfip.NC_X);
 }
 
 /**
