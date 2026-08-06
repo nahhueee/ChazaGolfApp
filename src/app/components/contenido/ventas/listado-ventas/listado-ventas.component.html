@@ -119,12 +119,12 @@
 
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
 
-                            @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada") 
+                            @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada")
                             && venta.proceso != "NOTA DE CREDITO" && venta.proceso != "NOTA DE DEBITO"){
-                                <p-button severity="primary" styleClass="p-button-sm" 
+                                <p-button severity="primary" styleClass="p-button-sm"
                                 [rounded]="true" [outlined]="true" icon="pi pi-file-edit"
-                                [disabled]="venta.notas && venta.notas.length > 0"
-                                (onClick)="EmitirNotaCredito(venta)" pTooltip="Emitir Nota de Crédito" tooltipPosition="bottom"/>
+                                (onClick)="ElegirTipoNotaCredito($event, venta)"
+                                pTooltip="Emitir Nota de Crédito" tooltipPosition="bottom"/>
                             }
 
                             @if(tipo == "factura"){
@@ -146,7 +146,7 @@
 </div>
 
 <app-vista-previa  [(visible)]="detalleVisible" [venta]="ventaSeleccionada" [preciosNetos]="ItemsEnPreciosNetos()"></app-vista-previa>
-<app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota"></app-notas-venta>
+<app-notas-venta [visible]="notasVisible" (cerrar)="Actualizar($event)" [venta]="ventaSeleccionada" [tipo]="tipoNota" [tipoNotaPreseleccionada]="tipoNotaCreditoElegida"></app-notas-venta>
 <app-nota-credito-x [visible]="notaCreditoXVisible" (cerrar)="ActualizarNotaCreditoX($event)"></app-nota-credito-x>
 <app-nota-debito-x [visible]="notaDebitoXVisible" (cerrar)="ActualizarNotaDebitoX($event)"></app-nota-debito-x>
 
@@ -210,6 +210,34 @@
         severity="primary"
         styleClass="p-button-sm w-full"
         (click)="tipoNota = 'Débito'; notasVisible = true; notas.hide()">
+        </p-button>
+  </div>
+</p-popover>
+
+<!-- Elegir Fiscal vs Interna (X) para la Nota de Crédito - ver
+     ElegirTipoNotaCredito. Se deshabilita la opción ya emitida sobre esta
+     venta (no se puede repetir el mismo tipo); el guard real y definitivo
+     igual vive en notas-venta.component (Confirmar) - esto es solo UX. -->
+<p-popover #tipoNC>
+    <div class="opciones-notas">
+        <p-button
+        label="Nota de Crédito Fiscal"
+        severity="primary"
+        styleClass="p-button-sm w-full"
+        [disabled]="TieneNotaFiscal(ventaSeleccionada)"
+        [pTooltip]="TieneNotaFiscal(ventaSeleccionada) ? 'Ya se emitió una fiscal sobre esta venta' : ''"
+        tooltipPosition="left"
+        (onClick)="EmitirNotaCredito('FISCAL'); tipoNC.hide()">
+        </p-button>
+
+        <p-button
+        label="Nota de Crédito Interna (X)"
+        severity="secondary"
+        styleClass="p-button-sm w-full"
+        [disabled]="TieneNotaInterna(ventaSeleccionada)"
+        [pTooltip]="TieneNotaInterna(ventaSeleccionada) ? 'Ya se emitió una interna sobre esta venta' : ''"
+        tooltipPosition="left"
+        (onClick)="EmitirNotaCredito('INTERNA'); tipoNC.hide()">
         </p-button>
   </div>
 </p-popover>

@@ -33,7 +33,7 @@ import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { esMayoristaConListaPropia, puedeDarseDeBaja } from '../models/venta.constants';
+import { esMayoristaConListaPropia, esItemNoCatalogado, puedeDarseDeBaja, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito } from '../models/venta.constants';
 
 @Component({
   selector: 'app-listado-ventas.component',
@@ -70,6 +70,9 @@ export class ListadoVentasComponent {
   filtroActual!: FiltroVenta;
   tipo: 'factura' | 'pre' = 'factura';
   tipoNota: 'Crédito' | 'Débito' = 'Crédito';
+  // Elegido en el popover #tipoNC (ver ElegirTipoNotaCredito) - viaja como
+  // Input a app-notas-venta para preseleccionar el selector Fiscal/Interna.
+  tipoNotaCreditoElegida: TipoNotaCredito = 'FISCAL';
   primeraCarga = true;
   detalleVisible: boolean = false;
   notasVisible: boolean = false;
@@ -89,6 +92,7 @@ export class ListadoVentasComponent {
   procesos:ProcesoVenta[] = [];
   @ViewChild('op') op!: Popover;
   @ViewChild('notas') notas!: Popover;
+  @ViewChild('tipoNC') tipoNC!: Popover;
 
 
   constructor(
@@ -212,11 +216,27 @@ export class ListadoVentasComponent {
     this.detalleVisible = true;
   }
 
-  EmitirNotaCredito(venta:Venta){
-    this.tipoNota = 'Crédito'; 
+  // Abre el popover para elegir Fiscal/Interna (ver #tipoNC en el html). La
+  // venta se fija acá para que los botones del popover (TieneNotaFiscal/
+  // TieneNotaInterna) sepan sobre qué venta preguntar.
+  ElegirTipoNotaCredito(event: Event, venta: Venta) {
     this.ventaSeleccionada = venta;
+    this.tipoNC.toggle(event);
+  }
+
+  TieneNotaFiscal(venta: Venta): boolean {
+    return tieneNotaFiscal(venta.notas);
+  }
+
+  TieneNotaInterna(venta: Venta): boolean {
+    return tieneNotaInterna(venta.notas);
+  }
+
+  EmitirNotaCredito(tipo: TipoNotaCredito){
+    this.tipoNota = 'Crédito';
+    this.tipoNotaCreditoElegida = tipo;
     this.PrepararPrecios();
-    this.notasVisible = true; 
+    this.notasVisible = true;
   }
   Actualizar(actualiza){
     this.notasVisible = false;
@@ -395,10 +415,17 @@ export class ListadoVentasComponent {
     this.ventaSeleccionada.productos.forEach(producto => {
       this.calcularPrecioItem(producto, esTipoA, esMayorista);
 
-      producto.stockInicial = Object.fromEntries(
-        Object.entries(producto)
-          .filter(([key]) => /^t\d+$/.test(key))
-      );
+      if (esItemNoCatalogado(producto.tipoItem)) {
+        // Ítem de presupuesto: no tiene talles, así que el tope de cantidad para
+        // la NC se guarda en cantidadOriginal (igual que en servicios) en vez de
+        // stockInicial, que quedaría vacío (sin claves t1..t10).
+        producto.cantidadOriginal = producto.cantidad;
+      } else {
+        producto.stockInicial = Object.fromEntries(
+          Object.entries(producto)
+            .filter(([key]) => /^t\d+$/.test(key))
+        );
+      }
     });
 
     // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar).

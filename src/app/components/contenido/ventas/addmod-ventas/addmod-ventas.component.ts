@@ -64,6 +64,8 @@ import {
   TIPO_METODO_PAGO,
   TALLES_ESTANDAR,
   esMayoristaConListaPropia,
+  TIPO_ITEM,
+  esItemNoCatalogado,
 } from '../models/venta.constants';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
@@ -114,6 +116,14 @@ export class AddModVentasComponent {
   // true cuando se está facturando un Pedido relacionado (ver ConfirmarFacturacionRelacionado):
   // el cliente queda fijo al del pedido, no se puede cambiar. Se resetea en ReiniciarTodo().
   clienteBloqueadoPorRelacion: boolean = false;
+  // true cuando la venta se está armando a partir de un Presupuesto: los ítems son una
+  // copia fiel y no se pueden tocar (decisión de negocio, ago-2026 - el presupuesto se
+  // verifica ANTES de relacionarlo; si después se pudiera editar, esa verificación no
+  // valdría nada). Aplica a productos Y servicios.
+  // OJO: esto es solo la capa de UI. La validación real la hace el backend
+  // (ValidarFacturacionDePresupuesto en ventasRepository) - sin ella, un POST armado a
+  // mano se saltea todo esto.
+  itemsBloqueadosPorRelacion: boolean = false;
   talles = TALLES_ESTANDAR;
 
   decimal_mask: any;
@@ -410,6 +420,13 @@ export class AddModVentasComponent {
     // No aplica a tipo='pre' (Presupuesto/Pedido/Nota de Empaque), que sigue su flujo incremental actual.
     get soloLecturaPorEdicion(): boolean {return this.modificando && this.tipo === 'factura';}
 
+    // Los ítems (productos y servicios) no se pueden tocar. Dos motivos independientes:
+    // la venta ya está guardada, o se está facturando un Presupuesto y la factura tiene
+    // que ser una copia fiel. Se usa en los guards de agregar/eliminar/editar cantidad y
+    // en el template; NO reemplaza a soloLecturaPorEdicion, que además bloquea campos de
+    // cabecera (fecha, punto de venta) que acá sí siguen editables.
+    get itemsSoloLectura(): boolean {return this.soloLecturaPorEdicion || this.itemsBloqueadosPorRelacion;}
+
     // Opciones visibles en el combo de Proceso. NOTA DE CREDITO/DEBITO se excluyen porque no son
     // procesos que el usuario deba elegir a mano al crear una venta: la NC se genera desde
     // listado-ventas (EmitirNotaCredito -> notas-venta.component, idProceso=3 asignado por código)
@@ -575,6 +592,7 @@ export class AddModVentasComponent {
     this.pagosFactura = [];
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
+    this.itemsBloqueadosPorRelacion = false;
 
     // Bug real (ago-2026): estos dos campos no se reseteaban acá. Al reutilizar
     // la misma instancia del componente para "nueva venta" sin recargar la
@@ -640,7 +658,16 @@ export class AddModVentasComponent {
   }
 
   EliminarItem(event: Event, lista: 'productos' | 'servicios' | 'pagos', indice: number): void {
-    if (this.soloLecturaPorEdicion) {
+    // Los pagos NO se bloquean al facturar un presupuesto: lo inmutable son los ítems
+    // (qué se vende y a qué precio), no cómo lo paga el cliente.
+    if (lista !== 'pagos' && this.itemsSoloLectura) {
+      this.Notificaciones.Warn(this.itemsBloqueadosPorRelacion
+        ? "Los ítems vienen del presupuesto y no se pueden modificar. Si hay que cambiar algo, corregí el presupuesto antes de relacionarlo."
+        : "No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
+
+    if (lista === 'pagos' && this.soloLecturaPorEdicion) {
       this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
       return;
     }
@@ -745,12 +772,27 @@ export class AddModVentasComponent {
     };
   }
 
+  // Tope de descuento (%) efectivo de un ítem. Único lugar donde se resuelve, porque el
+  // mismo criterio hace falta en dos cálculos distintos (aplicarDescuentoAItems, que
+  // persiste el importe, y calcularSubtotales dentro de recalcularTotales, que arma los
+  // totales de pantalla) y desincronizarlos haría que el resumen no cierre contra lo
+  // guardado - bug ya visto en la Venta #114.
+  //
+  // Los ítems no catalogados van SIEMPRE a tope 0 (decisión de negocio, ago-2026): su
+  // precio ya se pactó a mano al armar el presupuesto, así que aplicarles el descuento
+  // general encima sería un doble descuento. Además `productos_presupuesto` no tiene
+  // columna topeDescuento, así que sin esto caían al `?? 100` (descuento pleno).
+  private TopeDescuentoDe(item: { topeDescuento?: number; tipoItem?: string }): number {
+    if (esItemNoCatalogado(item.tipoItem)) return 0;
+    return item.topeDescuento ?? 100;
+  }
+
   //Aplica descuentoAplicado (%) e importeDescuento ($) a cada ítem según su tope individual.
   //importeDescuento es el que consume vista-previa.component.ts para mostrar el descuento.
   private aplicarDescuentoAItems(): void {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
     [...this.productosFactura, ...this.serviciosFactura].forEach(item => {
-      item.descuentoAplicado = Math.min(descuentoUsuario, item.topeDescuento ?? 100);
+      item.descuentoAplicado = Math.min(descuentoUsuario, this.TopeDescuentoDe(item));
       item.importeDescuento  = (item.total ?? 0) * item.descuentoAplicado / 100;
     });
   }
@@ -769,12 +811,12 @@ export class AddModVentasComponent {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
 
     const calcularSubtotales = (
-    items: { total?: number; topeDescuento?: number }[]
+    items: { total?: number; topeDescuento?: number; tipoItem?: string }[]
     ): SubtotalAcumulado =>
-      (items ?? []).reduce<SubtotalAcumulado>(   
+      (items ?? []).reduce<SubtotalAcumulado>(
         (acc, item) => {
           const totalItem    = item.total || 0;
-          const descAplicado = Math.min(descuentoUsuario, item.topeDescuento ?? 100);
+          const descAplicado = Math.min(descuentoUsuario, this.TopeDescuentoDe(item));
           return {
             total:    acc.total    + totalItem,
             descuento: acc.descuento + (totalItem * descAplicado) / 100,
@@ -883,7 +925,7 @@ export class AddModVentasComponent {
     ) {
       if (!this.esPresupuesto) {
         this.productosFactura.forEach(element => {
-          if (element.precioEditadoManualmente) return;
+          if (this.NoRecalcularPrecio(element)) return;
           element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
           element.total = element.unitario! * element.cantidad!;
         });
@@ -944,7 +986,7 @@ export class AddModVentasComponent {
           if(!this.modificando){
             if(this.productosFactura.length > 0 && !this.esPresupuesto){
               this.productosFactura.forEach(element => {
-                if (element.precioEditadoManualmente) return;
+                if (this.NoRecalcularPrecio(element)) return;
                 element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
                 element.total = element.unitario! * element.cantidad!;
               });
@@ -980,7 +1022,7 @@ export class AddModVentasComponent {
 
         if (!this.modificando && this.productosFactura.length > 0 && !this.esPresupuesto) {
           this.productosFactura.forEach(element => {
-            if (element.precioEditadoManualmente) return;
+            if (this.NoRecalcularPrecio(element)) return;
             element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado!.idListaPrecio!);
             element.total    = element.unitario! * element.cantidad!;
           });
@@ -1023,6 +1065,23 @@ export class AddModVentasComponent {
   // terminan recalculando un precio que el vendedor ya había pactado a mano. Lo reconstruimos acá
   // comparando el precio final contra lo que la lista de precio del cliente daría hoy: si
   // difieren, es porque alguien lo editó, y no debe volver a recalcularse.
+  // Guard único de los 3 loops que recalculan precio por lista (CambioTipoComprobante,
+  // SeleccionarCliente, PrepararFacturacionCliente).
+  //
+  // Los dos motivos para NO recalcular:
+  //  1. Precio pactado a mano (precioEditadoManualmente) - motivo original.
+  //  2. Ítem no catalogado. Estos NUNCA tienen `precio` (el ancla de precio de lista):
+  //     AgregarProducto, rama PRESUPUESTO, solo carga `unitario`. Recalcularlos hacía
+  //     `calcularPrecioCliente(undefined, lista)` -> `undefined * multiplicador` -> NaN
+  //     en unitario, total y total general. El guard viejo era `!this.esPresupuesto`,
+  //     que mira el proceso ACTUAL: al facturar un presupuesto eso vale FACTURA, así que
+  //     no protegía nada. Tampoco lo salvaba precioEditadoManualmente, porque
+  //     MarcarPreciosEditados corta antes con `if (p.precio == null) return`.
+  //     La pregunta correcta es por línea, no por proceso.
+  private NoRecalcularPrecio(item: ProductosFactura): boolean {
+    return item.precioEditadoManualmente === true || esItemNoCatalogado(item.tipoItem);
+  }
+
   private MarcarPreciosEditados(productos: ProductosFactura[], idListaPrecio?: number) {
     (productos ?? []).forEach(p => {
       if (p.precio == null || idListaPrecio == null) return;
@@ -1248,7 +1307,14 @@ export class AddModVentasComponent {
           this.Notificaciones.Info("Se relacionará con la nota de empaque Nro: " + venta.nroProceso);
         }
         if(venta.idProceso == ID_PROCESO.PRESUPUESTO){
-          this.Notificaciones.Info("Se facturará el presupuesto Nro: " + venta.nroProceso);
+          // La factura es una conversión FIEL del presupuesto: se bloquean los ítems
+          // (productos y servicios). Si hay que cambiar algo, se corrige el presupuesto
+          // antes de relacionarlo. Solo Presupuesto: Pedido/Nota de Empaque siguen
+          // admitiendo ajuste al facturar (el precio de un Pedido se negocia, ver
+          // permiteEditarPrecio) y ese comportamiento no se toca.
+          this.itemsBloqueadosPorRelacion = true;
+          this.clienteBloqueadoPorRelacion = true;
+          this.Notificaciones.Info("Se facturará el presupuesto Nro: " + venta.nroProceso + ". Los ítems no se pueden modificar.");
         }
 
       },
@@ -1381,22 +1447,40 @@ export class AddModVentasComponent {
   async AgregarProducto() {
     if (this.tablaProductos) this.tablaProductos.editingCell = null;
 
-    if (this.soloLecturaPorEdicion) {
-      this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
+    if (this.itemsSoloLectura) {
+      this.Notificaciones.Warn(this.itemsBloqueadosPorRelacion
+        ? "Los ítems vienen del presupuesto y no se pueden modificar. Si hay que cambiar algo, corregí el presupuesto antes de relacionarlo."
+        : "No puedes editar los ítems de una venta ya guardada.");
       return;
     }
 
     if(this.ProcesoControl.id === ID_PROCESO.PRESUPUESTO){
       if (!this.productoSeleccionado) return;
+      // Un Presupuesto facturado directo ahora cierra en FACTURADO (antes caía en
+      // RELACIONADO, que esAsociado ya cubría). AgregarServicio y Guardar ya
+      // chequean esFacturado antes de esAsociado - acá faltaba, así que se podía
+      // seguir armando la grilla en pantalla de un presupuesto ya facturado (el
+      // guardado igual lo iba a rechazar en Guardar, pero recién ahí).
+      if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
+        this.Notificaciones.Warn("No puedes editar un presupuesto ya facturado.");
+        return;
+      }
       if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta)) {
         this.Notificaciones.Warn("No puedes editar un presupuesto en estado asociado.");
         return;
       }
 
-      const cantidad = this.formProductos.get('cantidad')?.value != '' ? this.formProductos.get('cantidad')?.value : 1;
-      const precio = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value);
+      const cantidad = this.formProductos.get('cantidad')?.value || 1;
+      const precio = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value ?? '');
       const nuevo = new ProductosFactura({
         idProducto: this.productoSeleccionado.id,
+        // Marca el origen en la línea misma. Sin esto, el idProducto (que apunta a
+        // productos_presupuesto) queda indistinguible de un id del catálogo real y, al
+        // facturar, el sistema lo resuelve contra la tabla equivocada. Ver TIPO_ITEM.
+        tipoItem: TIPO_ITEM.PRESUPUESTO,
+        // Snapshot del nombre: viaja al backend y se congela en la venta, así el
+        // comprobante no depende de que el ítem siga existiendo en el catálogo.
+        descripcion: this.productoSeleccionado.nombre,
         codProducto: this.productoSeleccionado.codigo,
         nomProducto: this.productoSeleccionado.nombre,
         cantidad: cantidad,
@@ -1410,6 +1494,9 @@ export class AddModVentasComponent {
       }
 
       this.productosFactura.push(nuevo);
+      // Reasignar referencia: p-table no detecta la fila nueva si se muta el array
+      // in-place (ver comentario en OrdenarProductosPorLineaTalle, mismo problema).
+      this.productosFactura = [...this.productosFactura];
     }
     else{
       if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
@@ -1521,7 +1608,9 @@ export class AddModVentasComponent {
     this.formProductos.reset();
     setTimeout(() => {
         if (this.tablaProductos) this.tablaProductos.editingCell = null;
-        this.inputCodigo.nativeElement.focus();
+        // inputCodigo no existe en el flujo de Presupuesto (el input de código de
+        // barras no se renderiza para ese proceso, ver template línea ~170).
+        if (this.inputCodigo) this.inputCodigo.nativeElement.focus();
     }, 0);
   }
 
@@ -1595,6 +1684,15 @@ export class AddModVentasComponent {
 
   ActualizarCantidad(producto: any, field: string, event: any) {
     const input = event.target as HTMLInputElement;
+
+    // Facturando un presupuesto las cantidades tampoco se tocan. Se revierte el valor
+    // en el input para que la grilla no quede mostrando algo distinto del modelo.
+    if (this.itemsBloqueadosPorRelacion) {
+      input.value = producto[field];
+      this.Notificaciones.Warn("Las cantidades vienen del presupuesto y no se pueden modificar.");
+      return;
+    }
+
     const value = Number(input.value) || 0;
 
     const talleReal = this.ObtenerTalleDesdeField(producto, field);
@@ -1706,15 +1804,17 @@ export class AddModVentasComponent {
   }
 
   AgregarServicio() {
-    if (this.soloLecturaPorEdicion) {
-      this.Notificaciones.Warn("No puedes editar los ítems de una venta ya guardada.");
+    if (this.itemsSoloLectura) {
+      this.Notificaciones.Warn(this.itemsBloqueadosPorRelacion
+        ? "Los servicios vienen del presupuesto y no se pueden modificar. Si hay que cambiar algo, corregí el presupuesto antes de relacionarlo."
+        : "No puedes editar los ítems de una venta ya guardada.");
       return;
     }
     if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
       this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
       return;
     }
-    if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta) || this.venta.idProceso === ID_PROCESO.PRESUPUESTO) {
+    if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta)) {
       this.Notificaciones.Warn("No puedes editar un presupuesto en estado asociado.");
       return;
     }
@@ -1844,7 +1944,7 @@ export class AddModVentasComponent {
         this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
         return;
       }
-      if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta) || this.venta.idProceso === ID_PROCESO.PRESUPUESTO) {
+      if (estadoVenta.esAsociado(this.venta.estado as EstadoVenta)) {
         this.Notificaciones.Warn("No puedes editar un presupuesto en estado asociado.");
         return;
       }

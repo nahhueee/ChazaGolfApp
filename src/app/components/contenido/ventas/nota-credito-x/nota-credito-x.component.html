@@ -61,7 +61,7 @@
                     [binary]="true"
                     inputId="sinProductosCheck"
                 />
-                <label for="sinProductosCheck">Sin productos</label>
+                <label for="sinProductosCheck">Sin productos o servicios</label>
 
                 @if(sinProductos){
                     <form [formGroup]="formSinProductos" class="formSinProductos" autocomplete="off">
@@ -244,6 +244,86 @@
                 <ng-template #emptymessage>
                     <tr>
                         <td colspan="17" class="text-center">No hay productos cargados.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <!-- Servicios -->
+        <div class="seccion">
+            <h3>Servicios</h3>
+
+            <form [formGroup]="formServicios" class="formServicio" autocomplete="off" (keyup.enter)="AgregarServicio()">
+                <div class="horizontal">
+                    <p-floatlabel variant="in">
+                        <p-autocomplete
+                            formControlName="servicio"
+                            [suggestions]="serviciosFiltrado"
+                            placeholder="Buscar por código o nombre"
+                            emptyMessage="No se encontraron resultados"
+                            (completeMethod)="FiltrarServicios($event)"
+                            optionLabel="descripcion"
+                        >
+                            <ng-template let-servicio pTemplate="item">
+                                {{ servicio.codigo }} - {{ servicio.descripcion }}
+                            </ng-template>
+                        </p-autocomplete>
+                        <label>Servicio</label>
+                    </p-floatlabel>
+
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="cantidad" type="number"/>
+                        <label>Cantidad</label>
+                    </p-floatlabel>
+
+                    <p-floatlabel variant="in">
+                        <input pInputText formControlName="precio" type="text" [imask]="decimal_mask" [placeholder]="ServicioControl.sugerido != undefined ? 'Precio Sugerido: $' + (ServicioControl.sugerido | decimalFormat) : 'Precio Sugerido:'"/>
+                        <label>Precio</label>
+                    </p-floatlabel>
+                </div>
+            </form>
+            <div class="acciones">
+                <p-button label="Confirmar Servicio" [raised]="true" icon="pi pi-check" (onClick)="AgregarServicio()"/>
+            </div>
+
+            <p-table [value]="serviciosFactura">
+                <ng-template #header>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Quitar</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-servicio let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ servicio.codServicio }}</td>
+                        <td>{{ servicio.nomServicio }}</td>
+                        <td>{{ servicio.cantidad }}</td>
+                        <td>{{ servicio.unitario | decimalFormat }}</td>
+                        <td>{{ servicio.total | decimalFormat }}</td>
+                        <td>
+                            <p-button icon="pi pi-trash" severity="danger" [text]="true" (onClick)="EliminarServicio($event, rowIndex)"/>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template #footer>
+                    @if(serviciosFactura.length > 0){
+                        <tr>
+                            <td><strong>Total Unidades</strong></td>
+                            <td></td>
+                            <td><strong>{{ totalUnidadesServicios }}</strong></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    }
+                </ng-template>
+                <ng-template #emptymessage>
+                    <tr>
+                        <td colspan="6" class="text-center">No hay servicios cargados.</td>
                     </tr>
                 </ng-template>
             </p-table>

@@ -54,6 +54,12 @@ import { TallesProducto } from "./Producto";
 
   export class ProductosFactura{
     idProducto? : number;
+    // Origen de idProducto: 'CATALOGO' -> productos, 'PRESUPUESTO' -> productos_presupuesto.
+    // Ver TIPO_ITEM / esItemNoCatalogado en venta.constants.ts. A diferencia del resto de
+    // los flags de esta clase, este SÍ se persiste (columna ventas_productos.tipoItem).
+    tipoItem?: string;
+    // Snapshot del nombre al facturar, solo para ítems no catalogados.
+    descripcion?: string;
     codProducto?: string;
     nomProducto?: string;
     topeDescuento?: number;
@@ -82,6 +88,10 @@ import { TallesProducto } from "./Producto";
     importeDescuento?:number;
     tallesSeleccionados:string = "";
     stockInicial: any = {};
+    // Tope de cantidad para la Nota de Crédito sobre un ítem no catalogado (sin
+    // talles, ver tipoItem). Espejo de ServiciosFactura.cantidadOriginal - ver
+    // PrepararPrecios en listado-ventas.component.ts.
+    cantidadOriginal?: number;
     // true si el precio fue acordado/editado a mano (ver ActualizarValoresPresupuesto en
     // addmod-ventas). Evita que los recálculos automáticos de precio por cambio de cliente/
     // comprobante pisen el valor pactado. precio (lista) no se toca y viaja como precioLista.
@@ -90,6 +100,8 @@ import { TallesProducto } from "./Producto";
     constructor(data?: any) {
       if (data) {
         this.idProducto = data.idProducto;
+        this.tipoItem = data.tipoItem;
+        this.descripcion = data.descripcion;
         this.codProducto = data.codProducto;
         this.talles = data.talles;
         this.cantidad = data.cantidad;
@@ -181,6 +193,9 @@ import { TallesProducto } from "./Producto";
     idNotaVenta:number = 0;
     nroProceso:number = 0;
     total:number = 0;
+    // 3/8/13 = fiscal (NC A/B/C), 100 = interna/X. Ver TipoComprobante en
+    // ObjFacturar.ts y tieneNotaFiscal/tieneNotaInterna en venta.constants.ts.
+    idTipoComprobante:number = 0;
   }
   
   export class VentasClienteCuenta{

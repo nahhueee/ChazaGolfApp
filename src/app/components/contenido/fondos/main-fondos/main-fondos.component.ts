@@ -74,11 +74,11 @@ export class MainFondosComponent implements OnInit {
   cajaSeleccionada: Caja = new Caja();
 
   periodos = [
+    { label: 'Todo',          value: 'todo'   },
     { label: 'Hoy',           value: 'hoy'    },
     { label: 'Ayer',          value: 'ayer'   },
     { label: 'Últimos 7 días', value: '7dias' },
     { label: 'Últimos 30 días', value: '30dias'},
-    { label: 'Todo',          value: 'todo'   },
     { label: 'Personalizado', value: 'custom' }
   ];
 
@@ -111,7 +111,11 @@ export class MainFondosComponent implements OnInit {
       periodo: new FormControl(),
       fechas:  new FormControl()
     });
-    this.filtrosForm.get('periodo')?.setValue('hoy');
+    // Default "todo" (antes "hoy"): al entrar al sistema se quiere ver el
+    // histórico completo del fondo, no solo el día - ver conversación sobre
+    // reconciliación de fondos por empresa (jul-2026), donde comparar contra
+    // "Hoy" llevaba a confundir Neto Período con Histórico total.
+    this.filtrosForm.get('periodo')?.setValue('todo');
   }
 
   ngOnInit() {
