@@ -4,6 +4,9 @@
       <span>Vista Previa</span>
       |
       <p-button icon="pi pi-print" label="Imprimir Remito" variant="outlined" (click)="VerComprobante()"/>
+      @if(esProcesoPre){
+        <p-button icon="pi pi-file-pdf" [label]="'Imprimir ' + (venta.proceso | titlecase)" variant="outlined" (click)="VerDocumentoComercial()"/>
+      }
     </div>
   </ng-template>
     

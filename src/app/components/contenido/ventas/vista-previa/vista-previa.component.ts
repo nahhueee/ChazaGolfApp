@@ -3,11 +3,12 @@ import { Venta } from '../../../../models/Factura';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ComprobanteService } from '../../../../services/comprobante.service';
+import { DocumentoComercialService } from '../../../../services/documento-comercial.service';
 import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { MiscService } from '../../../../services/misc.service';
 import { LineasTalle } from '../../../../models/Producto';
@@ -20,6 +21,7 @@ import { ID_PROCESO } from '../models/venta.constants';
     DividerModule,
     DecimalFormatPipe,
     DatePipe,
+    TitleCasePipe,
     TableModule,
     ButtonModule,
     TooltipModule
@@ -60,6 +62,7 @@ export class VistaPreviaComponent implements OnInit {
 
   constructor(
     private comprobanteService:ComprobanteService,
+    private documentoComercialService:DocumentoComercialService,
     private miscService:MiscService
   ){}
 
@@ -225,5 +228,12 @@ export class VistaPreviaComponent implements OnInit {
 
   VerComprobante(){
     this.comprobanteService.VerComprobante(this.venta)
+  }
+
+  // Documento comercial (Presupuesto/Pedido/Nota de Empaque) con formato tipo factura +
+  // condiciones de venta - alternativa al remito operativo, solo disponible para estos
+  // 3 procesos (ver esProcesoPre).
+  VerDocumentoComercial(){
+    this.documentoComercialService.VerDocumento(this.venta)
   }
 }

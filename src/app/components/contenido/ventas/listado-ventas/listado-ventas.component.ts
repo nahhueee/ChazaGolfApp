@@ -7,7 +7,7 @@ import { Button } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
 import { VistaPreviaComponent } from '../vista-previa/vista-previa.component';
@@ -19,6 +19,7 @@ import { DatePicker } from 'primeng/datepicker';
 import { Cliente } from '../../../../models/Cliente';
 import { ClientesService } from '../../../../services/clientes.service';
 import { ComprobanteService } from '../../../../services/comprobante.service';
+import { DocumentoComercialService } from '../../../../services/documento-comercial.service';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { FacturaService } from '../../../../services/factura.service';
@@ -49,6 +50,7 @@ import { esMayoristaConListaPropia, esItemNoCatalogado, puedeDarseDeBaja, tieneN
     TooltipModule,
     DecimalFormatPipe,
     DatePipe,
+    TitleCasePipe,
     TagModule,
     DatePicker,
     VistaPreviaComponent,
@@ -103,6 +105,7 @@ export class ListadoVentasComponent {
     private clientesService:ClientesService,
     private comprobanteService:ComprobanteService,
     private facturaService:FacturaService,
+    private documentoComercialService:DocumentoComercialService,
     private confirmationService: ConfirmationService,
     private Notificaciones: NotificacionesService,
     private filesService:FilesService
@@ -274,6 +277,11 @@ export class ListadoVentasComponent {
   VerFactura(){
     this.PrepararPrecios();
     this.facturaService.VerFactura(this.ventaSeleccionada)
+  }
+  // Documento comercial (Presupuesto/Pedido/Nota de Empaque) con formato tipo factura +
+  // condiciones de venta - análogo a VerFactura() pero para tipo === 'pre'.
+  VerDocumentoComercial(){
+    this.documentoComercialService.VerDocumento(this.ventaSeleccionada)
   }
 
   Aprobar(venta:Venta){

@@ -766,14 +766,19 @@ export class AddModVentasComponent {
   // mismo criterio hace falta en dos cálculos distintos (aplicarDescuentoAItems, que
   // persiste el importe, y calcularSubtotales dentro de recalcularTotales, que arma los
   // totales de pantalla) y desincronizarlos haría que el resumen no cierre contra lo
-  // guardado - bug ya visto en la Venta #114.
+  // guardado - bug ya visto en la Venta #114. Por eso se mantiene como función aunque
+  // hoy sea una sola línea: son dos call sites que TIENEN que coincidir siempre.
   //
-  // Los ítems no catalogados van SIEMPRE a tope 0 (decisión de negocio, ago-2026): su
-  // precio ya se pactó a mano al armar el presupuesto, así que aplicarles el descuento
-  // general encima sería un doble descuento. Además `productos_presupuesto` no tiene
-  // columna topeDescuento, así que sin esto caían al `?? 100` (descuento pleno).
-  private TopeDescuentoDe(item: { topeDescuento?: number; tipoItem?: string }): number {
-    if (esItemNoCatalogado(item.tipoItem)) return 0;
+  // Regla única para todos los ítems: manda el topeDescuento del catálogo, y sin tope
+  // definido se permite el descuento pleno. Vale igual para productos, para servicios
+  // (que traen su propio tope de la tabla `servicios`, típicamente 0) y para los ítems
+  // de presupuesto.
+  //
+  // Los ítems de presupuesto no tienen columna topeDescuento en `productos_presupuesto`,
+  // así que caen al `?? 100`: reciben el descuento general completo. Decisión del
+  // usuario (ago-2026), que revierte una anterior de ese mismo mes en la que estos ítems
+  // iban forzados a tope 0 por considerarse que su precio ya venía pactado a mano.
+  private TopeDescuentoDe(item: { topeDescuento?: number }): number {
     return item.topeDescuento ?? 100;
   }
 
@@ -801,7 +806,7 @@ export class AddModVentasComponent {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
 
     const calcularSubtotales = (
-    items: { total?: number; topeDescuento?: number; tipoItem?: string }[]
+    items: { total?: number; topeDescuento?: number }[]
     ): SubtotalAcumulado =>
       (items ?? []).reduce<SubtotalAcumulado>(
         (acc, item) => {
@@ -1082,6 +1087,27 @@ export class AddModVentasComponent {
     });
   }
 
+  // Copia el descuento del documento relacionado y lo bloquea SOLO si había algo
+  // realmente pactado (> 0%). Si el origen no tenía descuento, se deja editable en el
+  // destino: no hay nada que "proteger" y el vendedor puede seguir negociando un
+  // descuento nuevo al facturar/pedir (ago-2026, pedido del cliente). El .enable() del
+  // else cubre el caso de relacionar dos veces seguidas con distinto origen (uno con
+  // descuento, después otro sin) sin recargar la página.
+  private AplicarDescuentoRelacionado(origen: { descuento?: number; idTipoDescuento?: number }): void {
+    const descuentoOrigen = origen.descuento ?? 0;
+
+    this.formFacturacion.get('descuento')?.setValue(descuentoOrigen);
+    this.formFacturacion.get('tDescuento')?.setValue(origen.idTipoDescuento ?? this.tiposDescuento[0]?.id);
+
+    if (descuentoOrigen > 0) {
+      this.formFacturacion.get('descuento')?.disable();
+      this.formFacturacion.get('tDescuento')?.disable();
+    } else {
+      this.formFacturacion.get('descuento')?.enable();
+      this.formFacturacion.get('tDescuento')?.enable();
+    }
+  }
+
   ObtenerVenta(idVenta){
     this.ventasService.ObtenerVenta(idVenta)
       .pipe(takeUntil(this.destroy$)) 
@@ -1098,14 +1124,35 @@ export class AddModVentasComponent {
     this.formGenerales.get('fechaEntrega')?.setValue(this.venta.fechaEntrega ? new Date(this.venta.fechaEntrega) : null);
     this.formGenerales.get('observacion')?.setValue(this.venta.observacion ?? '');
     this.formFacturacion.get('empresa')?.setValue(this.venta.idEmpresa);
-    this.formFacturacion.get('tDescuento')?.setValue(this.venta.idTipoDescuento);
-    this.formFacturacion.get('descuento')?.setValue(this.venta.descuento);
+    // ?? tiposDescuento[0]?.id / ?? 0: defensivo contra datos legacy con idTDescuento/
+    // descuento NULL (ventas guardadas antes de este fix o antes de habilitarse
+    // descuento en 'pre') - sin esto, el select de Tipo Descuento queda vacío y el
+    // template cae a la rama de Código Promocional en vez de mostrar el % (ver
+    // TipoDescuentoControl en el template).
+    this.formFacturacion.get('tDescuento')?.setValue(this.venta.idTipoDescuento ?? this.tiposDescuento[0]?.id);
+    this.formFacturacion.get('descuento')?.setValue(this.venta.descuento ?? 0);
     this.formFacturacion.get('codPromo')?.setValue(this.venta.codPromocion);
     this.formFacturacion.get('ajuste')?.setValue(this.venta.ajuste == 1 ? true : false);
     this.redondeo.setValue(this.venta.redondeo?.toLocaleString('es-AR'));
 
     this.nroRelacionado = this.venta.nroRelacionado!;
     this.tipoRelacionado = this.venta.tipoRelacionado!;
+
+    // Si este documento nació de una relación (nroRelacionado > 0) Y tenía un descuento
+    // pactado (> 0%) heredado al crearlo (ver AplicarDescuentoRelacionado), tiene que
+    // seguir bloqueado acá también al reabrirlo para editar, no solo en el momento de
+    // relacionar en vivo. Si no tenía descuento, queda editable (ver mismo criterio).
+    // Para tipo === 'factura' el caso bloqueado ya queda cubierto por soloLecturaPorEdicion
+    // más abajo, pero tipo === 'pre' nunca activa soloLecturaPorEdicion (ver su getter),
+    // así que sin este chequeo el descuento heredado quedaba editable de nuevo al reabrir
+    // un Pedido/Nota de Empaque ya guardado.
+    if (this.nroRelacionado && (this.venta.descuento ?? 0) > 0) {
+      this.formFacturacion.get('descuento')?.disable();
+      this.formFacturacion.get('tDescuento')?.disable();
+    } else {
+      this.formFacturacion.get('descuento')?.enable();
+      this.formFacturacion.get('tDescuento')?.enable();
+    }
 
     if(this.tipoRelacionado == TIPO_RELACIONADO.NOTA_EMPAQUE)
       this.formGenerales.get('nroNota')?.setValue(this.nroRelacionado);
@@ -1181,8 +1228,7 @@ export class AddModVentasComponent {
               this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
               this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
-              this.formFacturacion.get('descuento')?.setValue(0);
-              this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0].id);
+              this.AplicarDescuentoRelacionado(response);
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -1240,6 +1286,13 @@ export class AddModVentasComponent {
         return;
       }
 
+      // Pedido/Nota de Empaque armado desde un Presupuesto: los ítems se siguen armando
+      // a mano acá (comportamiento sin cambios, ver comentario arriba), pero si el
+      // Presupuesto tenía un descuento pactado, viaja y queda bloqueado - ver
+      // AplicarDescuentoRelacionado.
+      this.AplicarDescuentoRelacionado(venta);
+      this.CalcularTotalGeneral();
+
       this.Notificaciones.Info("Se relacionará con el presupuesto Nro: " + venta.nroProceso);
     }
 
@@ -1279,8 +1332,9 @@ export class AddModVentasComponent {
         this.OrdenarProductosPorLineaTalle();
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
-        this.formFacturacion.get('descuento')?.setValue(0);
-        this.formFacturacion.get('tDescuento')?.setValue(this.tiposDescuento[0].id);
+        // Si el documento relacionado (Presupuesto/Pedido/Nota de Empaque) tenía un
+        // descuento pactado, viaja y queda bloqueado acá - ver AplicarDescuentoRelacionado.
+        this.AplicarDescuentoRelacionado(venta);
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
@@ -1809,21 +1863,31 @@ export class AddModVentasComponent {
       return;
     }
 
-    const nuevoServicio:ServiciosFactura = new ServiciosFactura();
     const seleccionado = this.formServicios.get('servicio')?.value;
+    // Sin esto, seleccionado.id explota si el control quedó en null (p.ej.
+    // después de formServicios.reset() al confirmar el servicio anterior, si
+    // se clickea "Confirmar Servicio" sin volver a elegir uno de la lista).
+    // El error no se veía en pantalla - quedaba como si el botón no hiciera nada.
+    if (!seleccionado?.id) {
+      this.Notificaciones.Warn("Seleccioná un servicio de la lista.");
+      return;
+    }
 
+    const nuevoServicio:ServiciosFactura = new ServiciosFactura();
     nuevoServicio.idServicio = seleccionado.id;
     nuevoServicio.codServicio = seleccionado.codigo;
     nuevoServicio.nomServicio = seleccionado.descripcion;
-    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value != '' ? this.formServicios.get('cantidad')?.value : 1;
-    nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value);
+    nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value || 1;
+    nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value ?? '');
     if(nuevoServicio.unitario === 0){
       nuevoServicio.unitario = seleccionado.sugerido;
     }
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
     nuevoServicio.topeDescuento = seleccionado.topeDescuento;
 
-    this.serviciosFactura.push(nuevoServicio);
+    // Reasignar referencia: p-table no detecta la fila nueva si se muta el
+    // array in-place (mismo problema que en productos, ver AgregarProducto).
+    this.serviciosFactura = [...this.serviciosFactura, nuevoServicio];
     this.CalcularTotalGeneral();
     this.formServicios.reset();
   }
@@ -1945,6 +2009,13 @@ export class AddModVentasComponent {
 
     if (validarFacturacion) {
       this.markFormTouched(this.formFacturacion);
+    } else {
+      // tipo === 'pre': formFacturacion no se valida entero (empresa/tComprobante no
+      // aplican acá), pero el control de descuento sí tiene sus propios Validators
+      // (min 0/max 100, ver ArmarFormularios) y hay que respetarlos igual. Si vino
+      // bloqueado por una relación (ver CompletarCampos/ConfirmarFacturacionRelacionado),
+      // Angular ya lo excluye de la validación por estar disabled - nada que chequear.
+      this.formFacturacion.get('descuento')?.markAsTouched();
     }
 
     if (!this.clienteSeleccionado) {
@@ -1954,9 +2025,12 @@ export class AddModVentasComponent {
       return;
     }
 
+    const descuentoPreInvalido = !validarFacturacion && !!this.formFacturacion.get('descuento')?.invalid;
+
     const formularioInvalido =
       this.formGenerales.invalid ||
-      (validarFacturacion && this.formFacturacion.invalid);
+      (validarFacturacion && this.formFacturacion.invalid) ||
+      descuentoPreInvalido;
 
     if (formularioInvalido) {
       this.Notificaciones.Warn("Falta completar datos obligatorios.");
@@ -2227,18 +2301,24 @@ export class AddModVentasComponent {
       this.venta.listaPrecio = this.clienteSeleccionado.listaPrecio;
     }
       
+    // descuento/tDescuento se leen para los dos tipos ('factura' y 'pre'): Presupuesto/
+    // Pedido/Nota de Empaque también pueden tener descuento propio (ago-2026). Antes
+    // esto vivía adentro del if(tipo === 'factura') de más abajo, así que lo que se
+    // tipeaba en el campo Descuento de un Presupuesto/Pedido/Nota de Empaque nunca se
+    // persistía (quedaba siempre en 0, bug real visto en producción).
+    this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value;
+    const descuento = this.formFacturacion.get('descuento')?.value;
+    this.venta.descuento = descuento == '' ? 0 : descuento;
+    this.venta.tipoDescuento = this.tiposDescuento.find(t => t.id == this.formFacturacion.get('tDescuento')?.value)?.descripcion;
+
     if(this.tipo === 'factura'){
       this.venta.idEmpresa = this.formFacturacion.get('empresa')?.value;
       this.venta.idTipoComprobante = this.formFacturacion.get('tComprobante')?.value;
-      this.venta.idTipoDescuento = this.formFacturacion.get('tDescuento')?.value;
-      const descuento = this.formFacturacion.get('descuento')?.value;
-      this.venta.descuento = descuento == '' ? 0 : descuento;
       this.venta.codPromocion = 0;
       this.venta.redondeo = this.globalesService.EstandarizarDecimal(this.redondeo.value);
 
       this.venta.empresa = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value)?.razonSocial;
       this.venta.tipoComprobante = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
-      this.venta.tipoDescuento = this.tiposDescuento.find(t => t.id == this.formFacturacion.get('tDescuento')?.value)?.descripcion;
 
       this.venta.estado = ESTADO_VENTA.PENDIENTE;
       if(this.pagoCompleto == false){

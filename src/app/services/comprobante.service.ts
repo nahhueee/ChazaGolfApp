@@ -11,17 +11,20 @@ import { Venta } from '../models/Factura';
 import { ObjTicketFactura } from '../models/ObjTicketFactura';
 import { ObjComprobante } from '../models/ObjComprobant';
 import { LineasTalle } from '../models/Producto';
+import {
+  ProcesarItemsConDescuento,
+  ArmarFilasProductosConTalles,
+  FormatearCantidad,
+  FormatearPrecio,
+  FormatearPrecioTotalBruto,
+  CortarNombreProducto,
+} from './helpers/tabla-productos-talles.helper';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ComprobanteService {
   private pdfMake: any;
-
-  // Fallback usado cuando un producto no tiene idLineaTalle o no matchea ninguna línea
-  // del catálogo (dato legacy/faltante) - preserva el comportamiento que tenía la tabla
-  // antes de agrupar por línea de talle, en vez de romper o dejar la fila en blanco.
-  private readonly TALLES_LEGACY = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
 
   constructor(
     private filesService:FilesService,
@@ -94,105 +97,12 @@ export class ComprobanteService {
       }
       comprobante.observacion = venta.observacion;
   
-      const FormatearCantidad = (cantidad) => {
-        const cantNumero = parseFloat(cantidad);
-        return cantNumero % 1 === 0 ? cantNumero.toFixed(0) : cantNumero.toFixed(1);
-      };
-  
-      const FormatearPrecio = (precio) => {
-        const pNumero = parseFloat(precio);
-        return pNumero.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      };
-  
-      const CortarNombreProducto = (nombreProd) => {
-        return nombreProd.length > 25
-          ? nombreProd.substring(0, 25) + '...'
-          : nombreProd;
-      };
-
-      // Total de la fila en bruto (sin descuento): el descuento se muestra aparte
-      // en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
-      const FormatearPrecioTotalBruto = (unitario, cantidad) => {
-        const nCantidad = Number(cantidad) || 0;
-        const nUnitario = parseFloat(unitario) || 0;
-
-        const totalBruto = nUnitario * nCantidad;
-
-        return totalBruto.toLocaleString('es-AR', {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1
-        });
-      };
-
-      // Talles reales (en el mismo orden posicional que t1..t10) de una línea de talle.
-      // Fallback a TALLES_LEGACY si el producto no tiene idLineaTalle o no matchea el catálogo
-      // (dato legacy/faltante) - mismo criterio que vista-previa.component.ts (ObtenerTallesDeLinea).
-      const ObtenerTallesDeLinea = (idLineaTalle?: number): string[] => {
-        const talles = lineasTalle.find(l => l.id === idLineaTalle)?.talles;
-        return talles?.length ? talles : this.TALLES_LEGACY;
-      };
-
-      // Talle en 0 (slot no usado por esta línea) no se muestra (celda vacía) en vez de
-      // '0' o '–', para no generar ruido visual donde no hay talle.
-      const FormatearTalle = (valor: any): string => {
-        const n = Number(valor) || 0;
-        return n === 0 ? '' : n.toString();
-      };
-
-      //Productos
-      comprobante.filasProducto = [
-        [
-          { text: 'Código', style: 'tableHeader', alignment: 'left' },
-          { text: 'Producto', style: 'tableHeader', alignment: 'left' },
-          { text: 'Color', style: 'tableHeader', alignment: 'left' },
-          { text: 'Talles', style: 'tableHeader', alignment: 'center', colSpan: 10 },
-          {}, {}, {}, {}, {}, {}, {}, {}, {},
-          { text: 'Cant', style: 'tableHeader', alignment: 'center' },
-          { text: 'Precio', style: 'tableHeader', alignment: 'right' },
-          { text: 'Desc', style: 'tableHeader', alignment: 'right' },
-          { text: 'Total', style: 'tableHeader', alignment: 'right' },
-        ]
-      ];
-
-      const procesarItems = (items: any[]) => {
-        const descuentoGeneral = Number(venta.descuento) || 0;
-
-        return items?.reduce((acc, item) => {
-          const unitario = Number(item.unitario) || 0;
-          const cantidad = Number(item.cantidad) || 0;
-
-          // Total bruto
-          let totalBruto = unitario * cantidad;
-          
-          // Calcular descuento respetando tope
-          const descuentoMax = item.topeDescuento ?? 100;
-          const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
-          item.descuentoAplicado = descuentoAplicado;
-
-          const importeDescuento = totalBruto * (descuentoAplicado / 100);
-          // Total final del item
-          const totalFinalItem = totalBruto - importeDescuento;
-
-          // Acumuladores
-          acc.subtotal += totalBruto;
-          acc.descuento += importeDescuento;
-          acc.total += totalFinalItem;
-
-          return acc;
-
-        }, {
-          subtotal: 0,
-          descuento: 0,
-          total: 0
-        }) || {
-          subtotal: 0,
-          descuento: 0,
-          total: 0
-        };
-      };
-
-      const productos = procesarItems(venta.productos);
-      const servicios = procesarItems(venta.servicios);
+      // Descuento general + procesamiento de ítems (subtotal/descuento/total bruto,
+      // respetando tope de descuento por ítem) - lógica compartida con
+      // documento-comercial.service.ts (ver tabla-productos-talles.helper.ts).
+      const descuentoGeneral = Number(venta.descuento) || 0;
+      const productos = ProcesarItemsConDescuento(venta.productos, descuentoGeneral);
+      const servicios = ProcesarItemsConDescuento(venta.servicios, descuentoGeneral);
 
       // NC X "sin productos" (ver nota-credito-x.component.ts): sin ítems, el importe
       // real es el total que cargó el usuario a mano (venta.total) - mismo criterio
@@ -209,73 +119,11 @@ export class ComprobanteService {
       const productosOrdenados = [...(venta.productos ?? [])]
         .sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
 
-      const gruposIdx: number[] = [];
-      const continuacionIdx: number[] = [];
-      let idLineaActual: number | undefined;
-      let esPrimerGrupo = true;
-      let itemAnterior: any = undefined;
+      const tablaProductos = ArmarFilasProductosConTalles(productosOrdenados, lineasTalle);
+      comprobante.filasProducto = tablaProductos.filasProducto;
+      comprobante.filasProductoGrupos = tablaProductos.filasProductoGrupos;
+      comprobante.filasProductoContinuacion = tablaProductos.filasProductoContinuacion;
 
-      productosOrdenados.forEach(item => {
-        if (esPrimerGrupo || item.idLineaTalle !== idLineaActual) {
-          idLineaActual = item.idLineaTalle;
-          esPrimerGrupo = false;
-          itemAnterior = undefined; // un nuevo grupo de talle nunca es "continuación" del anterior
-
-          const talles = ObtenerTallesDeLinea(item.idLineaTalle);
-          const tallesFila = Array.from({ length: 10 }, (_, i) => talles[i] ?? '');
-
-          gruposIdx.push(comprobante.filasProducto?.length ?? 0);
-          comprobante.filasProducto?.push([
-            '', '', '',
-            ...tallesFila.map(t => ({ text: t, alignment: 'center', bold: true })),
-            '', '', '', '',
-          ]);
-        }
-
-        // Mismo producto+color que la fila anterior (partido en 2+ líneas por tener precio
-        // distinto entre talles -ver AgregarProducto en addmod-ventas.component.ts-). No
-        // repetimos Código/Nombre/Color: dejamos solo un indicador para que se lea como la
-        // misma línea, no como un producto duplicado.
-        const esContinuacion = !!itemAnterior
-          && itemAnterior.idProducto === item.idProducto
-          && itemAnterior.idColor === item.idColor;
-
-        if (esContinuacion) {
-          continuacionIdx.push(comprobante.filasProducto?.length ?? 0);
-        }
-
-        comprobante.filasProducto?.push([
-          // '->' en vez de '↳': ese carácter (bloque Unicode "Arrows") no está en la fuente
-          // embebida de pdfMake y no renderiza (se ve vacío). '->' es ASCII, siempre renderiza,
-          // y va en el color/peso normal del texto (sin bold ni color propio) para que se lea
-          // como una continuación de la fila, no como un elemento destacado aparte.
-          esContinuacion
-            ? { text: '->', alignment: 'left' }
-            : { text: item.codProducto, alignment: 'left' },
-          esContinuacion ? '' : CortarNombreProducto(item.nomProducto),
-          esContinuacion ? '' : { text: item.color, alignment: 'left' },
-          { text: FormatearTalle(item.t1), alignment: 'center' },
-          { text: FormatearTalle(item.t2), alignment: 'center' },
-          { text: FormatearTalle(item.t3), alignment: 'center' },
-          { text: FormatearTalle(item.t4), alignment: 'center' },
-          { text: FormatearTalle(item.t5), alignment: 'center' },
-          { text: FormatearTalle(item.t6), alignment: 'center' },
-          { text: FormatearTalle(item.t7), alignment: 'center' },
-          { text: FormatearTalle(item.t8), alignment: 'center' },
-          { text: FormatearTalle(item.t9), alignment: 'center' },
-          { text: FormatearTalle(item.t10), alignment: 'center' },
-          { text: FormatearCantidad(item.cantidad), alignment: 'center' },
-          { text: FormatearPrecio(item.unitario), alignment: 'right' },
-          { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
-        ]);
-
-        itemAnterior = item;
-      });
-
-      comprobante.filasProductoGrupos = gruposIdx;
-      comprobante.filasProductoContinuacion = continuacionIdx;
-  
       //Servicios
       comprobante.filasServicio = [
         [
