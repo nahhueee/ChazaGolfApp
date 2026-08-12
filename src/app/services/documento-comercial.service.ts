@@ -8,7 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { Venta } from '../models/Factura';
 import { ObjComprobante } from '../models/ObjComprobant';
 import { LineasTalle } from '../models/Producto';
-import { IdProceso, SIGLA_DOCUMENTO_COMERCIAL } from '../components/contenido/ventas/models/venta.constants';
+import { ID_PROCESO, IdProceso, SIGLA_DOCUMENTO_COMERCIAL } from '../components/contenido/ventas/models/venta.constants';
 import {
   ProcesarItemsConDescuento,
   ArmarFilasProductosConTalles,
@@ -197,6 +197,13 @@ export class DocumentoComercialService {
       const cliente = venta.cliente;
       const direccionCliente = cliente?.direcciones?.[0]?.resumen || '-';
 
+      // Qué se imprime al pie difiere por proceso (ago-2026, pedido del cliente):
+      // - Presupuesto: Condiciones de Venta (fijas) + Observaciones. Sin Fecha de
+      //   Entrega (todavía no hay nada confirmado en esta etapa).
+      // - Pedido/Nota de Empaque: Observaciones + Fecha de Entrega. Sin Condiciones de
+      //   Venta (ya no es una cotización, el pedido está en curso).
+      const esPresupuesto = venta.idProceso === ID_PROCESO.PRESUPUESTO;
+
       return {
         pageSize: 'A4',
         pageOrientation: 'landscape',
@@ -230,7 +237,7 @@ export class DocumentoComercialService {
                       { text: comprobante.proceso, style: 'titulo', alignment: 'center' },
                       { text: [{ text: 'N°: ', bold: true }, { text: comprobante.nroProceso?.toString().padStart(4, '0') ?? '-', bold: true }], style: 'simple' },
                       { text: [{ text: 'Fecha Emisión: ', bold: true }, { text: comprobante.fechaVenta }], style: 'simple' },
-                      comprobante.fechaEntrega ? { text: [{ text: 'Fecha de Entrega: ', bold: true }, { text: comprobante.fechaEntrega }], style: 'simple' } : [],
+                      (comprobante.fechaEntrega && !esPresupuesto) ? { text: [{ text: 'Fecha de Entrega: ', bold: true }, { text: comprobante.fechaEntrega }], style: 'simple' } : [],
                       { text: [{ text: 'CUIT: ', bold: true }, { text: empresa?.cuil }], style: 'simple' },
                       { text: [{ text: 'Cond. IVA: ', bold: true }, { text: empresa?.condicion?.toUpperCase() }], style: 'simple' },
                       { text: 'DOCUMENTO NO VALIDO COMO FACTURA', style: 'leyendaNoFiscal' },
@@ -346,9 +353,13 @@ export class DocumentoComercialService {
               body: [
                 [
                   {
-                    stack: [
+                    stack: esPresupuesto ? [
                       { text: 'CONDICIONES DE VENTA', style: 'tituloCondiciones' },
                       ...CONDICIONES_VENTA.map(linea => ({ text: linea, style: 'condicion' })),
+                      ...(comprobante.observacion
+                        ? [{ text: [{ text: 'Observaciones: ', bold: true }, { text: comprobante.observacion }], style: 'condicion' }]
+                        : []),
+                    ] : [
                       ...(comprobante.observacion
                         ? [{ text: [{ text: 'Observaciones: ', bold: true }, { text: comprobante.observacion }], style: 'condicion' }]
                         : []),
