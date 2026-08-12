@@ -589,29 +589,57 @@
         }
 
         <div class="enLinea" [ngClass]="{'pre': tipo == 'pre'}">
-            <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion" *ngIf="tipo == 'factura'">
-                <div class="horizontal">
-                    <!-- Empresa -->
-                    <p-floatlabel variant="in">
-                        <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" [disabled]="soloLecturaPorEdicion" (onChange)="CambioEmpresa()" />
-                        <label>Empresa</label>
-                    </p-floatlabel>
+            <!-- Sin *ngIf="tipo == 'factura'" acá: Presupuesto/Pedido/Nota de Empaque (tipo
+                 === 'pre') también usan este form, solo para Descuento (% plano, sin Tipo
+                 Descuento/código promocional - eso sigue siendo exclusivo de 'factura', ver
+                 más abajo). Empresa/Tipo Comprobante/Ajuste también siguen siendo
+                 exclusivos de 'factura'. -->
+            <form [formGroup]="formFacturacion" autocomplete="off" class="datos-facturacion">
+                @if(tipo == 'factura'){
+                    <div class="horizontal">
+                        <!-- Empresa -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" [disabled]="soloLecturaPorEdicion" (onChange)="CambioEmpresa()" />
+                            <label>Empresa</label>
+                        </p-floatlabel>
 
-                    <!-- Tipo Comprobante -->
-                    <p-floatlabel variant="in">
-                        <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" (onChange)="CambioTipoComprobante()" />
-                        <label>Tipo Comprobante</label>
-                    </p-floatlabel>
-                </div>
-                <div class="horizontal">
-                    <!-- Tipo Descuento -->
-                    <p-floatlabel variant="in">
-                        <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" />
-                        <label>Tipo Descuento</label>
-                    </p-floatlabel>
+                        <!-- Tipo Comprobante -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" (onChange)="CambioTipoComprobante()" />
+                            <label>Tipo Comprobante</label>
+                        </p-floatlabel>
+                    </div>
 
-                    @if(TipoDescuentoControl && TipoDescuentoControl.id != "3"){
-                        <!-- Descuento -->
+                    <div class="horizontal">
+                        <!-- Tipo Descuento -->
+                        <p-floatlabel variant="in">
+                            <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" />
+                            <label>Tipo Descuento</label>
+                        </p-floatlabel>
+
+                        @if(TipoDescuentoControl && TipoDescuentoControl.id != "3"){
+                            <!-- Descuento -->
+                            <p-inputgroup>
+                                <p-floatlabel variant="in">
+                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion" (input)="CalcularTotalGeneral()"/>
+                                    <label>Descuento</label>
+                                </p-floatlabel>
+                                <p-inputgroup-addon>%</p-inputgroup-addon>
+                            </p-inputgroup>
+                        }@else {
+                            <!-- Cod Promocion -->
+                            <p-floatlabel variant="in">
+                                <input pInputText formControlName="codPromo" type="text" [disabled]="soloLecturaPorEdicion"/>
+                                <label>Cod. Promocional</label>
+                            </p-floatlabel>
+                        }
+                    </div>
+                }@else {
+                    <!-- Presupuesto/Pedido/Nota de Empaque: descuento simple, sin tipo
+                         "código promocional" (eso solo aplica al facturar). El tipo
+                         descuento queda fijo en "normal" (ver AplicarValoresDefaultNuevaVenta/
+                         puntos de relación en el .ts) sin selector acá. -->
+                    <div class="horizontal">
                         <p-inputgroup>
                             <p-floatlabel variant="in">
                                 <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion" (input)="CalcularTotalGeneral()"/>
@@ -619,25 +647,21 @@
                             </p-floatlabel>
                             <p-inputgroup-addon>%</p-inputgroup-addon>
                         </p-inputgroup>
-                    }@else {
-                        <!-- Cod Promocion -->
-                        <p-floatlabel variant="in">
-                            <input pInputText formControlName="codPromo" type="text" [disabled]="soloLecturaPorEdicion"/>
-                            <label>Cod. Promocional</label>
-                        </p-floatlabel>
-                    }
-                </div>
-                <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1">
-                    <p-checkbox
-                        inputId="check1"
-                        formControlName="ajuste"
-                        [binary]="true"
-                        [disabled]="soloLecturaPorEdicion"
-                        (onChange)="CalcularTotalGeneral()">
-                    </p-checkbox>
+                    </div>
+                }
+                @if(tipo == 'factura'){
+                    <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1">
+                        <p-checkbox
+                            inputId="check1"
+                            formControlName="ajuste"
+                            [binary]="true"
+                            [disabled]="soloLecturaPorEdicion"
+                            (onChange)="CalcularTotalGeneral()">
+                        </p-checkbox>
 
-                    <label for="check1">Ajuste de transferencia de 10%</label>
-                </div>
+                        <label for="check1">Ajuste de transferencia de 10%</label>
+                    </div>
+                }
             </form>
 
             <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'" (keyup.enter)='AgregarPago()'>
@@ -736,33 +760,36 @@
                     <span class="monto">${{totales.subtotal| decimalFormat}}</span>
                 </div>
 
-                @if(tipo == 'factura'){
-                    <div class="fila">
-                        <span>Descuento:</span>
-                        <span class="monto">${{totales.descuento| decimalFormat}}</span>
-                    </div>
+                <div class="fila">
+                    <span>Descuento:</span>
+                    <span class="monto">${{totales.descuento| decimalFormat}}</span>
+                </div>
 
+                @if(tipo == 'factura'){
                     <div class="fila" *ngIf="totales.mostrarIva">
                         <span>IVA 21%:</span>
                         <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
+                }
 
-                    <br>
+                <br>
 
-                    <div class="fila">
-                        <span>Total General:</span>
-                        <span class="monto">${{totales.general | decimalFormat}}</span>
-                    </div> 
+                <div class="fila">
+                    <span>Total General:</span>
+                    <span class="monto">${{totales.general | decimalFormat}}</span>
+                </div>
+
+                @if(tipo == 'factura'){
                     <div class="fila" *ngIf="totales.ajusteTransferencia">
                         <span>Ajuste 10%:</span>
                         <span class="monto">${{totales.ajusteTransferencia| decimalFormat}}</span>
-                    </div> 
+                    </div>
                     <div class="fila">
                         <span>Redondeo:</span>
                         <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" [disabled]="soloLecturaPorEdicion" (focus)="SelectContent($event)"/>
                     </div>
                 }
-                
+
                 <div class="fila total-final">
                     <span>Total A Pagar:</span>
                     <span class="monto">${{totales.aPagar| decimalFormat}}</span>

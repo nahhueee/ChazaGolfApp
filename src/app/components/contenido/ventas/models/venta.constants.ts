@@ -96,6 +96,17 @@ export const ID_PROCESO = {
 export type IdProceso = ValueOf<typeof ID_PROCESO>;
 
 /**
+ * Sigla de documento comercial (ver documento-comercial.service.ts) para Presupuesto/
+ * Pedido/Nota de Empaque - mismo criterio que las siglas de comprobante fiscal (A/B/C/
+ * NC/ND), pero para estos 3 procesos que todavía no pasan por AFIP.
+ */
+export const SIGLA_DOCUMENTO_COMERCIAL: Partial<Record<IdProceso, string>> = {
+  [ID_PROCESO.PRESUPUESTO]:  'PRE',
+  [ID_PROCESO.PEDIDO]:       'PED',
+  [ID_PROCESO.NOTA_EMPAQUE]: 'NDE',
+} as const;
+
+/**
  * Origen del `idProducto` de cada línea de venta (columna `ventas_productos.tipoItem`).
  * Se persiste en BD, no cambiar los valores sin migración. Espejo de TipoItemVenta
  * en el backend (ventaEstados.ts).
@@ -105,9 +116,11 @@ export type IdProceso = ValueOf<typeof ID_PROCESO>;
  * venta, heurística que se rompía justo al facturar un Presupuesto (la venta deja de
  * ser presupuesto pero las líneas siguen apuntando a la otra tabla).
  *
- * Un ítem PRESUPUESTO no mueve stock, no tiene talles ni color, y NO entra en el
- * descuento general de la venta (decisión de negocio, ago-2026: el precio ya viene
- * pactado a mano en el presupuesto, aplicarle otro descuento encima sería doble).
+ * Un ítem PRESUPUESTO no mueve stock y no tiene talles ni color. SÍ entra en el
+ * descuento general de la venta: como `productos_presupuesto` no tiene columna
+ * topeDescuento, cae al fallback de descuento pleno (ver TopeDescuentoDe en
+ * addmod-ventas). Decisión del usuario (ago-2026), que revierte una anterior del mismo
+ * mes en la que estos ítems iban forzados a tope 0.
  */
 export const TIPO_ITEM = {
   CATALOGO: 'CATALOGO',

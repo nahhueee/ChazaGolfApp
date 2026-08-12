@@ -127,9 +127,9 @@
                                 pTooltip="Emitir Nota de Crédito" tooltipPosition="bottom"/>
                             }
 
-                            @if(tipo == "factura"){
-                                <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
-                            }@else {
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
+
+                            @if(tipo != "factura"){
                                 @if(venta.idProceso == 7 && venta.estado == "Pendiente"){
                                     <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="Aprobar(venta)" pTooltip="Aprobar" tooltipPosition="bottom"/>
                                 }
@@ -181,18 +181,27 @@
         (click)="VerComprobante(); op.hide()">
         </p-button>
 
-        <p-button
-         [label]="ventaSeleccionada.idTipoComprobante === 99 || ventaSeleccionada.idTipoComprobante === 100
-            ? 'Ver Comprobante' 
-            : 'Ver Factura'"
-        severity="success"
-        styleClass="p-button-sm w-full"
-        [disabled]="
-            ventaSeleccionada.proceso == 'FACTURA' &&
-            ventaSeleccionada.factura?.cae == null
-        "
-        (click)="VerFactura(); op.hide()">
-        </p-button>
+        @if(tipo == "factura"){
+            <p-button
+             [label]="ventaSeleccionada.idTipoComprobante === 99 || ventaSeleccionada.idTipoComprobante === 100
+                ? 'Ver Comprobante'
+                : 'Ver Factura'"
+            severity="success"
+            styleClass="p-button-sm w-full"
+            [disabled]="
+                ventaSeleccionada.proceso == 'FACTURA' &&
+                ventaSeleccionada.factura?.cae == null
+            "
+            (click)="VerFactura(); op.hide()">
+            </p-button>
+        }@else {
+            <p-button
+            [label]="'Ver ' + (ventaSeleccionada.proceso | titlecase)"
+            severity="success"
+            styleClass="p-button-sm w-full"
+            (click)="VerDocumentoComercial(); op.hide()">
+            </p-button>
+        }
   </div>
 </p-popover>
 
