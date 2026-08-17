@@ -9,6 +9,12 @@ import { MULTIPLICADOR_LISTA_PRECIO } from '../models/venta.constants';
  *
  * Función pura: no tiene side effects, no accede a estado externo.
  * Testeable unitariamente sin levantar el componente.
+ *
+ * OJO (ago-2026): en addmod-ventas.component.ts (Presupuesto/Pedido/Factura) esto ya NO
+ * se usa - el descuento de lista pasó a precargarse en `descuentoManual` (visible, ver
+ * LISTA_PRECIO_CONFIG en venta.constants.ts) en vez de hornearse acá en el precio. Este
+ * helper sigue vigente únicamente para nota-credito-x.component.ts, que todavía no tiene
+ * columna "Desc. %" por ítem.
  */
 export function calcularPrecioCliente(precioBase: number, idListaPrecio: number): number {
   const multiplicador = MULTIPLICADOR_LISTA_PRECIO[idListaPrecio] ?? 1;

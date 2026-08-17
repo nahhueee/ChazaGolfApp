@@ -86,6 +86,12 @@ import { TallesProducto } from "./Producto";
     totalMostrar?: number;
     descuentoAplicado?:number;
     importeDescuento?:number;
+    // Descuento (%) tipeado a mano en la columna "Desc. %" de la grilla, ítem por ítem.
+    // Mutuamente excluyente con el descuento general de cabecera (ver hayDescuentoPorItem/
+    // DescuentoBaseDe en addmod-ventas.component.ts) - ago-2026. Solo vive en memoria
+    // mientras se arma la venta: no se persiste tal cual, el importeDescuento($) resultante
+    // sí se persiste y es lo que se usa para reconstruir este valor al reabrir la venta.
+    descuentoManual?: number;
     tallesSeleccionados:string = "";
     stockInicial: any = {};
     // Tope de cantidad para la Nota de Crédito sobre un ítem no catalogado (sin
@@ -128,6 +134,7 @@ import { TallesProducto } from "./Producto";
         this.total = data.total;
         this.descuentoAplicado = data.descuentoAplicado;
         this.importeDescuento = data.importeDescuento;
+        this.descuentoManual = data.descuentoManual;
         this.tallesSeleccionados = data.tallesSeleccionados;
       }
     }
@@ -145,6 +152,8 @@ import { TallesProducto } from "./Producto";
     topeDescuento?:number;
     descuentoAplicado?:number;
     importeDescuento?:number;
+    // Ver comentario equivalente en ProductosFactura.descuentoManual.
+    descuentoManual?: number;
     cantidadOriginal?: number;
 
     constructor(data?: any) {
@@ -160,6 +169,7 @@ import { TallesProducto } from "./Producto";
         this.topeDescuento = data.topeDescuento;
         this.descuentoAplicado = data.descuentoAplicado;
         this.importeDescuento = data.importeDescuento;
+        this.descuentoManual = data.descuentoManual;
         this.cantidadOriginal = data.cantidadOriginal;
       }
     }

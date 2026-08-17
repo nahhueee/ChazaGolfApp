@@ -241,11 +241,16 @@ export const COMPROBANTE_POR_CONDICION_IVA:
 
 /**
  * IDs de listas de precio.
+ *
+ * LISTA_3 (35%, "Lista 3.5" en el nombre de negocio) se eliminó ago-2026 -
+ * confirmado sin clientes ni ventas/presupuestos/facturas históricas antes de
+ * sacarla (ver Diagnostico impacto Lista 3.5 - ago-2026.sql). El id 3 queda
+ * hueco a propósito: no se renumeran LISTA_4/5/6 para no tener que migrar los
+ * clientes/ventas ya persistidos con esos ids.
  */
 export const LISTA_PRECIO = {
   CONSUMIDOR_FINAL: 1,
   LISTA_2: 2,
-  LISTA_3: 3,
   LISTA_4: 4,
   LISTA_5: 5,
   LISTA_6: 6,
@@ -254,20 +259,94 @@ export const LISTA_PRECIO = {
 export type IdListaPrecio = ValueOf<typeof LISTA_PRECIO>;
 
 /**
- * Multiplicadores de precio
- * según lista asignada.
+ * Multiplicadores de precio según lista asignada.
  *
- * Ejemplo:
- * 0.70 = 30% descuento
+ * Ejemplo: 0.70 = 30% descuento.
+ *
+ * OJO: esto queda vigente SOLO para nota-credito-x.component.ts (calcularPrecioCliente),
+ * que todavía no tiene columna "Desc. %" por ítem y sigue horneando el descuento
+ * directo en el precio. Para Presupuesto/Pedido/Factura (addmod-ventas) el descuento
+ * de lista dejó de calcularse así (ago-2026, ver LISTA_PRECIO_CONFIG más abajo) -
+ * no reintroducir este multiplicador ahí.
  */
 export const MULTIPLICADOR_LISTA_PRECIO: Record<IdListaPrecio, number> = {
   [LISTA_PRECIO.CONSUMIDOR_FINAL]: 1.00,
   [LISTA_PRECIO.LISTA_2]: 0.70,
-  [LISTA_PRECIO.LISTA_3]: 0.65,
   [LISTA_PRECIO.LISTA_4]: 0.60,
   [LISTA_PRECIO.LISTA_5]: 0.55,
   [LISTA_PRECIO.LISTA_6]: 0.50,
 } as const;
+
+/**
+ * Descuento (%) por lista de precio, para Presupuesto/Pedido/Factura
+ * (addmod-ventas.component.ts) - ago-2026.
+ *
+ * Reemplaza, para estos 3 procesos, al esquema de multiplicador-sobre-precio:
+ * en vez de hornear el % directo en `unitario` (invisible en el resumen), se
+ * precarga en el mismo campo `descuentoManual` que ya usa la columna "Desc. %"
+ * por ítem - así el descuento de lista queda visible igual que cualquier otro
+ * (Precio bruto - Descuento + IVA). `unitario` deja de depender de la lista:
+ * siempre es el precio de catálogo bruto (ver AplicarDescuentoDeLista).
+ *
+ * `editable: false` (Lista 4.0/4.5/5.0): el % se fuerza siempre en cada ítem,
+ * no se puede desactivar ni cambiar, y el descuento general de cabecera queda
+ * bloqueado en cuanto hay ítems cargados (mecanismo ya existente, hayDescuentoPorItem).
+ *
+ * `editable: true` (Lista 3.0, hoy la única): el % se precarga como sugerido
+ * pero el usuario lo puede cambiar libremente por producto, dentro del rango
+ * [DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT, DESCUENTO_LISTA_EDITABLE_MAX_DEFAULT]
+ * (parametrizable vía tabla `parametros`, claves CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN/MAX
+ * - ver parametros.service.ts). Estos clientes además NUNCA pueden usar el
+ * descuento general de cabecera, ni siquiera antes de cargar ítems (decisión
+ * del usuario, ago-2026) - ver listaPrecioBloqueaDescuentoGeneral.
+ *
+ * Consumidor Final no tiene entrada acá: sin descuento de lista, comportamiento
+ * sin cambios.
+ */
+export const LISTA_PRECIO_CONFIG: Partial<Record<IdListaPrecio, { descuento: number; editable: boolean }>> = {
+  [LISTA_PRECIO.LISTA_2]: { descuento: 30, editable: true },
+  [LISTA_PRECIO.LISTA_4]: { descuento: 40, editable: false },
+  [LISTA_PRECIO.LISTA_5]: { descuento: 45, editable: false },
+  [LISTA_PRECIO.LISTA_6]: { descuento: 50, editable: false },
+} as const;
+
+/** true si la lista del cliente permite editar el % por ítem (hoy solo Lista 3.0). */
+export function listaPrecioEditablePorItem(idListaPrecio?: number | null): boolean {
+  if (idListaPrecio == null) return false;
+  return LISTA_PRECIO_CONFIG[idListaPrecio as IdListaPrecio]?.editable === true;
+}
+
+/**
+ * true si la lista del cliente prohíbe el descuento general de cabecera, incondicionalmente
+ * (no solo cuando ya hay % cargado por ítem, a diferencia de hayDescuentoPorItem). Aplica a
+ * TODA lista con entrada en LISTA_PRECIO_CONFIG (fija o editable), no solo a Lista 3.0.
+ *
+ * CORRECCIÓN (ago-2026, bug reportado): antes esto devolvía lo mismo que
+ * listaPrecioEditablePorItem, con la premisa de que las listas fijas no lo necesitaban
+ * porque "en cuanto se carga el primer ítem ya quedan con descuentoManual > 0, y el
+ * mecanismo existente (hayDescuentoPorItem) bloquea la cabecera solo". Esa premisa no
+ * cubre la ventana entre seleccionar el cliente y cargar el primer ítem: con lista fija
+ * (ej. Lista 5.0) y carrito vacío, hayDescuentoPorItem daba false y el campo "Descuento"
+ * general quedaba habilitado. Con lista editable (Lista 3.0) el bug no se notaba porque
+ * ya estaba cubierto acá desde el vamos.
+ */
+export function listaPrecioBloqueaDescuentoGeneral(idListaPrecio?: number | null): boolean {
+  if (idListaPrecio == null) return false;
+  return LISTA_PRECIO_CONFIG[idListaPrecio as IdListaPrecio] != null;
+}
+
+/**
+ * Tope mínimo/máximo (%) por defecto para el descuento editable de Lista 3.0, usados
+ * si todavía no se sembró el valor real en la tabla `parametros` (o falla la lectura).
+ * Valores reales parametrizables vía CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN/MAX - "puede
+ * cambiar" (decisión del usuario, ago-2026), por eso no son un valor fijo en código.
+ */
+export const DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT = 10;
+export const DESCUENTO_LISTA_EDITABLE_MAX_DEFAULT = 50;
+
+/** Claves en la tabla `parametros` (clave/valor) para el tope de Lista 3.0. */
+export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN = 'descuentoLista3Min';
+export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MAX = 'descuentoLista3Max';
 
 /**
  * Cliente mayorista con lista de precio propia (≠ Consumidor Final).

@@ -53,10 +53,12 @@ export class AddModClientesComponent {
     {id: 4, descripcion: 'OTRO'},
   ];
   categorias: CategoriaCliente[] = [];
+  // Lista 3.5 (id 3) se eliminó ago-2026 - confirmado sin clientes asignados antes de
+  // sacarla (ver Diagnostico impacto Lista 3.5 - ago-2026.sql). No se reordenan los ids
+  // de las demás listas.
   listasPrecio = [
     {id: 1, descripcion: 'CONSUMIDOR FINAL'},
     {id: 2, descripcion: 'LISTA 3'},
-    {id: 3, descripcion: 'LISTA 3.5'},
     {id: 4, descripcion: 'LISTA 4'},
     {id: 5, descripcion: 'LISTA 4.5'},
     {id: 6, descripcion: 'LISTA 5'},

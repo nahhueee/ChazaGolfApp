@@ -56,6 +56,14 @@ import {
   estadoVenta,
   EstadoVenta,
   LISTA_PRECIO,
+  LISTA_PRECIO_CONFIG,
+  IdListaPrecio,
+  listaPrecioEditablePorItem,
+  listaPrecioBloqueaDescuentoGeneral,
+  DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT,
+  DESCUENTO_LISTA_EDITABLE_MAX_DEFAULT,
+  CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN,
+  CLAVE_PARAMETRO_DESCUENTO_LISTA_MAX,
   CondicionIva,
   TIPO_RELACIONADO,
   ESTADO_FACTURA,
@@ -65,11 +73,10 @@ import {
   TALLES_ESTANDAR,
   esMayoristaConListaPropia,
   TIPO_ITEM,
-  esItemNoCatalogado,
 } from '../models/venta.constants';
-import { calcularPrecioCliente } from '../services/precio-cliente.utils';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
+import { ParametrosService } from '../../../../services/parametros.service';
 
 interface SubtotalAcumulado {
   total:    number;
@@ -124,6 +131,13 @@ export class AddModVentasComponent {
   // (ValidarFacturacionDePresupuesto en ventasRepository) - sin ella, un POST armado a
   // mano se saltea todo esto.
   itemsBloqueadosPorRelacion: boolean = false;
+
+  // Descuento pactado POR ÍTEM (no de cabecera) en el documento relacionado (Presupuesto/
+  // Pedido/Nota de Empaque) - viaja bloqueado igual que ya viaja bloqueado el descuento de
+  // cabecera (ver AplicarDescuentoRelacionado), pero es un flag propio: itemsBloqueadosPorRelacion
+  // arriba sigue siendo solo el lock total de Presupuesto→Factura y no se toca. Ago-2026,
+  // decisión del usuario: lo pactado en Presupuesto/Pedido no se edita al facturar.
+  itemsDescuentoBloqueadoPorRelacion: boolean = false;
   talles = TALLES_ESTANDAR;
 
   decimal_mask: any;
@@ -151,6 +165,13 @@ export class AddModVentasComponent {
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
   ventasCliente:Venta[]=[];
+
+  // Tope min/max (%) del descuento editable de Lista 3.0 (ver ActualizarDescuentoManual).
+  // Parametrizable vía tabla `parametros` (CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN/MAX,
+  // ver ngOnInit) - arrancan en el default de código por si la lectura falla o el
+  // valor todavía no está sembrado.
+  descuentoListaEditableMin: number = DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT;
+  descuentoListaEditableMax: number = DESCUENTO_LISTA_EDITABLE_MAX_DEFAULT;
 
   //PANTALLA 2
   formProductos:FormGroup;
@@ -211,7 +232,8 @@ export class AddModVentasComponent {
     private rutaActiva:ActivatedRoute,
     private serviciosService:ServiciosService,
     private cuentasService:CuentasCorrientesService,
-    private usuariosService:UsuariosService
+    private usuariosService:UsuariosService,
+    private parametrosService:ParametrosService
   ){
     this.ArmarFormularios();
   }
@@ -269,6 +291,27 @@ export class AddModVentasComponent {
 
   ngOnInit(): void {
     this.sesion = this.usuariosService.GetSesion().data;
+    this.ObtenerTopeDescuentoListaEditable();
+  }
+
+  // Lee el tope min/max parametrizable del descuento editable de Lista 3.0 (tabla
+  // `parametros`). Si la clave todavía no está sembrada o falla la lectura, se queda
+  // con el default de código (descuentoListaEditableMin/Max ya inicializados) - no
+  // bloquea la carga de la pantalla por esto.
+  private ObtenerTopeDescuentoListaEditable(): void {
+    this.parametrosService.ObtenerParametro(CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: valor => { if (valor != null && valor !== '') this.descuentoListaEditableMin = parseFloat(valor); },
+        error: () => {},
+      });
+
+    this.parametrosService.ObtenerParametro(CLAVE_PARAMETRO_DESCUENTO_LISTA_MAX)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: valor => { if (valor != null && valor !== '') this.descuentoListaEditableMax = parseFloat(valor); },
+        error: () => {},
+      });
   }
 
   ngAfterViewInit(): void {
@@ -426,6 +469,47 @@ export class AddModVentasComponent {
     // en el template; NO reemplaza a soloLecturaPorEdicion, que además bloquea campos de
     // cabecera (fecha, punto de venta) que acá sí siguen editables.
     get itemsSoloLectura(): boolean {return this.soloLecturaPorEdicion || this.itemsBloqueadosPorRelacion;}
+
+    // Solo lectura específico de la columna "Desc. %" por ítem: además de itemsSoloLectura,
+    // se agrega cuando el descuento venía pactado por ítem en el documento relacionado
+    // (ver itemsDescuentoBloqueadoPorRelacion/AplicarDescuentoRelacionado), o cuando el
+    // cliente tiene una lista de precio fija (Lista 4.0/4.5/5.0 - ver listaFijaBloqueaEdicionItem).
+    get itemsDescuentoSoloLectura(): boolean {
+      return this.itemsSoloLectura || this.itemsDescuentoBloqueadoPorRelacion || this.listaFijaBloqueaEdicionItem;
+    }
+
+    // true si la lista de precio del cliente es "fija" (tiene LISTA_PRECIO_CONFIG con
+    // editable:false - hoy Lista 4.0/4.5/5.0): el % de descuento por ítem se precarga
+    // solo y no se puede tocar. Ver AplicarDescuentoDeLista.
+    get listaFijaBloqueaEdicionItem(): boolean {
+      const idLista = this.clienteSeleccionado?.idListaPrecio;
+      if (idLista == null) return false;
+      const config = LISTA_PRECIO_CONFIG[idLista as IdListaPrecio];
+      return !!config && !config.editable;
+    }
+
+    // true si la lista de precio del cliente prohíbe el descuento general de cabecera de
+    // forma incondicional (toda lista con entrada en LISTA_PRECIO_CONFIG, fija o editable -
+    // ver listaPrecioBloqueaDescuentoGeneral). A diferencia de hayDescuentoPorItem, esto
+    // bloquea aunque todavía no haya ningún ítem cargado.
+    get listaBloqueaDescuentoGeneral(): boolean {
+      return listaPrecioBloqueaDescuentoGeneral(this.clienteSeleccionado?.idListaPrecio);
+    }
+
+    // true si algún ítem tiene descuento manual propio > 0 - bloquea el descuento general
+    // de cabecera (mutua exclusión, ver DescuentoBaseDe y el [disabled] del template). Al
+    // limpiar el último ítem con descuento manual, el general se reactiva solo: es un
+    // getter, se re-evalúa en cada change detection sin código adicional.
+    get hayDescuentoPorItem(): boolean {
+      return [...this.productosFactura, ...this.serviciosFactura].some(i => (i.descuentoManual ?? 0) > 0);
+    }
+
+    // Complemento de hayDescuentoPorItem para el template: true si el descuento general de
+    // cabecera tiene un valor > 0 cargado - usado para deshabilitar la columna "Desc. %" por
+    // ítem (mutua exclusión en el otro sentido).
+    get hayDescuentoGeneralActivo(): boolean {
+      return (parseFloat(this.DescuentoControl) || 0) > 0;
+    }
 
     // Opciones visibles en el combo de Proceso. NOTA DE CREDITO/DEBITO se excluyen porque no son
     // procesos que el usuario deba elegir a mano al crear una venta: la NC se genera desde
@@ -593,6 +677,20 @@ export class AddModVentasComponent {
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
     this.itemsBloqueadosPorRelacion = false;
+    // Mismo motivo que itemsBloqueadosPorRelacion arriba: sin este reset, el flag de
+    // descuento por ítem bloqueado quedaba pegado de la venta relacionada anterior al
+    // reutilizar la instancia del componente para "nueva venta" sin recargar la página.
+    this.itemsDescuentoBloqueadoPorRelacion = false;
+
+    // Bug real (ago-2026): estos dos campos no se reseteaban acá. Al reutilizar
+    // la misma instancia del componente para "nueva venta" sin recargar la
+    // página (ver switchMap de paramMap/queryParams en ngAfterViewInit), el
+    // nroRelacionado/tipoRelacionado de la venta relacionada anterior quedaba
+    // pegado y se colaba en la siguiente venta aunque el operador nunca haya
+    // tocado el selector de relación. Ver diagnóstico de Facturas mal
+    // relacionadas a Pedidos de otro cliente.
+    this.nroRelacionado = 0;
+    this.tipoRelacionado = "";
 
     this.ArmarFormularios();
     this.CalcularTotalGeneral();
@@ -690,6 +788,9 @@ export class AddModVentasComponent {
 
         if (lista !== 'pagos') {
           this.CalcularTotalGeneral();
+          // Si el ítem borrado era el único con descuento manual, el general se
+          // reactiva acá (ver SincronizarBloqueoDescuentoGeneral).
+          this.SincronizarBloqueoDescuentoGeneral();
         }
 
         this.Notificaciones.Success("Registro eliminado correctamente");
@@ -778,8 +879,69 @@ export class AddModVentasComponent {
   // así que caen al `?? 100`: reciben el descuento general completo. Decisión del
   // usuario (ago-2026), que revierte una anterior de ese mismo mes en la que estos ítems
   // iban forzados a tope 0 por considerarse que su precio ya venía pactado a mano.
-  private TopeDescuentoDe(item: { topeDescuento?: number }): number {
+  // Público (no private): además de los dos call sites internos que motivaron el comentario
+  // de arriba, lo usa ahora el template para el [max] del input de "Desc. %" por ítem
+  // (columna nueva, ver ActualizarDescuentoManual) - Angular no puede invocar métodos
+  // private desde el HTML.
+  TopeDescuentoDe(item: { topeDescuento?: number }): number {
     return item.topeDescuento ?? 100;
+  }
+
+  // Descuento (%) efectivo de un ítem ANTES de aplicarle el tope. Si el ítem tiene su
+  // propio descuento manual (ver ActualizarDescuentoManual/columna "Desc. %"), manda ese
+  // valor por sobre el descuento general de cabecera - son mutuamente excluyentes (ver
+  // hayDescuentoPorItem y el [disabled] del control "Descuento" en el template). El tope
+  // de catálogo (TopeDescuentoDe) se sigue aplicando igual en los dos casos, en el call site.
+  private DescuentoBaseDe(item: { descuentoManual?: number }, descuentoGeneral: number): number {
+    return (item.descuentoManual ?? 0) > 0 ? item.descuentoManual! : descuentoGeneral;
+  }
+
+  // Precarga (o fuerza) el descuento por ítem según la lista de precio del cliente
+  // (ago-2026, ver LISTA_PRECIO_CONFIG). Reemplaza al viejo esquema que horneaba el %
+  // directo en `unitario` vía calcularPrecioCliente() - `unitario` ya no depende de la
+  // lista, siempre es el precio de catálogo bruto (ver AgregarProducto/AgregarPresupuesto).
+  //
+  // Lista fija (editable:false): se fuerza siempre, topeada contra TopeDescuentoDe del
+  // ítem - no es editable, no hay nada del usuario que proteger de un pisado. Sin este
+  // tope, un ítem con topeDescuento de catálogo más bajo que el % de la lista mostraría
+  // en pantalla un % que en los totales termina recortado igual (ver aplicarDescuentoAItems/
+  // calcularSubtotales, que también aplican Math.min contra TopeDescuentoDe) - guardar acá
+  // ya el valor efectivo evita esa desprolijidad visual.
+  // Lista editable (editable:true, hoy Lista 3.0): solo sugiere el % si el ítem todavía
+  // no tiene uno propio (descuentoManual == null) - si el usuario ya lo cambió a mano,
+  // no se lo pisa en una recarga posterior (cambio de empresa, tipo de comprobante, etc.).
+  // Consumidor Final u otra sin entrada en LISTA_PRECIO_CONFIG: no toca nada.
+  private AplicarDescuentoDeLista(item: { descuentoManual?: number; topeDescuento?: number }, idListaPrecio?: number | null): void {
+    if (idListaPrecio == null) return;
+    const config = LISTA_PRECIO_CONFIG[idListaPrecio as IdListaPrecio];
+    if (!config) return;
+
+    if (config.editable) {
+      if (item.descuentoManual == null) item.descuentoManual = config.descuento;
+    } else {
+      item.descuentoManual = Math.min(config.descuento, this.TopeDescuentoDe(item));
+    }
+  }
+
+  // true si alguno de los ítems dados tiene un descuento pactado por ítem (importeDescuento
+  // > 0 ya persistido). Único lugar que resuelve este criterio - lo usan AplicarDescuentoRelacionado
+  // (relacionar en vivo) y CompletarCampos (reabrir un documento ya guardado con nroRelacionado)
+  // para bloquear la columna "Desc. %" cuando corresponde. Ago-2026, decisión del usuario:
+  // lo pactado en Presupuesto/Pedido viaja bloqueado hasta la Factura, igual que ya pasa con
+  // el descuento de cabecera - ver AplicarDescuentoRelacionado.
+  private HayDescuentoPorItemPactado(items: { importeDescuento?: number }[]): boolean {
+    return items.some(i => (i.importeDescuento ?? 0) > 0);
+  }
+
+  // Reconstruye descuentoManual (%) de cada ítem a partir del importeDescuento($) ya
+  // persistido - mismo criterio "el $ es la fuente de verdad, el % se re-deriva" que ya usa
+  // listado-ventas.calcularPrecioItem. Solo tiene sentido llamarla cuando
+  // HayDescuentoPorItemPactado dio true (si no, no hay nada que reconstruir).
+  private ReconstruirDescuentoManual(items: { total?: number; importeDescuento?: number; descuentoManual?: number }[]): void {
+    items.forEach(item => {
+      const total = item.total ?? 0;
+      item.descuentoManual = total > 0 ? Math.round(((item.importeDescuento ?? 0) / total) * 10000) / 100 : 0;
+    });
   }
 
   //Aplica descuentoAplicado (%) e importeDescuento ($) a cada ítem según su tope individual.
@@ -787,14 +949,20 @@ export class AddModVentasComponent {
   private aplicarDescuentoAItems(): void {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
     [...this.productosFactura, ...this.serviciosFactura].forEach(item => {
-      item.descuentoAplicado = Math.min(descuentoUsuario, this.TopeDescuentoDe(item));
+      item.descuentoAplicado = Math.min(this.DescuentoBaseDe(item, descuentoUsuario), this.TopeDescuentoDe(item));
       item.importeDescuento  = (item.total ?? 0) * item.descuentoAplicado / 100;
     });
   }
 
   //Cliente mayorista con lista de precio propia (≠ Consumidor Final).
-  //Para estos clientes, calcularPrecioCliente() devuelve un precio neto (sin IVA),
-  //a diferencia de Consumidor Final donde el precio de góndola ya incluye IVA.
+  //Para estos clientes, el `base` (items - descuento) de recalcularTotales() se trata
+  //como NETO (sin IVA, se suma arriba), a diferencia de Consumidor Final donde el precio
+  //de góndola ya incluye IVA (se discrimina). Hasta ago-2026 esto se derivaba de que
+  //calcularPrecioCliente() devolvía un precio ya neto para estos clientes; ahora que el
+  //descuento de lista se expresa como descuentoManual/importeDescuento (ver
+  //AplicarDescuentoDeLista) en vez de hornearse en el precio, sigue siendo la misma regla
+  //de negocio, solo que aplicada sobre `base` en vez de sobre el precio unitario - el
+  //resultado numérico no cambia.
   //Usado para decidir si en Factura A el IVA se suma o se discrimina (recalcularTotales),
   //y para que la vista previa de impresión muestre el mismo total (ver template).
   EsMayoristaConListaPropia(): boolean {
@@ -806,12 +974,12 @@ export class AddModVentasComponent {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
 
     const calcularSubtotales = (
-    items: { total?: number; topeDescuento?: number }[]
+    items: { total?: number; topeDescuento?: number; descuentoManual?: number }[]
     ): SubtotalAcumulado =>
       (items ?? []).reduce<SubtotalAcumulado>(
         (acc, item) => {
           const totalItem    = item.total || 0;
-          const descAplicado = Math.min(descuentoUsuario, this.TopeDescuentoDe(item));
+          const descAplicado = Math.min(this.DescuentoBaseDe(item, descuentoUsuario), this.TopeDescuentoDe(item));
           return {
             total:    acc.total    + totalItem,
             descuento: acc.descuento + (totalItem * descAplicado) / 100,
@@ -862,10 +1030,10 @@ export class AddModVentasComponent {
 
     if (esFacturaConIva && esComprobanteConIva) {
       if (this.EsMayoristaConListaPropia()) {
-        // Mayorista con lista de precio propia (≠ Consumidor Final): el precio
-        // resultante de calcularPrecioCliente() es neto (sin IVA) → se suma el 21% arriba.
-        // Aplica igual para A y B. No discriminar acá adentro como con CONSUMIDOR_FINAL,
-        // porque ahí el precio de góndola ya incluye IVA.
+        // Mayorista con lista de precio propia (≠ Consumidor Final): `base` se trata
+        // como neto (sin IVA) → se suma el 21% arriba (ver comentario en
+        // EsMayoristaConListaPropia). Aplica igual para A y B. No discriminar acá adentro
+        // como con CONSUMIDOR_FINAL, porque ahí el precio de góndola ya incluye IVA.
         iva        = base * 0.21;
         subtotal   = base;
         general    = base + iva;
@@ -918,13 +1086,9 @@ export class AddModVentasComponent {
       this.clienteSeleccionado?.idCondicionIva == CONDICION_IVA.RESPONSABLE_INSCRIPTO &&
       this.productosFactura.length > 0
     ) {
-      if (!this.esPresupuesto) {
-        this.productosFactura.forEach(element => {
-          if (this.NoRecalcularPrecio(element)) return;
-          element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
-          element.total = element.unitario! * element.cantidad!;
-        });
-      }
+      this.productosFactura.forEach(element => {
+        this.AplicarDescuentoDeLista(element, this.clienteSeleccionado?.idListaPrecio);
+      });
     }
 
     if(this.TipoComprobanteControl == TIPO_COMPROBANTE.SIN_COMPROBANTE){
@@ -979,16 +1143,15 @@ export class AddModVentasComponent {
           });
           
           if(!this.modificando){
-            if(this.productosFactura.length > 0 && !this.esPresupuesto){
+            if(this.productosFactura.length > 0){
               this.productosFactura.forEach(element => {
-                if (this.NoRecalcularPrecio(element)) return;
-                element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado?.idListaPrecio!);
-                element.total = element.unitario! * element.cantidad!;
+                this.AplicarDescuentoDeLista(element, this.clienteSeleccionado?.idListaPrecio);
               });
             }
             this.CalcularTotalGeneral();
           }
 
+          this.SincronizarBloqueoDescuentoGeneral();
         });
   }
 
@@ -1015,11 +1178,9 @@ export class AddModVentasComponent {
 
         this.formFacturacion.get('tComprobante')?.setValue(comprobanteFinal);
 
-        if (!this.modificando && this.productosFactura.length > 0 && !this.esPresupuesto) {
+        if (!this.modificando && this.productosFactura.length > 0) {
           this.productosFactura.forEach(element => {
-            if (this.NoRecalcularPrecio(element)) return;
-            element.unitario = calcularPrecioCliente(element.precio!, this.clienteSeleccionado!.idListaPrecio!);
-            element.total    = element.unitario! * element.cantidad!;
+            this.AplicarDescuentoDeLista(element, this.clienteSeleccionado?.idListaPrecio);
           });
         }
 
@@ -1048,6 +1209,7 @@ export class AddModVentasComponent {
       // Recalcular siempre al final: cubre cambio de empresa, de cliente
       // y cualquier otro caller asíncrono de este método
       this.CalcularTotalGeneral();
+      this.SincronizarBloqueoDescuentoGeneral();
     });
   }
   //#endregion
@@ -1055,56 +1217,64 @@ export class AddModVentasComponent {
   //#region PROCESOS RELACIONADOS
 
   // El flag precioEditadoManualmente vive solo en memoria (no se persiste, ver
-  // ActualizarValoresPresupuesto): al recargar una venta guardada (editar un Pedido, facturar
-  // un Pedido/Nota de Empaque relacionado) se pierde, y CambioEmpresa/SeleccionarCliente
-  // terminan recalculando un precio que el vendedor ya había pactado a mano. Lo reconstruimos acá
-  // comparando el precio final contra lo que la lista de precio del cliente daría hoy: si
-  // difieren, es porque alguien lo editó, y no debe volver a recalcularse.
-  // Guard único de los 3 loops que recalculan precio por lista (CambioTipoComprobante,
-  // SeleccionarCliente, PrepararFacturacionCliente).
+  // ActualizarValoresPresupuesto): se pierde al recargar una venta guardada (editar un
+  // Pedido, facturar un Pedido/Nota de Empaque relacionado), así que se reconstruye acá
+  // comparando el precio final contra el precio de catálogo (`precio`, el ancla que viaja
+  // como precioLista al backend): si difieren, es porque alguien lo editó a mano.
   //
-  // Los dos motivos para NO recalcular:
-  //  1. Precio pactado a mano (precioEditadoManualmente) - motivo original.
-  //  2. Ítem no catalogado. Estos NUNCA tienen `precio` (el ancla de precio de lista):
-  //     AgregarProducto, rama PRESUPUESTO, solo carga `unitario`. Recalcularlos hacía
-  //     `calcularPrecioCliente(undefined, lista)` -> `undefined * multiplicador` -> NaN
-  //     en unitario, total y total general. El guard viejo era `!this.esPresupuesto`,
-  //     que mira el proceso ACTUAL: al facturar un presupuesto eso vale FACTURA, así que
-  //     no protegía nada. Tampoco lo salvaba precioEditadoManualmente, porque
-  //     MarcarPreciosEditados corta antes con `if (p.precio == null) return`.
-  //     La pregunta correcta es por línea, no por proceso.
-  private NoRecalcularPrecio(item: ProductosFactura): boolean {
-    return item.precioEditadoManualmente === true || esItemNoCatalogado(item.tipoItem);
-  }
-
-  private MarcarPreciosEditados(productos: ProductosFactura[], idListaPrecio?: number) {
+  // Hasta ago-2026 este flag también protegía 3 recálculos de precio-por-lista
+  // (CambioTipoComprobante/SeleccionarCliente/PrepararFacturacionCliente, vía un guard
+  // NoRecalcularPrecio ya eliminado) de pisar un precio pactado a mano en Pedido. Esos
+  // recálculos dejaron de tocar `unitario` (el descuento de lista ahora se precarga en
+  // descuentoManual, ver AplicarDescuentoDeLista) - la reconstrucción de acá abajo ya no
+  // tiene ningún lector en el código (deuda técnica señalada, no resuelta: se deja para no
+  // tocar de más la funcionalidad de "editar precio a mano" de Pedido, que es independiente
+  // de este cambio y no fue pedida).
+  private MarcarPreciosEditados(productos: ProductosFactura[]) {
     (productos ?? []).forEach(p => {
-      if (p.precio == null || idListaPrecio == null) return;
-      const precioSegunLista = calcularPrecioCliente(p.precio, idListaPrecio);
-      if (Math.abs((p.unitario ?? 0) - precioSegunLista) > 0.01) {
+      if (p.precio == null) return;
+      if (Math.abs((p.unitario ?? 0) - p.precio) > 0.01) {
         p.precioEditadoManualmente = true;
       }
     });
   }
 
   // Copia el descuento del documento relacionado y lo bloquea SOLO si había algo
-  // realmente pactado (> 0%). Si el origen no tenía descuento, se deja editable en el
-  // destino: no hay nada que "proteger" y el vendedor puede seguir negociando un
-  // descuento nuevo al facturar/pedir (ago-2026, pedido del cliente). El .enable() del
-  // else cubre el caso de relacionar dos veces seguidas con distinto origen (uno con
-  // descuento, después otro sin) sin recargar la página.
-  private AplicarDescuentoRelacionado(origen: { descuento?: number; idTipoDescuento?: number }): void {
+  // realmente pactado (> 0%, de cabecera o por ítem). Si el origen no tenía descuento, se
+  // deja editable en el destino: no hay nada que "proteger" y el vendedor puede seguir
+  // negociando un descuento nuevo al facturar/pedir (ago-2026, pedido del cliente). El
+  // .enable() del else cubre el caso de relacionar dos veces seguidas con distinto origen
+  // (uno con descuento, después otro sin) sin recargar la página.
+  //
+  // itemsOrigen: SOLO se pasa cuando los ítems del origen viajan tal cual al documento
+  // nuevo (ConfirmarFacturacionRelacionado, BuscarNotaEmpaque). En el caso de Presupuesto→
+  // Pedido/Nota de Empaque "armado a mano" (RelacionarActualizarProceso) los ítems NO se
+  // heredan - se cargan de cero en el documento nuevo - así que no hay descuento por ítem
+  // que reconstruir ni bloquear ahí: se llama sin este parámetro y el comportamiento queda
+  // idéntico al de antes de este cambio (ago-2026, decisión del usuario: descuento por
+  // ítem pactado en Presupuesto/Pedido viaja bloqueado hasta la Factura, igual que el de
+  // cabecera - ver itemsDescuentoBloqueadoPorRelacion).
+  private AplicarDescuentoRelacionado(
+    origen: { descuento?: number; idTipoDescuento?: number },
+    itemsOrigen: { total?: number; importeDescuento?: number; descuentoManual?: number }[] = []
+  ): void {
     const descuentoOrigen = origen.descuento ?? 0;
+    const hayDescuentoPorItemOrigen = this.HayDescuentoPorItemPactado(itemsOrigen);
 
     this.formFacturacion.get('descuento')?.setValue(descuentoOrigen);
     this.formFacturacion.get('tDescuento')?.setValue(origen.idTipoDescuento ?? this.tiposDescuento[0]?.id);
 
-    if (descuentoOrigen > 0) {
+    if (descuentoOrigen > 0 || hayDescuentoPorItemOrigen) {
       this.formFacturacion.get('descuento')?.disable();
       this.formFacturacion.get('tDescuento')?.disable();
     } else {
       this.formFacturacion.get('descuento')?.enable();
       this.formFacturacion.get('tDescuento')?.enable();
+    }
+
+    this.itemsDescuentoBloqueadoPorRelacion = hayDescuentoPorItemOrigen;
+    if (hayDescuentoPorItemOrigen) {
+      this.ReconstruirDescuentoManual(itemsOrigen);
     }
   }
 
@@ -1139,19 +1309,27 @@ export class AddModVentasComponent {
     this.tipoRelacionado = this.venta.tipoRelacionado!;
 
     // Si este documento nació de una relación (nroRelacionado > 0) Y tenía un descuento
-    // pactado (> 0%) heredado al crearlo (ver AplicarDescuentoRelacionado), tiene que
-    // seguir bloqueado acá también al reabrirlo para editar, no solo en el momento de
-    // relacionar en vivo. Si no tenía descuento, queda editable (ver mismo criterio).
-    // Para tipo === 'factura' el caso bloqueado ya queda cubierto por soloLecturaPorEdicion
-    // más abajo, pero tipo === 'pre' nunca activa soloLecturaPorEdicion (ver su getter),
-    // así que sin este chequeo el descuento heredado quedaba editable de nuevo al reabrir
-    // un Pedido/Nota de Empaque ya guardado.
-    if (this.nroRelacionado && (this.venta.descuento ?? 0) > 0) {
+    // pactado (> 0%, de cabecera o por ítem) heredado al crearlo (ver
+    // AplicarDescuentoRelacionado), tiene que seguir bloqueado acá también al reabrirlo
+    // para editar, no solo en el momento de relacionar en vivo. Si no tenía descuento,
+    // queda editable (ver mismo criterio). Para tipo === 'factura' el caso bloqueado ya
+    // queda cubierto por soloLecturaPorEdicion más abajo, pero tipo === 'pre' nunca activa
+    // soloLecturaPorEdicion (ver su getter), así que sin este chequeo el descuento heredado
+    // quedaba editable de nuevo al reabrir un Pedido/Nota de Empaque ya guardado.
+    const itemsVentaActual = [...(this.venta.productos ?? []), ...(this.venta.servicios ?? [])];
+    const hayDescuentoPorItemVenta = this.HayDescuentoPorItemPactado(itemsVentaActual);
+
+    if (this.nroRelacionado && ((this.venta.descuento ?? 0) > 0 || hayDescuentoPorItemVenta)) {
       this.formFacturacion.get('descuento')?.disable();
       this.formFacturacion.get('tDescuento')?.disable();
     } else {
       this.formFacturacion.get('descuento')?.enable();
       this.formFacturacion.get('tDescuento')?.enable();
+    }
+
+    this.itemsDescuentoBloqueadoPorRelacion = !!this.nroRelacionado && hayDescuentoPorItemVenta;
+    if (this.itemsDescuentoBloqueadoPorRelacion) {
+      this.ReconstruirDescuentoManual(itemsVentaActual);
     }
 
     if(this.tipoRelacionado == TIPO_RELACIONADO.NOTA_EMPAQUE)
@@ -1160,7 +1338,7 @@ export class AddModVentasComponent {
     this.formGenerales.get('cliente')?.setValue(this.venta.cliente);
 
     if(this.venta.productos) this.productosFactura = this.venta.productos;
-    this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+    this.MarcarPreciosEditados(this.productosFactura);
     this.OrdenarProductosPorLineaTalle();
     if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
     if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
@@ -1225,10 +1403,10 @@ export class AddModVentasComponent {
               this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
 
               if(this.venta.productos) this.productosFactura = this.venta.productos;
-              this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+              this.MarcarPreciosEditados(this.productosFactura);
               this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
-              this.AplicarDescuentoRelacionado(response);
+              this.AplicarDescuentoRelacionado(response, [...this.productosFactura, ...this.serviciosFactura]);
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -1328,13 +1506,13 @@ export class AddModVentasComponent {
       accept: () => {
         this.venta = venta;
         if(this.venta.productos) this.productosFactura = this.venta.productos;
-        this.MarcarPreciosEditados(this.productosFactura, this.venta.idListaPrecio);
+        this.MarcarPreciosEditados(this.productosFactura);
         this.OrdenarProductosPorLineaTalle();
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
         this.formGenerales.get('punto')?.setValue(this.puntos.find(p => p.id == this.venta.idPunto));
         // Si el documento relacionado (Presupuesto/Pedido/Nota de Empaque) tenía un
         // descuento pactado, viaja y queda bloqueado acá - ver AplicarDescuentoRelacionado.
-        this.AplicarDescuentoRelacionado(venta);
+        this.AplicarDescuentoRelacionado(venta, [...this.productosFactura, ...this.serviciosFactura]);
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
@@ -1537,6 +1715,10 @@ export class AddModVentasComponent {
         nuevo.total = nuevo.unitario! * nuevo.cantidad!;
       }
 
+      // Ítem libre (sin catálogo): también participa del descuento de lista, igual
+      // que los ítems de catálogo - ver AplicarDescuentoDeLista.
+      this.AplicarDescuentoDeLista(nuevo, this.clienteSeleccionado?.idListaPrecio);
+
       this.productosFactura.push(nuevo);
       // Reasignar referencia: p-table no detecta la fila nueva si se muta el array
       // in-place (ver comentario en OrdenarProductosPorLineaTalle, mismo problema).
@@ -1586,12 +1768,11 @@ export class AddModVentasComponent {
 
       tallesSeleccionados.forEach((talleSel: any) => {
         const cantidad = talleSel.cantAgregar ?? 0;
-        let precio = talleSel.precio;
+        // `precio` es siempre el bruto de catálogo - el descuento de lista ya no se
+        // hornea acá (ago-2026, ver AplicarDescuentoDeLista más abajo). Antes esto
+        // pisaba `precio` con `calcularPrecioCliente(precio, idListaPrecio)`.
+        const precio = talleSel.precio;
 
-        if(this.clienteSeleccionado){
-          precio = calcularPrecioCliente(precio, this.clienteSeleccionado.idListaPrecio!);
-        }
-        
         // Ver si ya existe ese producto con ese precio en el detalle
         let existente = this.productosFactura.find(
           (p: ProductosFactura) =>
@@ -1636,6 +1817,10 @@ export class AddModVentasComponent {
           });
 
           console.log('Agregando nuevo producto a la factura:', nuevo);
+
+          // Precarga (o fuerza) el % de descuento según la lista del cliente - ver
+          // AplicarDescuentoDeLista. Sin cliente seleccionado, no hace nada.
+          this.AplicarDescuentoDeLista(nuevo, this.clienteSeleccionado?.idListaPrecio);
 
           // Asignar cantidad a tX
           this.AsignarTalle(nuevo, talleSel.talle, cantidad, talleSel.idLineaTalle);
@@ -1825,6 +2010,81 @@ export class AddModVentasComponent {
 
     producto.total = producto.cantidad * producto.unitario;
     this.CalcularTotalGeneral();
+  }
+
+  // Descuento (%) tipeado a mano en la columna "Desc. %" de un ítem puntual (producto o
+  // servicio) - alternativa al descuento general de cabecera, mutuamente excluyente con
+  // él (ver hayDescuentoPorItem/DescuentoBaseDe). Mismo patrón que ActualizarValoresPresupuesto
+  // (p-cellEditor + EstandarizarDecimal), pero clampeando siempre contra el tope de catálogo
+  // del ítem en vez de contra 0.
+  ActualizarDescuentoManual(item: ProductosFactura | ServiciosFactura, event: any) {
+    if (this.itemsDescuentoSoloLectura) {
+      this.Notificaciones.Warn(this.itemsDescuentoBloqueadoPorRelacion
+        ? "El descuento viene pactado del documento relacionado y no se puede modificar acá."
+        : "No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
+    if ((parseFloat(this.DescuentoControl) || 0) > 0) {
+      this.Notificaciones.Warn("Ya hay un descuento general aplicado. Para usar descuento por ítem, primero poné el descuento general en 0.");
+      return;
+    }
+
+    const input = event.target as HTMLInputElement;
+    let value = this.globalesService.EstandarizarDecimal(input.value);
+    if (value < 0) value = 0;
+
+    const tope = this.TopeDescuentoDe(item);
+    if (value > tope) {
+      const nombre = (item as any).nomProducto ?? (item as any).nomServicio ?? 'este ítem';
+      this.Notificaciones.Warn(`El descuento máximo para ${nombre} es ${tope}%.`);
+      value = tope;
+    }
+
+    // Lista de precio editable (hoy Lista 3.0): el % se mueve dentro de un rango
+    // parametrizable (descuentoListaEditableMin/Max), además del tope de catálogo de
+    // arriba - manda siempre lo más restrictivo. El mínimo de la lista nunca puede
+    // forzar un valor por encima del tope del producto puntual (ej. tope catálogo 5%
+    // con mínimo de lista 10%: gana el tope, el ítem queda en 5%, no en 10%).
+    if (listaPrecioEditablePorItem(this.clienteSeleccionado?.idListaPrecio)) {
+      const maxEfectivo = Math.min(this.descuentoListaEditableMax, tope);
+      const minEfectivo = Math.min(this.descuentoListaEditableMin, tope);
+
+      if (value > maxEfectivo) {
+        this.Notificaciones.Warn(`El descuento máximo para este ítem es ${maxEfectivo}%.`);
+        value = maxEfectivo;
+      }
+      if (value < minEfectivo) {
+        this.Notificaciones.Warn(`El descuento mínimo para este ítem es ${minEfectivo}%.`);
+        value = minEfectivo;
+      }
+      item.descuentoManual = value;
+    } else {
+      item.descuentoManual = value > 0 ? value : undefined;
+    }
+
+    this.CalcularTotalGeneral();
+    this.SincronizarBloqueoDescuentoGeneral();
+  }
+
+  // Habilita/deshabilita en vivo el FormControl 'descuento' de cabecera según
+  // hayDescuentoPorItem. Hace falta llamarlo explícito (no alcanza con el [disabled] del
+  // template): Angular reactive forms resuelve el disabled real de un control con
+  // formControlName por su propio estado (.enable()/.disable()), no por el binding de
+  // atributo del host - el resto de este archivo (AplicarDescuentoRelacionado,
+  // CompletarCampos) ya lo hacía así por el mismo motivo. Sin este método, cargar un
+  // descuento manual en un ítem no bloqueaba el campo "Descuento" general aunque el
+  // template mostrara [disabled]="... || hayDescuentoPorItem" (bug reportado, ago-2026).
+  // Se llama después de tocar productosFactura/serviciosFactura (ActualizarDescuentoManual,
+  // EliminarItem), nunca desde el propio control de cabecera - ese lado ya funciona con el
+  // *ngIf simple de la columna "Desc. %" (sin formControlName, sin este problema).
+  private SincronizarBloqueoDescuentoGeneral(): void {
+    if (this.hayDescuentoPorItem || this.listaBloqueaDescuentoGeneral) {
+      this.formFacturacion.get('descuento')?.disable();
+      this.formFacturacion.get('tDescuento')?.disable();
+    } else {
+      this.formFacturacion.get('descuento')?.enable();
+      this.formFacturacion.get('tDescuento')?.enable();
+    }
   }
 
   ObtenerTalleReal(tx: string, objeto: any): string | null {
