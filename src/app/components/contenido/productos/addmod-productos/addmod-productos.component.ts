@@ -55,7 +55,10 @@ export class AddmodProductosComponent {
   formulario: FormGroup;
   modalAddClienteVisible: boolean = false;
 
-  empresas:any[] = [{id:70, descripcion:'SUCEDE'}];
+  empresas:any[] = [
+    {id:70, descripcion:'SUCEDE'},
+    {id:81, descripcion:'SUELTO Y CONFIO'},
+  ];
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
   temporadas: Temporada[] = [];
@@ -578,7 +581,7 @@ export class AddmodProductosComponent {
           operaciones$.push(this.productosService.Modificar(productoRelacionado));
         });
 
-        // ✅ NUEVO: Insertar colores que no existían antes
+        // NUEVO: Insertar colores que no existían antes
         const idsExistentes = new Set([
           this.producto.color.id,
           ...(this.producto.relacionados?.map(r => r.color?.id).filter(Boolean) ?? [])
