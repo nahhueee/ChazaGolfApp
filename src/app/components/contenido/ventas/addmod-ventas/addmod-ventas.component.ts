@@ -951,6 +951,13 @@ export class AddModVentasComponent {
     [...this.productosFactura, ...this.serviciosFactura].forEach(item => {
       item.descuentoAplicado = Math.min(this.DescuentoBaseDe(item, descuentoUsuario), this.TopeDescuentoDe(item));
       item.importeDescuento  = (item.total ?? 0) * item.descuentoAplicado / 100;
+      // totalMostrar = total NETO de descuento, solo para la columna "Total" de la
+      // grilla (ver template) - total sigue siendo el bruto, no se toca: es la base de
+      // cálculo de todo lo demás (recalcularTotales, impresión). Mismo campo/semántica
+      // que ya usa listado-ventas.component.ts (calcularPrecioItem) para la vista de
+      // solo lectura - acá estaba declarado pero sin mantenerse actualizado. Pedido del
+      // cliente (ago-2026): ver el total ya descontado línea por línea, no de cabeza.
+      item.totalMostrar      = (item.total ?? 0) - item.importeDescuento;
     });
   }
 
@@ -1328,7 +1335,14 @@ export class AddModVentasComponent {
     }
 
     this.itemsDescuentoBloqueadoPorRelacion = !!this.nroRelacionado && hayDescuentoPorItemVenta;
-    if (this.itemsDescuentoBloqueadoPorRelacion) {
+    // Reconstruir el % siempre que haya descuento por ítem persistido, esté o no
+    // bloqueado por relación: lo de arriba solo decide si la columna queda editable, no
+    // si hay que mostrar lo que ya está guardado. Antes esto vivía adentro del if de
+    // arriba, así que reabrir para editar un Presupuesto/Pedido standalone (sin
+    // nroRelacionado) con descuento por ítem mostraba "Desc. %" en 0 y el Total de la
+    // grilla en bruto, aunque importeDescuento estuviera bien persistido - bug reportado
+    // por el usuario (ago-2026): "cuando entro a editar el descuento no aparece aplicado".
+    if (hayDescuentoPorItemVenta) {
       this.ReconstruirDescuentoManual(itemsVentaActual);
     }
 

@@ -492,7 +492,7 @@
                             </ng-template>
                         </td>
 
-                        <td>{{ producto.total | decimalFormat }}</td>
+                        <td>{{ producto.totalMostrar | decimalFormat }}</td>
                         @if(!itemsSoloLectura){
                             <td class="acciones-tabla">
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
@@ -629,7 +629,7 @@
                         </ng-template>
                     </td>
 
-                    <td>{{ servicio.total | decimalFormat }}</td>
+                    <td>{{ servicio.totalMostrar | decimalFormat }}</td>
                     @if(!itemsSoloLectura){
                         <td class="acciones-tabla">
                             <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
@@ -830,20 +830,13 @@
 
             <div class="resumen">
 
-                <!-- Bruto (totales.items, sin descontar) solo cuando hay descuento aplicado:
-                     sin esta referencia, "Subtotal"($ ya neto de descuento, ver TotalesVenta)
-                     queda igual a "Total General" en todo documento sin IVA (Presupuesto/
-                     Pedido, Factura C, Sin Comprobante), y un descuento grande por ítem
-                     (ej. 100% en un producto) no tiene contra qué compararse visualmente -
-                     ago-2026, a pedido del usuario tras probar el descuento por ítem. -->
-                <div class="fila" *ngIf="totales.descuento">
-                    <span>Bruto:</span>
-                    <span class="monto">${{totales.items| decimalFormat}}</span>
-                </div>
-
+                <!-- Subtotal = totales.items: bruto real, suma de ítems sin descontar.
+                     Estandarizado (ago-2026) para que "Subtotal" signifique lo mismo acá,
+                     en Vista Previa y en el comprobante impreso (antes cada pantalla mostraba
+                     un número distinto bajo el mismo nombre y generaba confusión). -->
                 <div class="fila">
                     <span>Subtotal:</span>
-                    <span class="monto">${{totales.subtotal| decimalFormat}}</span>
+                    <span class="monto">${{totales.items| decimalFormat}}</span>
                 </div>
 
                 <div class="fila">
@@ -852,8 +845,15 @@
                 </div>
 
                 @if(tipo == 'factura'){
+                    <!-- Neto = base imponible (totales.subtotal: post-descuento, pre-IVA).
+                         Solo tiene sentido mostrarla junto al IVA, por eso comparte el
+                         *ngIf con la fila de IVA. -->
                     <div class="fila" *ngIf="totales.mostrarIva">
-                        <span>IVA 21%:</span>
+                        <span>Neto:</span>
+                        <span class="monto">${{totales.subtotal| decimalFormat}}</span>
+                    </div>
+                    <div class="fila" *ngIf="totales.mostrarIva">
+                        <span>IVA 21% ({{ EsMayoristaConListaPropia() ? 'Discriminado' : 'Incluido' }}):</span>
                         <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
                 }

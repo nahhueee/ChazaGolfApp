@@ -11,6 +11,7 @@ import { ObjTicketFactura } from '../models/ObjTicketFactura';
 import { ObjComprobante } from '../models/ObjComprobant';
 import { MiscService } from './misc.service';
 import { TipoComprobante } from '../models/ObjFacturar';
+import { esMayoristaConListaPropia } from '../components/contenido/ventas/models/venta.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -191,21 +192,28 @@ export class FacturaService {
 
       comprobante.descuento = totalDescuento;
       comprobante.redondeo = venta.redondeo;
+      // Ver esMayoristaConListaPropia en venta.constants.ts: mayorista con lista propia →
+      // precio ya neto, IVA se suma aparte (Discriminado); resto → precio con IVA incluido,
+      // se discrimina hacia atrás sin cambiar el total (Incluido). Solo afecta el label del
+      // "Detalle de Totales" impreso (ago-2026, estandarización de totales entre pantallas).
+      comprobante.ivaDiscriminado = esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.cliente?.idListaPrecio);
 
       // Usamos neto/iva/total ya confirmados por AFIP (venta.factura, venta.total) en vez de
       // recalcular desde los ítems con una regla fija (A siempre neto, B siempre con IVA
-      // incluido) que no aplica a todos los clientes (ver EsMayoristaConListaPropia en
+      // incluido) que no aplica a todos los clientes (ver esMayoristaConListaPropia en
       // addmod-ventas) y podía mostrar, en este Detalle de Totales, un número distinto al
-      // Neto/IVA Total que se imprime más abajo en el pie del mismo comprobante.
+      // Neto/IVA Total que antes se imprimía en el pie del mismo comprobante (bloque sacado,
+      // ago-2026, por redundante con este resumen).
       if (venta.idTipoComprobante != 99 && venta.idTipoComprobante != 100 && venta.idTipoComprobante != 101 && venta.factura) {
         // venta.factura.neto es el importe YA NETO DE DESCUENTO (y de IVA) que confirmó AFIP.
-        // Para que el "Subtotal" impreso sea el bruto (antes de descuento, como ahora se
-        // muestran los ítems) y la cuenta Subtotal - Descuento = Total General cierre en la
-        // página, se reconstruye sumándole el descuento de vuelta — sin volver a recalcular
-        // el neto desde los ítems (eso es justamente lo que se evitó con el fix de IVA
-        // mayorista, para no volver a desalinear este bloque con el pie "Neto Total/IVA Total").
-        comprobante.subTotal = (venta.factura.neto ?? subtotalSinComprobante) + totalDescuento;
+        // Para que el "Subtotal" impreso sea el bruto real (suma de ítems sin descontar,
+        // como ahora se muestran) y la cuenta Subtotal - Descuento - IVA = Total General
+        // cierre en la página, se reconstruye sumándole el descuento y el IVA de vuelta —
+        // sin volver a recalcular el neto desde los ítems (eso es justamente lo que se evitó
+        // con el fix de IVA mayorista, para no desalinear este bloque de lo que confirmó AFIP).
+        comprobante.neto = venta.factura.neto ?? subtotalSinComprobante;
         comprobante.totalIva = venta.factura.iva ?? 0;
+        comprobante.subTotal = comprobante.neto + comprobante.totalIva + totalDescuento;
         comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
         comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
       } else if (sinItems) {
@@ -213,12 +221,14 @@ export class FacturaService {
         // el que cargó el usuario en nota-credito-x.component.ts / nota-debito-x.component.ts
         // (venta.total).
         comprobante.subTotal = venta.total ?? 0;
+        comprobante.neto = venta.total ?? 0;
         comprobante.totalIva = 0;
         comprobante.totalFinal = venta.total ?? 0;
         comprobante.totalAPagar = (venta.total ?? 0) + comprobante.redondeo;
       } else {
         // Sin comprobante fiscal (cotización, etc.) → sin IVA
         comprobante.subTotal = subtotalBruto;
+        comprobante.neto = subtotalSinComprobante;
         comprobante.totalIva = 0;
         comprobante.totalFinal = subtotalSinComprobante;
         comprobante.totalAPagar = subtotalSinComprobante + comprobante.redondeo;
@@ -258,14 +268,20 @@ export class FacturaService {
         return cantNumero % 1 === 0 ? cantNumero.toFixed(0) : cantNumero.toFixed(1);
       };
   
-      // Total de la fila en bruto (sin descuento): el descuento se muestra aparte
-      // en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
-      const FormatearPrecioTotalBruto = (unitario, cantidad) => {
+      // Total de la fila NETO de descuento (unitario × cantidad × (1 - descuentoAplicado%)).
+      // Antes mostraba el bruto (el descuento solo se veía aparte, en la columna "Desc" y
+      // en el resumen) - cambiado a pedido del cliente (ago-2026), mismo criterio ya
+      // aplicado en comprobante.service.ts/documento-comercial.service.ts (ver
+      // FormatearPrecioTotalNeto en tabla-productos-talles.helper.ts - acá va duplicada,
+      // no ese helper, porque este archivo arma la Factura fiscal con su propia estructura
+      // de filas, sin desglose por talle).
+      const FormatearPrecioTotalNeto = (unitario, cantidad, descuentoAplicado) => {
         const nCantidad = Number(cantidad) || 0;
+        const nDescuento = Number(descuentoAplicado) || 0;
 
-        const totalBruto = unitario * nCantidad;
+        const totalNeto = unitario * nCantidad * (1 - nDescuento / 100);
 
-        return totalBruto.toLocaleString('es-AR', {
+        return totalNeto.toLocaleString('es-AR', {
           minimumFractionDigits: 1,
           maximumFractionDigits: 1
         });
@@ -294,7 +310,10 @@ export class FacturaService {
           FormatearCantidad(item.cantidad),
           { text: item.precioMostrar!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: item.total!.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
+          // Neto de descuento (item.total ya es el bruto real, no unitario×cantidad -
+          // precioMostrar puede diferir de unitario en algún caso de IVA discriminado,
+          // por eso se parte de item.total directo en vez de reconstruirlo).
+          { text: (item.total! * (1 - (item.descuentoAplicado ?? 0) / 100)).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right'  },
         ]);
       });
 
@@ -334,7 +353,7 @@ export class FacturaService {
           FormatearCantidad(item.cantidad),
           { text: unitario.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotalBruto(unitario, item.cantidad), alignment: 'right' },
+          { text: FormatearPrecioTotalNeto(unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   
@@ -617,8 +636,9 @@ export class FacturaService {
                       { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
                       (datosFactura.tipoComprobante === 1) ? [
-                         { text: `IVA: $${comprobante.totalIva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
-                      ] : [],                     
+                         { text: `Neto: $${comprobante.neto?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                         { text: `IVA 21% (${comprobante.ivaDiscriminado ? 'Discriminado' : 'Incluido'}): $${comprobante.totalIva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ] : [],
 
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Redondeo: $${comprobante.redondeo?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },
@@ -677,42 +697,48 @@ export class FacturaService {
                     width: 'auto' 
                   },
 
-                  // Columna derecha descripcion del IVA
-                  (datosFactura.tipoComprobante != 11) ? [ //Ocultamos para facturas C
-                    {
-                      stack: [
-                        (datosFactura.tipoComprobante == 6) ? [
-                          { text: 'IVA 21% Incluido', fontSize: 10, margin: [0, 12, 0, 5] },
-                        ] : [
-                          { text: 'IVA 21% Discriminado', fontSize: 10, margin: [0, 12, 0, 5] },
-                        ],
-                        
-                        {
-                          text: [
-                            { text: 'Neto Total: ', bold: true },
-                            { text: '$' + datosFactura.neto?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-                          ],
-                          style: 'simple'
-                        },
-                        {
-                          text: [
-                            { text: 'IVA Total: ', bold: true },
-                            { text: '$' + datosFactura.iva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-                          ],
-                          style: 'simple'
-                        },
-                        {
-                          text: [
-                            { text: 'Moneda: ', bold: true },
-                            { text: 'PES' }
-                          ],
-                          style: 'simple'
-                        }
-                      ],
-                      alignment: 'right',
-                      width: '*'
-                    }
-                  ] : [],
+                  // Columna derecha descripcion del IVA - sacada (ago-2026, a pedido del
+                  // cliente): quedaba redundante y "se veía mal" (dos bloques con Neto/IVA
+                  // distintos, uno acá y otro en el "Detalle de Totales" de arriba, que ahora
+                  // ya muestra Neto + IVA (Incluido/Discriminado) - ver comprobante.neto/
+                  // comprobante.ivaDiscriminado en GenerarDatosComunes). Se deja comentado
+                  // por si el cliente lo reclama.
+                  // (datosFactura.tipoComprobante != 11) ? [ //Ocultamos para facturas C
+                  //   {
+                  //     stack: [
+                  //       (datosFactura.tipoComprobante == 6) ? [
+                  //         { text: 'IVA 21% Incluido', fontSize: 10, margin: [0, 12, 0, 5] },
+                  //       ] : [
+                  //         { text: 'IVA 21% Discriminado', fontSize: 10, margin: [0, 12, 0, 5] },
+                  //       ],
+                  //
+                  //       {
+                  //         text: [
+                  //           { text: 'Neto Total: ', bold: true },
+                  //           { text: '$' + datosFactura.neto?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                  //         ],
+                  //         style: 'simple'
+                  //       },
+                  //       {
+                  //         text: [
+                  //           { text: 'IVA Total: ', bold: true },
+                  //           { text: '$' + datosFactura.iva?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                  //         ],
+                  //         style: 'simple'
+                  //       },
+                  //       {
+                  //         text: [
+                  //           { text: 'Moneda: ', bold: true },
+                  //           { text: 'PES' }
+                  //         ],
+                  //         style: 'simple'
+                  //       }
+                  //     ],
+                  //     alignment: 'right',
+                  //     width: '*'
+                  //   }
+                  // ] : [],
+                  [],
 
 
               ],

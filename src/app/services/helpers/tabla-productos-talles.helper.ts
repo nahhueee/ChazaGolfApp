@@ -43,15 +43,22 @@ export const CortarNombreProducto = (nombreProd?: string): string => {
     : nombreProd;
 };
 
-// Total de la fila en bruto (sin descuento): el descuento se muestra aparte
-// en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
-export const FormatearPrecioTotalBruto = (unitario: any, cantidad: any): string => {
+// Total de la fila NETO de descuento (unitario × cantidad × (1 - descuentoAplicado%)).
+// Antes mostraba el bruto (el descuento solo se veía aparte, en la columna "Desc" y en
+// el resumen) - cambiado a pedido del cliente (ago-2026): quiere ver el importe ya
+// descontado línea por línea, no tener que calcularlo a mano contra el % informativo.
+// Mismo criterio que ya usa la grilla en pantalla (ver totalMostrar en
+// addmod-ventas.component.ts). Requiere que ProcesarItemsConDescuento ya haya corrido
+// sobre este ítem (setea item.descuentoAplicado) - ver comentario de
+// ArmarFilasProductosConTalles más abajo.
+export const FormatearPrecioTotalNeto = (unitario: any, cantidad: any, descuentoAplicado: any): string => {
   const nCantidad = Number(cantidad) || 0;
   const nUnitario = parseFloat(unitario) || 0;
+  const nDescuento = Number(descuentoAplicado) || 0;
 
-  const totalBruto = nUnitario * nCantidad;
+  const totalNeto = nUnitario * nCantidad * (1 - nDescuento / 100);
 
-  return totalBruto.toLocaleString('es-AR', {
+  return totalNeto.toLocaleString('es-AR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   });
@@ -197,7 +204,7 @@ export const ArmarFilasProductosConTalles = (
       { text: FormatearCantidad(item.cantidad), alignment: 'center' },
       { text: FormatearPrecio(item.unitario), alignment: 'right' },
       { text: item.descuentoAplicado + "%", alignment: 'right' },
-      { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
+      { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
     ]);
 
     itemAnterior = item;

@@ -16,7 +16,7 @@ import {
   ArmarFilasProductosConTalles,
   FormatearCantidad,
   FormatearPrecio,
-  FormatearPrecioTotalBruto,
+  FormatearPrecioTotalNeto,
   CortarNombreProducto,
 } from './helpers/tabla-productos-talles.helper';
 
@@ -143,7 +143,7 @@ export class ComprobanteService {
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
           { text: item.descuentoAplicado + "%", alignment: 'right' },
-          { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
+          { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
   

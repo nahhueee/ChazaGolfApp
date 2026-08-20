@@ -48,6 +48,10 @@ export class VistaPreviaComponent implements OnInit {
   cantItems:number = 0;
   subTotal:number = 0;
   totalItems:number = 0;
+  // Base imponible (neto de descuento, sin IVA) - solo se muestra junto al IVA, cuando
+  // mostrarIva es true. Ver estandarización de totales ago-2026 (mismo criterio que
+  // "Neto" en addmod-ventas/factura.service.ts).
+  totalNeto:number = 0;
   totalDescuento:number = 0;
   totalGeneral:number = 0;
   totalAPagar:number = 0;
@@ -175,9 +179,17 @@ export class VistaPreviaComponent implements OnInit {
     // realmente pagó el cliente. Mientras la venta se arma en addmod-ventas todavía no hay
     // venta.factura (no se facturó contra AFIP) → se sigue calculando local como antes.
     if (this.venta.factura) {
-      this.subTotal = (this.venta.factura.neto ?? subtotalNeto) + totalDescuento;
+      // venta.factura.neto/iva son los importes confirmados por AFIP (base imponible y
+      // IVA). El "Subtotal" mostrado debe ser el bruto real (suma de ítems sin descontar) -
+      // se reconstruye sumando neto + iva + descuento, mismo criterio que
+      // factura.service.ts (GenerarDatosComunes) - ago-2026, evita el bug de mostrar
+      // Neto+Descuento como si fuera el bruto (quedaba $42.190,08 en vez de $50.000).
+      const netoAfip = this.venta.factura.neto ?? subtotalNeto;
+      const ivaAfip = esComprobanteConIva ? (this.venta.factura.iva ?? 0) : 0;
+      this.totalNeto = netoAfip;
+      this.subTotal = netoAfip + ivaAfip + totalDescuento;
       this.totalDescuento = totalDescuento;
-      this.totalIva = esComprobanteConIva ? (this.venta.factura.iva ?? 0) : 0;
+      this.totalIva = ivaAfip;
       this.mostrarIva = esComprobanteConIva;
       this.totalGeneral = (this.venta.total ?? subtotalNeto) - (this.venta.redondeo ?? 0);
       this.totalAPagar = this.totalGeneral + (this.venta.redondeo ?? 0);
@@ -185,6 +197,7 @@ export class VistaPreviaComponent implements OnInit {
     } else {
       let totalIva = 0;
       let totalGeneral = 0;
+      let totalNeto = 0;
 
       // Aplica igual para A y B: el caller decide vía preciosNetos si el precio de los
       // ítems ya viene neto (mayorista con lista propia → se suma IVA) o con IVA incluido
@@ -194,9 +207,11 @@ export class VistaPreviaComponent implements OnInit {
         if (this.preciosNetos) {
           totalIva = subtotalNeto * 0.21;
           totalGeneral = subtotalNeto + totalIva;
+          totalNeto = subtotalNeto;
         } else {
           totalIva = subtotalNeto * 21 / 121;
           totalGeneral = subtotalNeto; // ya incluye IVA
+          totalNeto = subtotalNeto - totalIva;
         }
         this.mostrarIva = true;
 
@@ -205,10 +220,12 @@ export class VistaPreviaComponent implements OnInit {
 
         totalIva = 0;
         totalGeneral = subtotalNeto;
+        totalNeto = 0;
         this.mostrarIva = false;
       }
 
       this.subTotal = subtotalBruto;
+      this.totalNeto = totalNeto;
       this.totalDescuento = totalDescuento;
       this.totalIva = totalIva;
       this.totalGeneral = totalGeneral;

@@ -26,8 +26,19 @@ export class ObjComprobante {
     filasProductoContinuacion?:number[];
     cantProductos?:number;
     cantServicios?:number;
+    // Bruto real (suma de ítems, sin descontar) - ver GenerarDatosComunes en factura.service.ts.
     subTotal?:number;
+    // Base imponible (neto de descuento, sin IVA) - solo se imprime cuando hay IVA a mostrar
+    // (ver "Detalle de Totales" en ArmarFacturaA4). Antes solo vivía en datosFactura.neto,
+    // duplicado en el pie "Neto Total" del comprobante (bloque que ahora se sacó, ago-2026,
+    // por redundante con este resumen).
+    neto?:number;
     totalIva?:number;
+    // true = el precio de lista del cliente ya es neto (sin IVA) y el IVA se suma aparte
+    // (mayorista con lista propia); false = el precio ya incluye IVA y se discrimina de él
+    // sin cambiar el total (resto de clientes). Ver esMayoristaConListaPropia en
+    // venta.constants.ts - usado solo para el label "IVA 21% (Incluido/Discriminado)".
+    ivaDiscriminado?:boolean;
     totalFinal?:number;
     totalAPagar?:number;
     // true cuando la venta no tiene productos ni servicios (ej. NC X "sin productos"

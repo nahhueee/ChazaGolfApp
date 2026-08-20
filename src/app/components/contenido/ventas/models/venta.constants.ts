@@ -349,19 +349,30 @@ export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN = 'descuentoLista3Min';
 export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MAX = 'descuentoLista3Max';
 
 /**
- * Cliente mayorista con lista de precio propia (≠ Consumidor Final).
- * Para estos clientes, el precio resultante de calcularPrecioCliente() es siempre
+ * Cliente mayorista con lista de precio propia (≠ Consumidor Final), o cliente con
+ * Lista 3.0 (sin importar su Categoría). Para estos clientes, el precio es siempre
  * NETO (sin IVA), a diferencia de Consumidor Final donde el precio de góndola ya
  * incluye IVA. Se usa para decidir, tanto en Factura A como en B, si el IVA se suma
- * arriba del precio (mayorista) o se discrimina de un precio que ya lo incluye (resto).
+ * arriba del precio (neto) o se discrimina de un precio que ya lo incluye (resto).
+ *
+ * Lista 3.0 (LISTA_PRECIO.LISTA_2) es una EXCEPCIÓN explícita, confirmada por el
+ * usuario (ago-2026): a diferencia de Lista 4.0/4.5/5.0 (que exigen Categoría =
+ * Mayorista), Lista 3.0 siempre aplica "items - descuento + IVA" sin importar si el
+ * cliente está categorizado como Mayorista o Minorista - es lo que la distingue del
+ * resto de las listas. Por eso se chequea aparte, ANTES de la condición de Categoría.
  *
  * Centralizada acá porque la misma condición se necesita en addmod-ventas,
- * listado-ventas, notas-venta y vista-previa.
+ * listado-ventas, notas-venta, vista-previa y factura.service. También replicada a
+ * mano en SQL en EasyStoreApi/src/data/ventasRepository.ts (ObtenerReporteVentas) -
+ * no hay forma de reusar esta función TS desde una query - si esta regla vuelve a
+ * cambiar, actualizar ese archivo también (tiene el mismo comentario apuntando acá).
  */
 export function esMayoristaConListaPropia(
   idCategoria?: number | null,
   idListaPrecio?: number | null
 ): boolean {
+  if (idListaPrecio === LISTA_PRECIO.LISTA_2) return true;
+
   return idCategoria === CATEGORIA_CLIENTE.MAYORISTA &&
          idListaPrecio != null &&
          idListaPrecio !== LISTA_PRECIO.CONSUMIDOR_FINAL;
