@@ -35,5 +35,9 @@ export class ProveedoresService {
   Eliminar(id:number): Observable<any>{
     return this.apiService.delete(`proveedores/eliminar/${id}`)
   }
+
+  DarBaja(idProveedor:number, motivo:string): Observable<any>{
+    return this.apiService.put('proveedores/dar-baja', { idProveedor, motivo })
+  }
   //#endregion
 }
