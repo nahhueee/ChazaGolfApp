@@ -20,7 +20,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
-import { esMayoristaConListaPropia, esItemNoCatalogado, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
+import { esItemNoCatalogado, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -173,13 +173,6 @@ export class NotasVentaComponent {
     return this.serviciosSeleccionados?.some(s => s === servicio);
   }
 
-  // Cliente mayorista con lista de precio propia (≠ Consumidor Final) de la venta
-  // original sobre la que se emite la nota. Mismo criterio que listado-ventas/
-  // addmod-ventas: para estos clientes el precio ya es neto (sin IVA) en A y B.
-  EsMayoristaConListaPropia(): boolean {
-    return esMayoristaConListaPropia(this.venta.cliente?.idCategoria, this.venta.idListaPrecio);
-  }
-
   CalcularTotalGeneral() {
     const procesarItems = (items: any[]) => {
       return items?.reduce((acc, item) => {
@@ -217,27 +210,16 @@ export class NotasVentaComponent {
       ].includes(this.venta.idTipoComprobante!);
 
       if (esComprobanteConIva) {
-        const esTipoA = [
-          TipoComprobante.FACTURA_A,
-          TipoComprobante.NC_A,
-          TipoComprobante.ND_A
-        ].includes(this.venta.idTipoComprobante!);
-
-        // PrepararPrecios() en listado-ventas.component.ts (que llama EmitirNotaCredito
-        // antes de abrir este modal) deja los items en NETO para Factura A siempre, y
-        // para Factura B solo si el cliente es mayorista con lista propia (ver
-        // EsMayoristaConListaPropia). El resto de los casos de B llega con IVA incluido.
-        const itemsEnNeto = esTipoA || this.EsMayoristaConListaPropia();
-
-        if (itemsEnNeto) {
-          this.totalIva = this.subTotal * 0.21;
-          this.totalGeneral = this.subTotal + this.totalIva;
-        } else {
-          const totalConIva = this.subTotal;
-          this.totalIva = totalConIva * 21 / 121;
-          this.subTotal = totalConIva - this.totalIva;
-          this.totalGeneral = totalConIva;
-        }
+        // IVA incluido (ago-2026): PrepararPrecios() en listado-ventas.component.ts (que
+        // llama EmitirNotaCredito antes de abrir este modal) deja los items con IVA
+        // incluido para CUALQUIER tipo de comprobante/cliente, sin excepciones - se
+        // discrimina, no se suma arriba. Uniforma con addmod-ventas.recalcularTotales(),
+        // que nunca trató Factura A como caso especial (antes acá sí, `esTipoA ||
+        // EsMayoristaConListaPropia()`, inconsistencia preexistente corregida de paso).
+        const totalConIva = this.subTotal;
+        this.totalIva = totalConIva * 21 / 121;
+        this.subTotal = totalConIva - this.totalIva;
+        this.totalGeneral = totalConIva;
         this.mostrarIva = true;
       }
 

@@ -853,7 +853,7 @@
                         <span class="monto">${{totales.subtotal| decimalFormat}}</span>
                     </div>
                     <div class="fila" *ngIf="totales.mostrarIva">
-                        <span>IVA 21% ({{ EsMayoristaConListaPropia() ? 'Discriminado' : 'Incluido' }}):</span>
+                        <span>IVA 21% (Incluido):</span>
                         <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
                 }
@@ -899,9 +899,7 @@
 
 
 <!-- Modal Resumen -->
-<!-- preciosNetos refleja la misma condición que recalcularTotales() (ver EsMayoristaConListaPropia),
-     para que el total de la vista previa coincida con el del resumen de esta pantalla. -->
-<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta" [preciosNetos]="EsMayoristaConListaPropia()"></app-vista-previa>
+<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta"></app-vista-previa>
 
 
 <!-- Modal Datos Cliente -->

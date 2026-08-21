@@ -71,8 +71,8 @@ import {
   MAX_TALLES,
   TIPO_METODO_PAGO,
   TALLES_ESTANDAR,
-  esMayoristaConListaPropia,
   TIPO_ITEM,
+  esMayoristaConListaPropia,
 } from '../models/venta.constants';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
@@ -896,6 +896,64 @@ export class AddModVentasComponent {
     return (item.descuentoManual ?? 0) > 0 ? item.descuentoManual! : descuentoGeneral;
   }
 
+  // true si la venta actual va a un comprobante fiscal que discrimina/suma IVA
+  // explícitamente (Factura A o B). Cotización (siempre TIPO_COMPROBANTE.SIN_COMPROBANTE,
+  // ver PrepararFacturacionCliente), Factura C, Sin Comprobante, NC/ND internas, y
+  // cualquier Presupuesto/Pedido/Nota de Empaque (this.tipo !== 'factura', no tienen
+  // concepto de comprobante fiscal) dan false. Mismo criterio que ya usaba
+  // recalcularTotales() para decidir si discrimina IVA de los totales - extraído acá para
+  // reusarlo también en el precio por ítem (ver PrecioItemSegunComprobante).
+  private EsComprobanteConIvaExplicito(): boolean {
+    const esFacturaConIva =
+      this.tipo === 'factura' &&
+      this.TipoComprobanteControl !== TIPO_COMPROBANTE.SIN_COMPROBANTE;
+    const esComprobanteConIva =
+      this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_A ||
+      this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_B;
+    return esFacturaConIva && esComprobanteConIva;
+  }
+
+  // Precio de catálogo (el mismo que ve Consumidor Final, sin ajustes) con el 21% de IVA
+  // sumado arriba SI el cliente es mayorista con lista propia o Lista 3.0 (ver
+  // esMayoristaConListaPropia) Y el comprobante actual lo amerita (Factura A o B - ver
+  // EsComprobanteConIvaExplicito). "Precio lista minorista + IVA" (ago-2026). Si cambian
+  // el comprobante a C/Cotización, o están en Presupuesto/Pedido/Nota de Empaque, el
+  // precio vuelve al normal (sin el ajuste) - pedido explícito del usuario: la grilla
+  // tiene que reaccionar al tipo de comprobante, no quedar fija desde que se agregó el
+  // ítem (ver RecalcularPreciosSegunComprobante, que reaplica esto a los ítems ya
+  // cargados cuando cambia comprobante o cliente). Se aplica ANTES del descuento de lista
+  // (AplicarDescuentoDeLista, que sigue igual para todos, sin reaccionar a esto).
+  // Consumidor Final y el resto de comprobantes/procesos: precio de catálogo tal cual.
+  private PrecioItemSegunComprobante(precioCatalogo: number): number {
+    const necesitaIva =
+      this.EsComprobanteConIvaExplicito() &&
+      esMayoristaConListaPropia(this.clienteSeleccionado?.idCategoria, this.clienteSeleccionado?.idListaPrecio);
+    return necesitaIva ? precioCatalogo * 1.21 : precioCatalogo;
+  }
+
+  // Reaplica PrecioItemSegunComprobante a cada ítem YA CARGADO en el carrito, a partir de
+  // su precio de catálogo ancla (item.precio - ver que ahora se setea siempre al agregar
+  // un ítem, talles/item libre/servicio). Se llama cada vez que cambia algo que afecta esa
+  // decisión: tipo de comprobante (CambioTipoComprobante) o cliente/lista
+  // (SeleccionarCliente, PrepararFacturacionCliente) - mismos 3 lugares donde ya se
+  // reaplica AplicarDescuentoDeLista, mismo criterio.
+  // Ítems SIN `precio` ancla (ventas cargadas antes de este fix, datos legacy) se dejan
+  // como están - no hay desde dónde recalcular sin arriesgarse a pisar un valor válido con
+  // uno inventado. Ítems con precioEditadoManualmente (ver ActualizarValoresPresupuesto)
+  // tampoco se tocan - mismo criterio que descuentoManual, lo que el usuario editó a mano
+  // no se pisa con un recálculo automático.
+  private RecalcularPreciosSegunComprobante(): void {
+    const recalcular = (item: { precio?: number; cantidad?: number; unitario?: number; total?: number; precioMostrar?: number; precioEditadoManualmente?: boolean }) => {
+      if (item.precio == null || item.precioEditadoManualmente) return;
+      const nuevoUnitario = this.PrecioItemSegunComprobante(item.precio);
+      item.unitario = nuevoUnitario;
+      item.precioMostrar = nuevoUnitario;
+      item.total = nuevoUnitario * (item.cantidad ?? 0);
+    };
+    (this.productosFactura ?? []).forEach(recalcular);
+    (this.serviciosFactura ?? []).forEach(recalcular);
+  }
+
   // Precarga (o fuerza) el descuento por ítem según la lista de precio del cliente
   // (ago-2026, ver LISTA_PRECIO_CONFIG). Reemplaza al viejo esquema que horneaba el %
   // directo en `unitario` vía calcularPrecioCliente() - `unitario` ya no depende de la
@@ -961,21 +1019,6 @@ export class AddModVentasComponent {
     });
   }
 
-  //Cliente mayorista con lista de precio propia (≠ Consumidor Final).
-  //Para estos clientes, el `base` (items - descuento) de recalcularTotales() se trata
-  //como NETO (sin IVA, se suma arriba), a diferencia de Consumidor Final donde el precio
-  //de góndola ya incluye IVA (se discrimina). Hasta ago-2026 esto se derivaba de que
-  //calcularPrecioCliente() devolvía un precio ya neto para estos clientes; ahora que el
-  //descuento de lista se expresa como descuentoManual/importeDescuento (ver
-  //AplicarDescuentoDeLista) en vez de hornearse en el precio, sigue siendo la misma regla
-  //de negocio, solo que aplicada sobre `base` en vez de sobre el precio unitario - el
-  //resultado numérico no cambia.
-  //Usado para decidir si en Factura A el IVA se suma o se discrimina (recalcularTotales),
-  //y para que la vista previa de impresión muestre el mismo total (ver template).
-  EsMayoristaConListaPropia(): boolean {
-    return esMayoristaConListaPropia(this.clienteSeleccionado?.idCategoria, this.clienteSeleccionado?.idListaPrecio);
-  }
-
   //Calcula todos los totales de la venta a partir del estado actual.
   private recalcularTotales(): TotalesVenta {
     const descuentoUsuario = parseFloat(this.DescuentoControl) || 0;
@@ -1010,50 +1053,31 @@ export class AddModVentasComponent {
     const ajusteTransferencia =
       this.formFacturacion.get('ajuste')?.value === true ? base * 0.10 : 0;
 
-    // IVA aplica solo cuando hay un comprobante fiscal real (A o B).
-    // No depende de ProcesoControl porque ese valor puede estar stale
-    // cuando valueChanges dispara antes que CambioTipoComprobante() del template.
+    // IVA aplica solo cuando hay un comprobante fiscal real (A o B) - ver
+    // EsComprobanteConIvaExplicito(), que centraliza este mismo criterio (también lo usa
+    // PrecioItemSegunComprobante para el precio por ítem).
     // OJO: antes exigía productosFactura.length > 0, lo que dejaba sin discriminar
     // IVA a toda venta 100% servicio facturada A/B (bug real, no solo un tema de
     // reporte - ver Venta #230, jul-2026: AFIP sí discriminó IVA en el CAE real,
     // pero acá quedaba neto=total/iva=0 porque nunca entraba a este cálculo).
     // El IVA no depende de si el ítem es producto o servicio, solo del tipo de
     // comprobante - por eso se saca la condición de productos.
-    const esFacturaConIva =
-      this.tipo === 'factura' &&
-      this.TipoComprobanteControl !== TIPO_COMPROBANTE.SIN_COMPROBANTE;
-
-    // Nota: usamos variable local para no depender del orden de evaluación
-    const tipoComprobante = this.TipoComprobanteControl;
-
     let subtotal   = base;
     let iva        = 0;
     let general    = base;
     let mostrarIva = false;
 
-    const esComprobanteConIva =
-      tipoComprobante === TIPO_COMPROBANTE.FACTURA_A ||
-      tipoComprobante === TIPO_COMPROBANTE.FACTURA_B;
-
-    if (esFacturaConIva && esComprobanteConIva) {
-      if (this.EsMayoristaConListaPropia()) {
-        // Mayorista con lista de precio propia (≠ Consumidor Final): `base` se trata
-        // como neto (sin IVA) → se suma el 21% arriba (ver comentario en
-        // EsMayoristaConListaPropia). Aplica igual para A y B. No discriminar acá adentro
-        // como con CONSUMIDOR_FINAL, porque ahí el precio de góndola ya incluye IVA.
-        iva        = base * 0.21;
-        subtotal   = base;
-        general    = base + iva;
-        mostrarIva = true;
-
-      } else {
-        // Resto de Factura A (ej. Responsable Inscripto con lista Consumidor Final) y
-        // toda Factura B: precio ya incluye IVA → se discrimina.
-        iva        = base * 21 / 121;
-        subtotal   = base - iva;
-        general    = base;
-        mostrarIva = true;
-      }
+    if (this.EsComprobanteConIvaExplicito()) {
+      // IVA incluido (ago-2026, decisión comercial): el precio de catálogo ya trae el 21%
+      // sumado para CUALQUIER lista/categoría de cliente - antes esto solo aplicaba a
+      // Consumidor Final, mayorista con lista propia sumaba el IVA arriba de un precio
+      // neto (rama eliminada, ver historial de git de EsMayoristaConListaPropia). El
+      // descuento de lista (LISTA_PRECIO_CONFIG) se sigue aplicando igual sobre `base`,
+      // solo cambia cómo se discrimina el IVA. Aplica igual para Factura A y B.
+      iva        = base * 21 / 121;
+      subtotal   = base - iva;
+      general    = base;
+      mostrarIva = true;
       // FACTURA_C y SIN_COMPROBANTE: sin IVA, subtotal = base, general = base
     }
 
@@ -1103,6 +1127,13 @@ export class AddModVentasComponent {
     }else{
       this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
     }
+
+    // El precio con IVA sumado (mayorista/Lista 3.0) tiene que reaccionar al comprobante
+    // elegido - Factura A/B lo muestra, C/Cotización/Sin Comprobante vuelve al precio
+    // normal (pedido del usuario, ago-2026). Sin gate de RI/cantidad de ítems a propósito
+    // (a diferencia del AplicarDescuentoDeLista de arriba): cubre también servicios, y es
+    // un no-op inofensivo para Consumidor Final (necesitaIva siempre da false).
+    this.RecalcularPreciosSegunComprobante();
     this.CalcularTotalGeneral();
   }
   //#endregion
@@ -1214,7 +1245,12 @@ export class AddModVentasComponent {
       }
 
       // Recalcular siempre al final: cubre cambio de empresa, de cliente
-      // y cualquier otro caller asíncrono de este método
+      // y cualquier otro caller asíncrono de este método. RecalcularPreciosSegunComprobante
+      // va ANTES de CalcularTotalGeneral() a propósito: acá ya están finales tanto
+      // clienteSeleccionado (lista) como tComprobante (recién seteado arriba) - los dos
+      // datos que necesita PrecioItemSegunComprobante (ver CambioTipoComprobante, mismo
+      // criterio).
+      this.RecalcularPreciosSegunComprobante();
       this.CalcularTotalGeneral();
       this.SincronizarBloqueoDescuentoGeneral();
     });
@@ -1707,7 +1743,14 @@ export class AddModVentasComponent {
       }
 
       const cantidad = this.formProductos.get('cantidad')?.value || 1;
-      const precio = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value ?? '');
+      // precioCatalogo: el ancla sin ajustes (viaja como precioLista al backend, ver
+      // MarcarPreciosEditados). precio: lo que se muestra/usa según comprobante+lista -
+      // en la práctica siempre igual al ancla acá porque Presupuesto es tipo 'pre' (sin
+      // comprobante fiscal, ver EsComprobanteConIvaExplicito), pero se calcula igual por
+      // consistencia con talles/servicios y por si este ítem se recalcula más adelante
+      // (ver RecalcularPreciosSegunComprobante).
+      const precioCatalogo = this.globalesService.EstandarizarDecimal(this.formProductos.get('precio')?.value ?? '');
+      const precio = this.PrecioItemSegunComprobante(precioCatalogo);
       const nuevo = new ProductosFactura({
         idProducto: this.productoSeleccionado.id,
         // Marca el origen en la línea misma. Sin esto, el idProducto (que apunta a
@@ -1720,12 +1763,14 @@ export class AddModVentasComponent {
         codProducto: this.productoSeleccionado.codigo,
         nomProducto: this.productoSeleccionado.nombre,
         cantidad: cantidad,
+        precio: precioCatalogo,
         unitario: precio,
         total: precio * cantidad,
       });
 
       if(nuevo.unitario === 0){
-        nuevo.unitario = this.ProductoControl.sugerido;
+        nuevo.precio = this.ProductoControl.sugerido;
+        nuevo.unitario = this.PrecioItemSegunComprobante(nuevo.precio ?? 0);
         nuevo.total = nuevo.unitario! * nuevo.cantidad!;
       }
 
@@ -1782,10 +1827,14 @@ export class AddModVentasComponent {
 
       tallesSeleccionados.forEach((talleSel: any) => {
         const cantidad = talleSel.cantAgregar ?? 0;
-        // `precio` es siempre el bruto de catálogo - el descuento de lista ya no se
-        // hornea acá (ago-2026, ver AplicarDescuentoDeLista más abajo). Antes esto
-        // pisaba `precio` con `calcularPrecioCliente(precio, idListaPrecio)`.
-        const precio = talleSel.precio;
+        // `talleSel.precio` es el precio de catálogo (el de Consumidor Final, sin
+        // ajustes) - el descuento de lista ya no se hornea acá (ago-2026, ver
+        // AplicarDescuentoDeLista más abajo). Antes esto pisaba `precio` con
+        // `calcularPrecioCliente(precio, idListaPrecio)`. Para mayorista con lista
+        // propia/Lista 3.0, Y con Factura A/B seleccionada, SÍ hace falta sumarle el 21%
+        // de IVA acá (ver PrecioItemSegunComprobante) - a diferencia del descuento, el
+        // ajuste de IVA no es lo mismo para todas las listas/comprobantes.
+        const precio = this.PrecioItemSegunComprobante(talleSel.precio);
 
         // Ver si ya existe ese producto con ese precio en el detalle
         let existente = this.productosFactura.find(
@@ -2014,6 +2063,12 @@ export class AddModVentasComponent {
       producto.cantidad = value;
 
     if(tipo === 'precio'){
+      // Edición manual: se toma el valor tal cual lo tipeó el usuario, SIN pasar por
+      // PrecioItemSegunComprobante - es una edición explícita del precio final de la
+      // línea, mismo criterio que descuentoManual (ver ActualizarDescuentoManual): si el
+      // usuario ya lo tocó a mano, no se lo pisa con ningún cálculo automático. Por eso
+      // RecalcularPreciosSegunComprobante respeta precioEditadoManualmente (seteado 2
+      // líneas más abajo) y no lo pisa si cambia el comprobante después.
       producto.unitario = value;
       // Marca el ítem como editado a mano para que los recálculos automáticos de precio
       // (cambio de cliente / tipo de comprobante, ver CambioTipoComprobante, SeleccionarCliente,
@@ -2152,9 +2207,14 @@ export class AddModVentasComponent {
     nuevoServicio.codServicio = seleccionado.codigo;
     nuevoServicio.nomServicio = seleccionado.descripcion;
     nuevoServicio.cantidad = this.formServicios.get('cantidad')?.value || 1;
-    nuevoServicio.unitario = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value ?? '');
+    // precio: ancla sin ajustes (igual que ProductosFactura.precio, ver
+    // MarcarPreciosEditados). unitario: lo que se muestra/usa según comprobante+lista -
+    // ver PrecioItemSegunComprobante/RecalcularPreciosSegunComprobante.
+    nuevoServicio.precio = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value ?? '');
+    nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0);
     if(nuevoServicio.unitario === 0){
-      nuevoServicio.unitario = seleccionado.sugerido;
+      nuevoServicio.precio = seleccionado.sugerido;
+      nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0);
     }
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
     nuevoServicio.topeDescuento = seleccionado.topeDescuento;
@@ -2560,8 +2620,8 @@ export class AddModVentasComponent {
       this.venta.estado = ESTADO_VENTA.APROBADO;
 
 
-    // idListaPrecio se persiste desde clienteSeleccionado: es la misma fuente que ya
-    // usa recalcularTotales()/EsMayoristaConListaPropia() para el cálculo en pantalla.
+    // idListaPrecio se persiste desde clienteSeleccionado: es la misma fuente que ya usa
+    // AplicarDescuentoDeLista() para precargar el % de descuento por ítem en pantalla.
     // Antes se leía de un FormControl 'lista' sin UI (siempre vacío), que forzaba
     // CONSUMIDOR_FINAL en toda venta y rompía el recálculo de IVA en NC/Resumen
     // para clientes mayoristas con lista propia.

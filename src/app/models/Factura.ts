@@ -145,6 +145,12 @@ import { TallesProducto } from "./Producto";
     codServicio?: string;
     nomServicio?: string;
     cantidad?: number;
+    // Precio de catálogo ancla, sin ajustes (ago-2026) - espejo de
+    // ProductosFactura.precio: unitario es lo que se muestra/usa según comprobante+lista
+    // (ver PrecioItemSegunComprobante en addmod-ventas.component.ts), precio es el valor
+    // de referencia sin ese ajuste, para poder recalcular unitario si cambia el
+    // comprobante o el cliente (ver RecalcularPreciosSegunComprobante).
+    precio?: number;
     unitario?: number;
     precioMostrar?: number;
     total?: number;
@@ -161,6 +167,7 @@ import { TallesProducto } from "./Producto";
         this.idServicio = data.idServicio;
         this.codServicio = data.codServicio;
         this.cantidad = data.cantidad;
+        this.precio = data.precio;
         this.unitario = data.unitario;
         this.precioMostrar = data.precioMostrar;
         this.nomServicio = data.nomServicio;

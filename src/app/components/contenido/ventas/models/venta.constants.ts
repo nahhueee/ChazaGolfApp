@@ -349,23 +349,24 @@ export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MIN = 'descuentoLista3Min';
 export const CLAVE_PARAMETRO_DESCUENTO_LISTA_MAX = 'descuentoLista3Max';
 
 /**
- * Cliente mayorista con lista de precio propia (≠ Consumidor Final), o cliente con
- * Lista 3.0 (sin importar su Categoría). Para estos clientes, el precio es siempre
- * NETO (sin IVA), a diferencia de Consumidor Final donde el precio de góndola ya
- * incluye IVA. Se usa para decidir, tanto en Factura A como en B, si el IVA se suma
- * arriba del precio (neto) o se discrimina de un precio que ya lo incluye (resto).
+ * true si el cliente es Mayorista con lista de precio propia (≠ Consumidor Final), o
+ * tiene Lista 3.0 (LISTA_PRECIO.LISTA_2) sin importar su Categoría.
  *
- * Lista 3.0 (LISTA_PRECIO.LISTA_2) es una EXCEPCIÓN explícita, confirmada por el
- * usuario (ago-2026): a diferencia de Lista 4.0/4.5/5.0 (que exigen Categoría =
- * Mayorista), Lista 3.0 siempre aplica "items - descuento + IVA" sin importar si el
- * cliente está categorizado como Mayorista o Minorista - es lo que la distingue del
- * resto de las listas. Por eso se chequea aparte, ANTES de la condición de Categoría.
+ * REINTRODUCIDA (ago-2026) con un propósito distinto al que tenía antes. Hasta ahora
+ * decidía, en los TOTALES de la venta, si el IVA se sumaba arriba de un precio neto
+ * (mayorista) o se discriminaba de un precio que ya lo incluía (resto) - esa distinción
+ * se eliminó, los totales discriminan IVA de la misma forma para todos (ver historial de
+ * git de esta función).
  *
- * Centralizada acá porque la misma condición se necesita en addmod-ventas,
- * listado-ventas, notas-venta, vista-previa y factura.service. También replicada a
- * mano en SQL en EasyStoreApi/src/data/ventasRepository.ts (ObtenerReporteVentas) -
- * no hay forma de reusar esta función TS desde una query - si esta regla vuelve a
- * cambiar, actualizar ese archivo también (tiene el mismo comentario apuntando acá).
+ * Lo que SÍ sigue haciendo falta distinguir es el precio de catálogo EN SÍ, antes de
+ * aplicar cualquier descuento: el catálogo tiene un único precio por producto/servicio,
+ * que es el precio final de Consumidor Final (ya con IVA, sin ningún ajuste). Para estos
+ * clientes (mayorista con lista propia, o Lista 3.0) hay que sumarle el 21% de IVA a ese
+ * precio de catálogo ANTES de aplicar el descuento de lista - "precio lista minorista +
+ * IVA", a diferencia de Consumidor Final que usa el precio de catálogo tal cual. Se usa
+ * en addmod-ventas.component.ts, en el momento de agregar un producto/servicio/ítem
+ * libre al carrito (ver PrecioConIvaSegunLista) - NO en el descuento de lista en sí, que
+ * sigue siendo igual para todos vía LISTA_PRECIO_CONFIG.
  */
 export function esMayoristaConListaPropia(
   idCategoria?: number | null,

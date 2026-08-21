@@ -33,11 +33,6 @@ import { ID_PROCESO } from '../models/venta.constants';
 export class VistaPreviaComponent implements OnInit {
   @Input() visible = false;
   @Input() venta: Venta = new Venta();
-  // Indica si venta.productos/servicios ya vienen NETOS (sin IVA) para Factura A,
-  // como deja listado-ventas.PrepararPrecios() antes de abrir esta vista (caso por defecto).
-  // En addmod-ventas los precios siempre llegan BRUTOS (con IVA incluido, para A y B),
-  // por eso ese caller pasa preciosNetos=false explícitamente.
-  @Input() preciosNetos: boolean = true;
   @Output() visibleChange = new EventEmitter<boolean>();
 
   cantProductos:number = 0;
@@ -199,20 +194,15 @@ export class VistaPreviaComponent implements OnInit {
       let totalGeneral = 0;
       let totalNeto = 0;
 
-      // Aplica igual para A y B: el caller decide vía preciosNetos si el precio de los
-      // ítems ya viene neto (mayorista con lista propia → se suma IVA) o con IVA incluido
-      // (resto de casos → se discrimina). Ver EsMayoristaConListaPropia en addmod-ventas.
+      // IVA incluido (ago-2026): el precio de los ítems ya viene con IVA incluido para
+      // cualquier lista/categoría de cliente - se discrimina, no se suma arriba. Aplica
+      // igual para A y B (antes mayorista con lista propia sumaba el IVA arriba de un
+      // precio neto, ver EsMayoristaConListaPropia en el historial de git).
       if (esComprobanteConIva) {
 
-        if (this.preciosNetos) {
-          totalIva = subtotalNeto * 0.21;
-          totalGeneral = subtotalNeto + totalIva;
-          totalNeto = subtotalNeto;
-        } else {
-          totalIva = subtotalNeto * 21 / 121;
-          totalGeneral = subtotalNeto; // ya incluye IVA
-          totalNeto = subtotalNeto - totalIva;
-        }
+        totalIva = subtotalNeto * 21 / 121;
+        totalGeneral = subtotalNeto; // ya incluye IVA
+        totalNeto = subtotalNeto - totalIva;
         this.mostrarIva = true;
 
       // Otros comprobantes → sin IVA
