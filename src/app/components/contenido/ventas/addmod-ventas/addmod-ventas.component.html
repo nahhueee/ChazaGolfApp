@@ -22,8 +22,17 @@
                     <div class="horizontal">
                         <!-- Proceso -->
                         <p-floatlabel variant="in">
+                            <!-- modificando (no soloLecturaPorEdicion): el tipo de un documento
+                                 existente no debe poder cambiarse en NINGUNA edición, no solo en
+                                 'factura'. soloLecturaPorEdicion = modificando && tipo === 'factura'
+                                 dejaba este combo habilitado al editar Presupuesto/Pedido/Nota de
+                                 Empaque (tipo 'pre'): cambiar el tipo ahí pisa venta.idProceso al
+                                 guardar pero el nroProceso queda con el número del tipo original
+                                 (Modificar()/UpdateVenta() no lo recalcula, solo Agregar() lo hace),
+                                 y choca contra UNIQUE(idProceso, nroProceso) si ese número ya existe
+                                 en el tipo nuevo. Bug real en producción, ago-2026. -->
                             <p-select [options]="procesosSeleccionables" formControlName="proceso" optionLabel="descripcion"
-                            [disabled]="soloLecturaPorEdicion || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo()" />
+                            [disabled]="modificando || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo()" />
                             <label>Proceso</label>
                         </p-floatlabel>
                         <!-- Fecha -->
