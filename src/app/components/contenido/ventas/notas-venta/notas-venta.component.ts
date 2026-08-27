@@ -97,11 +97,11 @@ export class NotasVentaComponent {
     ];
   }
 
-  // Solo se puede pedir CAE de NC A/B si la venta origen tiene un comprobante
-  // fiscal real que asociar (Factura A o B). Si no (Cotización, Ticket X,
+  // Solo se puede pedir CAE de NC A/B/C si la venta origen tiene un comprobante
+  // fiscal real que asociar (Factura A, B o C). Si no (Cotización, Ticket X,
   // etc.), la única opción es la interna - no se muestra el selector.
   get puedeElegirFiscal(): boolean {
-    return this.venta.idTipoComprobante == 1 || this.venta.idTipoComprobante == 6;
+    return this.venta.idTipoComprobante == 1 || this.venta.idTipoComprobante == 6 || this.venta.idTipoComprobante == 11;
   }
 
   get emiteFiscal(): boolean {
@@ -418,6 +418,10 @@ export class NotasVentaComponent {
     }
     else if(this.emiteFiscal && this.venta.idTipoComprobante == 1) {//FACTURA A
       this.nuevaVenta.idTipoComprobante = 3;
+      this.nuevaVenta.estado = "Facturada";
+    }
+    else if(this.emiteFiscal && this.venta.idTipoComprobante == 11) {//FACTURA C
+      this.nuevaVenta.idTipoComprobante = 13;
       this.nuevaVenta.estado = "Facturada";
     }
     else{
