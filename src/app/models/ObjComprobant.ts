@@ -47,6 +47,11 @@ export class ObjComprobante {
     // mostrarle al mayorista el % de descuento aplicado, solo Cantidad/Precio/Total).
     // Determina también el ancho de columnas de esas tablas - ver ArmarFacturaA4.
     ocultarDescuento?:boolean;
+    // true = comprobante que discrimina IVA (Factura/NC/ND A): unitarios, Subtotal y
+    // Descuento del impreso van netos. Ver GenerarDatosComunes en factura.service.ts.
+    imprimirEnNeto?:boolean;
+    // true = no imprimir la línea "Subtotal" (Factura A + mayorista: quedaría idéntica a Neto).
+    ocultarSubtotal?:boolean;
     totalFinal?:number;
     totalAPagar?:number;
     // true cuando la venta no tiene productos ni servicios (ej. NC X "sin productos"

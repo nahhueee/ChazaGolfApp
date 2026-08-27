@@ -190,7 +190,11 @@ export class FacturaService {
       const totalDescuento = productos.descuento + servicios.descuento;
       const subtotalSinComprobante = subtotalBruto - totalDescuento;
 
-      comprobante.descuento = totalDescuento;
+      // Factura A: el Descuento impreso también va neto, para que la resta cierre contra
+      // el Neto de abajo (Subtotal - Descuento == Neto + IVA). B y el resto: sin cambios.
+      comprobante.descuento = comprobante.imprimirEnNeto
+        ? totalDescuento / 1.21
+        : totalDescuento;
       comprobante.redondeo = venta.redondeo;
       // IVA incluido (ago-2026, decisión comercial): el precio de catálogo ya trae el IVA
       // incluido para CUALQUIER lista/categoría de cliente, sin excepciones - antes acá se
@@ -199,7 +203,7 @@ export class FacturaService {
       // esMayoristaConListaPropia en venta.constants.ts (eliminada, ver su historial de
       // git). Solo afecta el label del "Detalle de Totales" impreso - los montos reales
       // siguen viniendo de venta.factura.neto/iva más abajo, sin cambios.
-      comprobante.ivaDiscriminado = false;
+      comprobante.ivaDiscriminado = comprobante.imprimirEnNeto;
 
       // Usamos neto/iva/total ya confirmados por AFIP (venta.factura, venta.total) en vez de
       // recalcular desde los ítems con una regla fija (A siempre neto, B siempre con IVA
@@ -219,9 +223,13 @@ export class FacturaService {
         // ocultarDescuento (Factura A/B + mayorista/Lista3, ver GenerarDatosComunes): no se
         // reconstruye el bruto ni se imprime "Descuento" - el Subtotal ya es neto de
         // descuento (Neto + IVA), igual que el precio unitario que se muestra por línea.
-        comprobante.subTotal = comprobante.ocultarDescuento
-          ? comprobante.neto + comprobante.totalIva
-          : comprobante.neto + comprobante.totalIva + totalDescuento;
+        comprobante.subTotal = comprobante.imprimirEnNeto
+          // A: bruto SIN IVA = neto + descuento neto (no se suma el IVA)
+          ? comprobante.neto + (totalDescuento / 1.21)
+          // B y resto: comportamiento actual, sin cambios
+          : (comprobante.ocultarDescuento
+              ? comprobante.neto + comprobante.totalIva
+              : comprobante.neto + comprobante.totalIva + totalDescuento);
         comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
         comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
       } else if (sinItems) {
@@ -316,6 +324,23 @@ export class FacturaService {
       const ocultarDescuento = esFactura && esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.idListaPrecio);
       comprobante.ocultarDescuento = ocultarDescuento;
 
+      // Factura A discrimina IVA: los unitarios, el Subtotal y el Descuento del comprobante
+      // IMPRESO se muestran netos (el cliente RI computa crédito fiscal sobre esos valores).
+      // Solo afecta el impreso - la grilla de carga y la vista previa siguen en bruto
+      // (decisión del cliente, ago-2026: el operador trabaja en bruto).
+      // Incluye NC_A/ND_A por consistencia: una nota que ajusta una Factura A debe verse
+      // con el mismo criterio que la factura que ajusta.
+      const imprimirEnNeto = [
+        TIPO_COMPROBANTE.FACTURA_A,
+        TipoComprobante.NC_A,
+        TipoComprobante.ND_A,
+      ].includes(venta.idTipoComprobante as any);
+      comprobante.imprimirEnNeto = imprimirEnNeto;
+      // Factura A + mayorista/Lista3: con el descuento oculto, el Subtotal quedaría
+      // idéntico al Neto (ver Cambio 5b en ArmarFacturaA4).
+      const ocultarSubtotal = imprimirEnNeto && ocultarDescuento;
+      comprobante.ocultarSubtotal = ocultarSubtotal;
+
       //Productos
       comprobante.filasProducto = [
         ocultarDescuento ? [
@@ -333,21 +358,31 @@ export class FacturaService {
       ];
 
       venta.productos.forEach(item => {
+        // Factura/NC/ND A (imprimirEnNeto): el unitario y el total de línea impresos van
+        // netos de IVA. QuitarIva(50.000) = 41.322,31 (Consumidor Final, precio con IVA
+        // incluido) y QuitarIva(60.500) = 50.000 (mayorista, catálogo neto + 21%) - funciona
+        // igual para las dos listas sin ramas extra.
+        const unitarioImpreso = imprimirEnNeto
+          ? this.QuitarIva(item.precioMostrar!, 21)
+          : item.precioMostrar!;
+        const totalBrutoImpreso = imprimirEnNeto
+          ? this.QuitarIva(item.total!, 21)
+          : item.total!;
         // ocultarDescuento: el Precio impreso pasa a ser el YA NETO del descuento (en vez
-        // del bruto + columna Desc aparte) - mismo % que se le aplica a item.total en
+        // del bruto + columna Desc aparte) - mismo % que se le aplica a totalBrutoImpreso en
         // totalNetoDescuento más abajo, para que Cantidad × Precio == Total de la fila.
         const precioImpreso = ocultarDescuento
-          ? item.precioMostrar! * (1 - (item.descuentoAplicado ?? 0) / 100)
-          : item.precioMostrar!;
+          ? unitarioImpreso * (1 - (item.descuentoAplicado ?? 0) / 100)
+          : unitarioImpreso;
         const filaBase = [
           CortarNombreProducto(item.nomProducto),
           FormatearCantidad(item.cantidad),
           { text: precioImpreso.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' },
         ];
-        // Neto de descuento (item.total ya es el bruto real, no unitario×cantidad -
-        // precioMostrar puede diferir de unitario en algún caso de IVA discriminado,
-        // por eso se parte de item.total directo en vez de reconstruirlo).
-        const totalNetoDescuento = { text: (item.total! * (1 - (item.descuentoAplicado ?? 0) / 100)).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' };
+        // Neto de descuento, partiendo del mismo valor ya convertido que el precio impreso
+        // (totalBrutoImpreso) - si se partiera de item.total directo, Cantidad × Precio
+        // dejaría de cerrar con el Total cuando imprimirEnNeto está activo.
+        const totalNetoDescuento = { text: (totalBrutoImpreso * (1 - (item.descuentoAplicado ?? 0) / 100)).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), alignment: 'right' };
 
         comprobante.filasProducto?.push(
           ocultarDescuento
@@ -391,7 +426,11 @@ export class FacturaService {
       venta.servicios.forEach(item => {
         let unitario = Number(item.unitario) || 0;
 
-        if (venta.idTipoComprobante == 1) {
+        // Factura/NC/ND A (imprimirEnNeto): antes solo cubría idTipoComprobante == 1
+        // (Factura A), lo que dejaba el servicio impreso en neto y el producto de arriba
+        // con IVA incluido en un mismo comprobante NC_A/ND_A. Unificado con la misma
+        // variable que productos para que no puedan volver a divergir.
+        if (imprimirEnNeto) {
           unitario = this.QuitarIva(unitario, 21);
         }
 
@@ -690,7 +729,12 @@ export class FacturaService {
                   },
                   {
                     stack: [
-                      { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
+                      // Factura A + mayorista/Lista3 (comprobante.ocultarSubtotal): con el
+                      // descuento oculto, el Subtotal quedaría idéntico al Neto (dos líneas
+                      // con el mismo número) - se omite (decisión del cliente, ago-2026).
+                      comprobante.ocultarSubtotal ? [] : [
+                        { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
+                      ],
                       // Factura A/B + mayorista/Lista3 (comprobante.ocultarDescuento): no se
                       // muestra esta línea - el % de descuento ya no se expone en ningún lado
                       // del comprobante (ver columna "Desc" en GenerarDatosComunes), así que
@@ -713,7 +757,10 @@ export class FacturaService {
 
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       { text: `Redondeo: $${comprobante.redondeo?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },
-                      { text: `Total A Pagar: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'total', alignment: 'right' }
+                      // Fix redondeo (ago-2026): antes usaba totalFinal, el mismo valor que
+                      // "Total General" (totalFinal = totalAPagar - redondeo), así que con
+                      // redondeo != 0 el impreso mostraba un Total A Pagar distinto al cobrado.
+                      { text: `Total A Pagar: $${comprobante.totalAPagar?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'total', alignment: 'right' }
                     ]
                   }
                 ]
