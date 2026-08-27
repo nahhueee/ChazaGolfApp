@@ -53,14 +53,22 @@ export class AddModClientesComponent {
     {id: 4, descripcion: 'OTRO'},
   ];
   categorias: CategoriaCliente[] = [];
+  // Lista 3.5 (id 3) se eliminó ago-2026 - confirmado sin clientes asignados antes de
+  // sacarla (ver Diagnostico impacto Lista 3.5 - ago-2026.sql). No se reordenan los ids
+  // de las demás listas.
   listasPrecio = [
     {id: 1, descripcion: 'CONSUMIDOR FINAL'},
     {id: 2, descripcion: 'LISTA 3'},
-    {id: 3, descripcion: 'LISTA 3.5'},
     {id: 4, descripcion: 'LISTA 4'},
     {id: 5, descripcion: 'LISTA 4.5'},
     {id: 6, descripcion: 'LISTA 5'},
   ];
+  // Listas 4/4.5/5 (ids 4,5,6) son exclusivas de categoría Mayorista (id 2) - ver
+  // FiltrarListasPrecio. Arranca en el subconjunto Minorista (CONSUMIDOR FINAL +
+  // LISTA 3) porque la categoría del formulario todavía no tiene valor elegido
+  // (HANDOFF-2 Parte B: evita repetir el caso de un cliente RI con Lista 5 pero
+  // categoría Minorista, que facturó sin el +21% en silencio).
+  listasPrecioFiltradas = this.listasPrecio.filter(l => l.id === 1 || l.id === 2);
 
   provincias : any[] = [];
   provinciasFiltrado : any[] = [];
@@ -210,6 +218,13 @@ export class AddModClientesComponent {
     let categoria = this.categorias.find(c => c.id == cliente.idCategoria);
     if(categoria) this.formulario.get('categoria')?.setValue(categoria);
 
+    // Cliente ya guardado (HANDOFF-2 Parte B.2): si su lista actual no corresponde a
+    // su categoría (ej. Minorista con Lista 5, caso real detectado), se incluye igual
+    // en las opciones para que no desaparezca del select ni se pise al guardar. El
+    // filtro estricto solo aplica al crear un cliente nuevo o cambiar de categoría a
+    // mano (ver CambioCategoria).
+    this.FiltrarListasPrecio(cliente.idCategoria, cliente.idListaPrecio);
+
     let tipoDocumento = this.tiposDocumento.find(c => c.id == cliente.idTipoDocumento);
     if(tipoDocumento) this.formulario.get('tDocumento')?.setValue(tipoDocumento);
 
@@ -233,11 +248,37 @@ export class AddModClientesComponent {
   }
 
   CambioCategoria(){
-    if(this.formulario.get('categoria')?.value.id == 2){
+    const idCategoria = this.formulario.get('categoria')?.value.id;
+
+    if(idCategoria == 2){
       this.formulario.get('lista')?.setValue(this.listasPrecio[1]);
     }else{
       this.formulario.get('lista')?.setValue(this.listasPrecio[0]);
     }
+
+    // Cambio manual de categoría (o alta nueva): filtro estricto, sin conservar
+    // listas que ya no corresponden - a diferencia de CompletarCampos, acá no hay
+    // combinación previa que preservar (ver FiltrarListasPrecio).
+    this.FiltrarListasPrecio(idCategoria);
+  }
+
+  // Categoría Mayorista (id 2): habilita las 5 listas. Cualquier otra categoría
+  // (Minorista) solo puede usar CONSUMIDOR FINAL (id 1) y LISTA 3 (id 2) - las
+  // listas 4/4.5/5 (ids 4,5,6) son exclusivas de Mayorista (HANDOFF-2 Parte B).
+  // idListaPrecioActual: si se pasa y no está permitida por idCategoria, se incluye
+  // igual (ver CompletarCampos) para no perder la combinación ya guardada.
+  FiltrarListasPrecio(idCategoria?: number, idListaPrecioActual?: number){
+    const esMayorista = idCategoria == 2;
+    let listas = esMayorista
+      ? this.listasPrecio
+      : this.listasPrecio.filter(l => l.id === 1 || l.id === 2);
+
+    if (idListaPrecioActual != null && !listas.some(l => l.id === idListaPrecioActual)) {
+      const listaActual = this.listasPrecio.find(l => l.id === idListaPrecioActual);
+      if (listaActual) listas = [...listas, listaActual];
+    }
+
+    this.listasPrecioFiltradas = listas;
   }
 
   CambioCondicion() {

@@ -26,8 +26,32 @@ export class ObjComprobante {
     filasProductoContinuacion?:number[];
     cantProductos?:number;
     cantServicios?:number;
+    // Bruto real (suma de ítems, sin descontar) - ver GenerarDatosComunes en factura.service.ts.
     subTotal?:number;
+    // Base imponible (neto de descuento, sin IVA) - solo se imprime cuando hay IVA a mostrar
+    // (ver "Detalle de Totales" en ArmarFacturaA4). Antes solo vivía en datosFactura.neto,
+    // duplicado en el pie "Neto Total" del comprobante (bloque que ahora se sacó, ago-2026,
+    // por redundante con este resumen).
+    neto?:number;
     totalIva?:number;
+    // Siempre false (ago-2026): el precio de catálogo ya incluye IVA para cualquier
+    // cliente/lista, sin excepciones, y se discrimina de él sin cambiar el total. Antes
+    // distinguía mayorista con lista propia (precio neto, IVA sumado aparte) del resto -
+    // ver esMayoristaConListaPropia en el historial de git de venta.constants.ts. Usado
+    // solo para el label "IVA 21% (Incluido)" - se mantiene el campo por si se necesita
+    // reintroducir la distinción más adelante.
+    ivaDiscriminado?:boolean;
+    // true si el comprobante es una Factura (A/B/C) y el cliente es mayorista con lista
+    // propia o Lista 3.0 (ver esMayoristaConListaPropia) - oculta la columna "Desc" en
+    // filasProducto/filasServicio (ago-2026, a pedido del cliente: en factura no quiere
+    // mostrarle al mayorista el % de descuento aplicado, solo Cantidad/Precio/Total).
+    // Determina también el ancho de columnas de esas tablas - ver ArmarFacturaA4.
+    ocultarDescuento?:boolean;
+    // true = comprobante que discrimina IVA (Factura/NC/ND A): unitarios, Subtotal y
+    // Descuento del impreso van netos. Ver GenerarDatosComunes en factura.service.ts.
+    imprimirEnNeto?:boolean;
+    // true = no imprimir la línea "Subtotal" (Factura A + mayorista: quedaría idéntica a Neto).
+    ocultarSubtotal?:boolean;
     totalFinal?:number;
     totalAPagar?:number;
     // true cuando la venta no tiene productos ni servicios (ej. NC X "sin productos"

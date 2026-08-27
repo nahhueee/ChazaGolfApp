@@ -43,15 +43,22 @@ export const CortarNombreProducto = (nombreProd?: string): string => {
     : nombreProd;
 };
 
-// Total de la fila en bruto (sin descuento): el descuento se muestra aparte
-// en la columna "Desc" (informativa) y se aplica una sola vez, en el resumen.
-export const FormatearPrecioTotalBruto = (unitario: any, cantidad: any): string => {
+// Total de la fila NETO de descuento (unitario × cantidad × (1 - descuentoAplicado%)).
+// Antes mostraba el bruto (el descuento solo se veía aparte, en la columna "Desc" y en
+// el resumen) - cambiado a pedido del cliente (ago-2026): quiere ver el importe ya
+// descontado línea por línea, no tener que calcularlo a mano contra el % informativo.
+// Mismo criterio que ya usa la grilla en pantalla (ver totalMostrar en
+// addmod-ventas.component.ts). Requiere que ProcesarItemsConDescuento ya haya corrido
+// sobre este ítem (setea item.descuentoAplicado) - ver comentario de
+// ArmarFilasProductosConTalles más abajo.
+export const FormatearPrecioTotalNeto = (unitario: any, cantidad: any, descuentoAplicado: any): string => {
   const nCantidad = Number(cantidad) || 0;
   const nUnitario = parseFloat(unitario) || 0;
+  const nDescuento = Number(descuentoAplicado) || 0;
 
-  const totalBruto = nUnitario * nCantidad;
+  const totalNeto = nUnitario * nCantidad * (1 - nDescuento / 100);
 
-  return totalBruto.toLocaleString('es-AR', {
+  return totalNeto.toLocaleString('es-AR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   });
@@ -72,10 +79,21 @@ export const ObtenerTallesDeLinea = (lineasTalle: LineasTalle[], idLineaTalle?: 
   return talles?.length ? talles : TALLES_LEGACY;
 };
 
-// Calcula subtotal/descuento/total bruto de una lista de ítems (productos o servicios),
-// respetando el tope de descuento por ítem. Efecto lateral: setea item.descuentoAplicado
-// en cada ítem (lo consumen después las filas de la tabla) - mismo comportamiento que
-// tenía procesarItems en comprobante.service.ts.
+// Calcula subtotal/descuento/total bruto de una lista de ítems (productos o servicios).
+// Efecto lateral: setea item.descuentoAplicado en cada ítem (lo consumen después las filas
+// de la tabla) - mismo comportamiento que tenía procesarItems en comprobante.service.ts.
+//
+// Usa item.importeDescuento($) ya calculado por el caller (aplicarDescuentoAItems en
+// addmod-ventas, que contempla tanto el descuento general de cabecera como el descuento
+// manual por ítem - ver DescuentoBaseDe) cuando está disponible, en vez de recalcularlo acá
+// solo a partir de descuentoGeneral. Sin este fallback al $ persistido, una venta con
+// descuento por ítem (cabecera en 0%) imprimía 0% de descuento en TODOS los ítems en el
+// remito/documento comercial, aunque item.importeDescuento tuviera plata real (ago-2026,
+// mismo patrón de bug ya documentado para factura.service.ts/vista-previa.component.ts -
+// "cualquier pantalla que recalcule desde venta.productos en vez de leer importeDescuento
+// persistido es candidata a este mismo problema"). Fallback al cálculo por %-cabecera solo
+// para datos legacy sin importeDescuento (no debería pasar en un flujo en vivo, donde
+// aplicarDescuentoAItems ya corrió antes de imprimir).
 export const ProcesarItemsConDescuento = (items: any[] | undefined, descuentoGeneral: number): TotalesItems => {
   return items?.reduce((acc, item) => {
     const unitario = Number(item.unitario) || 0;
@@ -83,11 +101,17 @@ export const ProcesarItemsConDescuento = (items: any[] | undefined, descuentoGen
 
     const totalBruto = unitario * cantidad;
 
-    const descuentoMax = item.topeDescuento ?? 100;
-    const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
-    item.descuentoAplicado = descuentoAplicado;
+    let importeDescuento: number;
+    if (item.importeDescuento != null) {
+      importeDescuento = item.importeDescuento;
+      item.descuentoAplicado = totalBruto > 0 ? Math.round((importeDescuento / totalBruto) * 10000) / 100 : 0;
+    } else {
+      const descuentoMax = item.topeDescuento ?? 100;
+      const descuentoAplicado = Math.min(descuentoGeneral, descuentoMax);
+      item.descuentoAplicado = descuentoAplicado;
+      importeDescuento = totalBruto * (descuentoAplicado / 100);
+    }
 
-    const importeDescuento = totalBruto * (descuentoAplicado / 100);
     const totalFinalItem = totalBruto - importeDescuento;
 
     acc.subtotal += totalBruto;
@@ -180,7 +204,7 @@ export const ArmarFilasProductosConTalles = (
       { text: FormatearCantidad(item.cantidad), alignment: 'center' },
       { text: FormatearPrecio(item.unitario), alignment: 'right' },
       { text: item.descuentoAplicado + "%", alignment: 'right' },
-      { text: FormatearPrecioTotalBruto(item.unitario, item.cantidad), alignment: 'right' },
+      { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
     ]);
 
     itemAnterior = item;

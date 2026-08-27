@@ -1,6 +1,7 @@
 <div class="contenido">
     <app-encabezado-seccion titulo="Proveedores" icono="pi pi-truck">
         <p-button label="Nuevo Proveedor" icon="pi pi-plus" routerLink="/proveedores/add" />
+        <p-button label="Exportar" icon="pi pi-file-excel" raised (onClick)="DescargarResultados()"/>
     </app-encabezado-seccion>
 
     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
@@ -65,6 +66,7 @@
                     <td>
                         <div class="acciones">
                             <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(proveedor.id)" pTooltip="Editar" tooltipPosition="bottom"/>
+                            <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="AbrirDarBaja(proveedor)" pTooltip="Dar de baja" tooltipPosition="bottom"/>
                         </div>
                     </td>
                 </tr>
@@ -84,4 +86,27 @@
         </div>
     </ng-template>
     <app-addmod-proveedores [proveedorEditar]="proveedorSeleccionado" (cerrar)="Actualizar($event)"/>
+</p-dialog>
+
+<!-- Modal Dar de baja -->
+<p-dialog
+    header="Dar de baja proveedor"
+    [(visible)]="bajaVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>
+        ¿Dar de baja al proveedor <strong>{{proveedorBaja?.razonSocial}}</strong>? Esta acción no se puede revertir desde la aplicación.
+    </p>
+    <br>
+    <p-floatlabel variant="in">
+        <textarea pTextarea rows="3" cols="30" [(ngModel)]="motivoBaja" style="resize: none; width: 100%"></textarea>
+        <label>Motivo (obligatorio)</label>
+    </p-floatlabel>
+    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="bajaVisible = false" />
+        <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
+    </div>
 </p-dialog>

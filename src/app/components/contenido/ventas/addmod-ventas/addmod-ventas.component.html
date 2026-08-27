@@ -324,6 +324,7 @@
 
                         <th>Cant.</th>
                         <th>Precio</th>
+                        <th>Desc. %</th>
                         <th>Total</th>
                         @if(!itemsSoloLectura){
                             <th>Quitar</th>
@@ -338,6 +339,7 @@
                         <td *ngFor="let t of ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10']; let i = index" class="text-center">
                             <strong>{{ ObtenerTallesDeLinea(producto.idLineaTalle)[i] ?? '' }}</strong>
                         </td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -463,7 +465,43 @@
                             </ng-template>
                         </td>
 
-                        <td>{{ producto.total | decimalFormat }}</td>
+                        <!-- Desc. % por ítem: alternativa al descuento general de cabecera, mutuamente
+                             excluyente con él (ver hayDescuentoPorItem/ActualizarDescuentoManual en el .ts).
+                             Editable solo si no está bloqueado por relación/venta guardada y no hay
+                             descuento general activo. -->
+                        <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? producto.descuentoManual : null"
+                            pEditableColumnField="descuentoManual">
+
+                            <ng-container *ngIf="!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo; else soloLecturaDescItem">
+                                <p-cellEditor>
+
+                                    <ng-template pTemplate="input">
+                                        <input
+                                            pInputText
+                                            type="number"
+                                            min="0"
+                                            [max]="TopeDescuentoDe(producto)"
+                                            [value]="producto.descuentoManual ?? 0"
+                                            style="max-width: 70px;"
+                                            (focus)="SelectContent($event)"
+                                            (keydown.enter)="ActualizarDescuentoManual(producto, $event)"
+                                            (keydown.tab)="ActualizarDescuentoManual(producto, $event)"
+                                        />
+                                    </ng-template>
+
+                                    <ng-template pTemplate="output">
+                                        {{ producto.descuentoManual ?? 0 }}%
+                                    </ng-template>
+
+                                </p-cellEditor>
+                            </ng-container>
+
+                            <ng-template #soloLecturaDescItem>
+                                {{ producto.descuentoManual ?? 0 }}%
+                            </ng-template>
+                        </td>
+
+                        <td>{{ producto.totalMostrar | decimalFormat }}</td>
                         @if(!itemsSoloLectura){
                             <td class="acciones-tabla">
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
@@ -481,6 +519,7 @@
                                 <td *ngFor="let talla of talles"></td>
                             }
                             <td><strong>{{ totalUnidadesProductos }}</strong></td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             @if(!itemsSoloLectura){
@@ -552,6 +591,7 @@
                     <th>Nombre</th>
                     <th>Cant.</th>
                     <th>Precio</th>
+                    <th>Desc. %</th>
                     <th>Total</th>
                     @if(!itemsSoloLectura){
                         <th>Quitar</th>
@@ -564,7 +604,41 @@
                     <td>{{ servicio.nomServicio }}</td>
                     <td>{{ servicio.cantidad }}</td>
                     <td>{{ servicio.unitario | decimalFormat}}</td>
-                    <td>{{ servicio.total | decimalFormat }}</td>
+
+                    <!-- Desc. % por ítem: ver comentario equivalente en la tabla de Productos. -->
+                    <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? servicio.descuentoManual : null"
+                        pEditableColumnField="descuentoManual">
+
+                        <ng-container *ngIf="!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo; else soloLecturaDescServicio">
+                            <p-cellEditor>
+
+                                <ng-template pTemplate="input">
+                                    <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        [max]="TopeDescuentoDe(servicio)"
+                                        [value]="servicio.descuentoManual ?? 0"
+                                        style="max-width: 70px;"
+                                        (focus)="SelectContent($event)"
+                                        (keydown.enter)="ActualizarDescuentoManual(servicio, $event)"
+                                        (keydown.tab)="ActualizarDescuentoManual(servicio, $event)"
+                                    />
+                                </ng-template>
+
+                                <ng-template pTemplate="output">
+                                    {{ servicio.descuentoManual ?? 0 }}%
+                                </ng-template>
+
+                            </p-cellEditor>
+                        </ng-container>
+
+                        <ng-template #soloLecturaDescServicio>
+                            {{ servicio.descuentoManual ?? 0 }}%
+                        </ng-template>
+                    </td>
+
+                    <td>{{ servicio.totalMostrar | decimalFormat }}</td>
                     @if(!itemsSoloLectura){
                         <td class="acciones-tabla">
                             <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
@@ -578,6 +652,7 @@
                         <td><strong>Total Unidades</strong></td>
                         <td></td>
                         <td><strong>{{ totalUnidadesServicios }}</strong></td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         @if(!itemsSoloLectura){
@@ -630,7 +705,7 @@
                             <!-- Descuento -->
                             <p-inputgroup>
                                 <p-floatlabel variant="in">
-                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion" (input)="CalcularTotalGeneral()"/>
+                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral" (input)="CalcularTotalGeneral()"/>
                                     <label>Descuento</label>
                                 </p-floatlabel>
                                 <p-inputgroup-addon>%</p-inputgroup-addon>
@@ -651,7 +726,7 @@
                     <div class="horizontal">
                         <p-inputgroup>
                             <p-floatlabel variant="in">
-                                <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion" (input)="CalcularTotalGeneral()"/>
+                                <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral" (input)="CalcularTotalGeneral()"/>
                                 <label>Descuento</label>
                             </p-floatlabel>
                             <p-inputgroup-addon>%</p-inputgroup-addon>
@@ -763,10 +838,14 @@
             </form>
 
             <div class="resumen">
-                
+
+                <!-- Subtotal = totales.items: bruto real, suma de ítems sin descontar.
+                     Estandarizado (ago-2026) para que "Subtotal" signifique lo mismo acá,
+                     en Vista Previa y en el comprobante impreso (antes cada pantalla mostraba
+                     un número distinto bajo el mismo nombre y generaba confusión). -->
                 <div class="fila">
                     <span>Subtotal:</span>
-                    <span class="monto">${{totales.subtotal| decimalFormat}}</span>
+                    <span class="monto">${{totales.items| decimalFormat}}</span>
                 </div>
 
                 <div class="fila">
@@ -775,8 +854,15 @@
                 </div>
 
                 @if(tipo == 'factura'){
+                    <!-- Neto = base imponible (totales.subtotal: post-descuento, pre-IVA).
+                         Solo tiene sentido mostrarla junto al IVA, por eso comparte el
+                         *ngIf con la fila de IVA. -->
                     <div class="fila" *ngIf="totales.mostrarIva">
-                        <span>IVA 21%:</span>
+                        <span>Neto:</span>
+                        <span class="monto">${{totales.subtotal| decimalFormat}}</span>
+                    </div>
+                    <div class="fila" *ngIf="totales.mostrarIva">
+                        <span>IVA 21% (Incluido):</span>
                         <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
                 }
@@ -822,9 +908,7 @@
 
 
 <!-- Modal Resumen -->
-<!-- preciosNetos refleja la misma condición que recalcularTotales() (ver EsMayoristaConListaPropia),
-     para que el total de la vista previa coincida con el del resumen de esta pantalla. -->
-<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta" [preciosNetos]="EsMayoristaConListaPropia()"></app-vista-previa>
+<app-vista-previa [(visible)]="vistaPreviaVisible" [venta]="venta"></app-vista-previa>
 
 
 <!-- Modal Datos Cliente -->

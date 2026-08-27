@@ -20,7 +20,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
-import { esMayoristaConListaPropia, esItemNoCatalogado, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
+import { esItemNoCatalogado, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -97,11 +97,11 @@ export class NotasVentaComponent {
     ];
   }
 
-  // Solo se puede pedir CAE de NC A/B si la venta origen tiene un comprobante
-  // fiscal real que asociar (Factura A o B). Si no (Cotización, Ticket X,
+  // Solo se puede pedir CAE de NC A/B/C si la venta origen tiene un comprobante
+  // fiscal real que asociar (Factura A, B o C). Si no (Cotización, Ticket X,
   // etc.), la única opción es la interna - no se muestra el selector.
   get puedeElegirFiscal(): boolean {
-    return this.venta.idTipoComprobante == 1 || this.venta.idTipoComprobante == 6;
+    return this.venta.idTipoComprobante == 1 || this.venta.idTipoComprobante == 6 || this.venta.idTipoComprobante == 11;
   }
 
   get emiteFiscal(): boolean {
@@ -173,13 +173,6 @@ export class NotasVentaComponent {
     return this.serviciosSeleccionados?.some(s => s === servicio);
   }
 
-  // Cliente mayorista con lista de precio propia (≠ Consumidor Final) de la venta
-  // original sobre la que se emite la nota. Mismo criterio que listado-ventas/
-  // addmod-ventas: para estos clientes el precio ya es neto (sin IVA) en A y B.
-  EsMayoristaConListaPropia(): boolean {
-    return esMayoristaConListaPropia(this.venta.cliente?.idCategoria, this.venta.idListaPrecio);
-  }
-
   CalcularTotalGeneral() {
     const procesarItems = (items: any[]) => {
       return items?.reduce((acc, item) => {
@@ -217,27 +210,16 @@ export class NotasVentaComponent {
       ].includes(this.venta.idTipoComprobante!);
 
       if (esComprobanteConIva) {
-        const esTipoA = [
-          TipoComprobante.FACTURA_A,
-          TipoComprobante.NC_A,
-          TipoComprobante.ND_A
-        ].includes(this.venta.idTipoComprobante!);
-
-        // PrepararPrecios() en listado-ventas.component.ts (que llama EmitirNotaCredito
-        // antes de abrir este modal) deja los items en NETO para Factura A siempre, y
-        // para Factura B solo si el cliente es mayorista con lista propia (ver
-        // EsMayoristaConListaPropia). El resto de los casos de B llega con IVA incluido.
-        const itemsEnNeto = esTipoA || this.EsMayoristaConListaPropia();
-
-        if (itemsEnNeto) {
-          this.totalIva = this.subTotal * 0.21;
-          this.totalGeneral = this.subTotal + this.totalIva;
-        } else {
-          const totalConIva = this.subTotal;
-          this.totalIva = totalConIva * 21 / 121;
-          this.subTotal = totalConIva - this.totalIva;
-          this.totalGeneral = totalConIva;
-        }
+        // IVA incluido (ago-2026): PrepararPrecios() en listado-ventas.component.ts (que
+        // llama EmitirNotaCredito antes de abrir este modal) deja los items con IVA
+        // incluido para CUALQUIER tipo de comprobante/cliente, sin excepciones - se
+        // discrimina, no se suma arriba. Uniforma con addmod-ventas.recalcularTotales(),
+        // que nunca trató Factura A como caso especial (antes acá sí, `esTipoA ||
+        // EsMayoristaConListaPropia()`, inconsistencia preexistente corregida de paso).
+        const totalConIva = this.subTotal;
+        this.totalIva = totalConIva * 21 / 121;
+        this.subTotal = totalConIva - this.totalIva;
+        this.totalGeneral = totalConIva;
         this.mostrarIva = true;
       }
 
@@ -436,6 +418,10 @@ export class NotasVentaComponent {
     }
     else if(this.emiteFiscal && this.venta.idTipoComprobante == 1) {//FACTURA A
       this.nuevaVenta.idTipoComprobante = 3;
+      this.nuevaVenta.estado = "Facturada";
+    }
+    else if(this.emiteFiscal && this.venta.idTipoComprobante == 11) {//FACTURA C
+      this.nuevaVenta.idTipoComprobante = 13;
       this.nuevaVenta.estado = "Facturada";
     }
     else{
