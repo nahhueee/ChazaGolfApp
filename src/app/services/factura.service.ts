@@ -242,8 +242,12 @@ export class FacturaService {
         comprobante.totalFinal = venta.total ?? 0;
         comprobante.totalAPagar = (venta.total ?? 0) + comprobante.redondeo;
       } else {
-        // Sin comprobante fiscal (cotización, etc.) → sin IVA
-        comprobante.subTotal = subtotalBruto;
+        // Sin comprobante fiscal (cotización) → sin IVA.
+        // ocultarDescuento (Cotización + mayorista/Lista3, HANDOFF-2): la línea
+        // "Descuento" no se imprime, así que el Subtotal tiene que ser el ya neto de
+        // descuento o la cuenta no cierra visualmente (mismo criterio que la rama de
+        // factura de arriba).
+        comprobante.subTotal = comprobante.ocultarDescuento ? subtotalSinComprobante : subtotalBruto;
         comprobante.neto = subtotalSinComprobante;
         comprobante.totalIva = 0;
         comprobante.totalFinal = subtotalSinComprobante;
@@ -309,19 +313,20 @@ export class FacturaService {
           : nombreProd;
       };
 
-      // Factura A/B específicamente (confirmado por el usuario: "esto solo en el
-      // comprobante de facturación A B", no aplica a Factura C ni Cotización/NC/ND) +
-      // cliente mayorista con lista propia o Lista 3.0: se oculta la columna "Desc" Y la
-      // línea "Descuento" del resumen de totales (ver más abajo, ArmarComprobante) - el
-      // cliente no quiere mostrarle al mayorista el % de descuento aplicado en ningún
-      // lado del comprobante. El precio unitario que se imprime pasa a ser el YA NETO de
-      // ese descuento (ver precioUnitarioImpreso más abajo), para que Cantidad × Precio
-      // cierre con el Total de la fila sin necesidad de la columna Desc.
-      const esFactura = [
+      // Comprobantes que el cliente final recibe y en los que NO se le muestra el % de
+      // descuento de su lista: Factura A/B y Cotización (ago-2026, pedido del cliente,
+      // HANDOFF-2). TIPO_COMPROBANTE.SIN_COMPROBANTE dentro de este servicio es siempre
+      // la Cotización - Presupuesto, Pedido y Nota de Empaque se arman en
+      // documento-comercial.service.ts, no acá. Factura C queda afuera a propósito.
+      // Donde aplica, el precio unitario impreso pasa a ser el YA NETO de ese descuento
+      // (ver precioUnitarioImpreso más abajo), para que Cantidad × Precio cierre con el
+      // Total de la fila sin necesidad de la columna Desc.
+      const ocultaDescuentoPorTipo = [
         TIPO_COMPROBANTE.FACTURA_A,
         TIPO_COMPROBANTE.FACTURA_B,
+        TIPO_COMPROBANTE.SIN_COMPROBANTE,
       ].includes(venta.idTipoComprobante as any);
-      const ocultarDescuento = esFactura && esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.idListaPrecio);
+      const ocultarDescuento = ocultaDescuentoPorTipo && esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.idListaPrecio);
       comprobante.ocultarDescuento = ocultarDescuento;
 
       // Factura A discrimina IVA: los unitarios, el Subtotal y el Descuento del comprobante
@@ -329,16 +334,19 @@ export class FacturaService {
       // Solo afecta el impreso - la grilla de carga y la vista previa siguen en bruto
       // (decisión del cliente, ago-2026: el operador trabaja en bruto).
       // Incluye NC_A/ND_A por consistencia: una nota que ajusta una Factura A debe verse
-      // con el mismo criterio que la factura que ajusta.
+      // con el mismo criterio que la factura que ajusta. La Cotización NO entra acá - nunca
+      // discrimina IVA (se maneja aparte en ocultarSubtotal, más abajo).
       const imprimirEnNeto = [
         TIPO_COMPROBANTE.FACTURA_A,
         TipoComprobante.NC_A,
         TipoComprobante.ND_A,
       ].includes(venta.idTipoComprobante as any);
       comprobante.imprimirEnNeto = imprimirEnNeto;
-      // Factura A + mayorista/Lista3: con el descuento oculto, el Subtotal quedaría
-      // idéntico al Neto (ver Cambio 5b en ArmarFacturaA4).
-      const ocultarSubtotal = imprimirEnNeto && ocultarDescuento;
+      // Se omite la línea "Subtotal" cuando quedaría duplicando el número de abajo:
+      //  - Factura A + mayorista: Subtotal == Neto
+      //  - Cotización + mayorista: Subtotal == Total General (ver fix del Subtotal en la
+      //    rama "sin comprobante fiscal" de ArmarComprobante, HANDOFF-2 Parte A.2)
+      const ocultarSubtotal = ocultarDescuento && (imprimirEnNeto || venta.idTipoComprobante === TIPO_COMPROBANTE.SIN_COMPROBANTE);
       comprobante.ocultarSubtotal = ocultarSubtotal;
 
       //Productos
