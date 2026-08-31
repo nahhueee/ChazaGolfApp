@@ -21,7 +21,6 @@ import { EntregaDineroComponent } from '../entrega-dinero/entrega-dinero.compone
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
 import { FiltroVentasCliente } from '../../../../models/filtros/FiltroClientes';
 import { TagModule } from 'primeng/tag';
-import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { CuentaCorrienteReporteService } from '../../../../services/cuenta-corriente.reporte.service';
 import { METODO_PAGO } from '../../ventas/models/venta.constants';
 import { Popover, PopoverModule } from 'primeng/popover';
@@ -33,6 +32,7 @@ import { Dialog } from 'primeng/dialog';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { TextareaModule } from 'primeng/textarea';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
   selector: 'app-ventas-cliente',
@@ -321,43 +321,12 @@ export class VentasClienteComponent {
     return 'info';
   }
 
+  // Delegado al helper compartido (ago-2026): antes había acá una copia vieja de esta
+  // lógica que reconstruía el descuento desde venta.descuento (cabecera) en vez de leer
+  // item.importeDescuento persistido - con el rediseño de listas de precio la cabecera
+  // quedó en 0 y una venta de cliente Lista 5 se imprimía al doble desde esta pantalla.
+  // Ver precios-venta.helper.ts.
   PrepararPrecios(){
-    const esTipoA = [
-      TipoComprobante.FACTURA_A,
-      TipoComprobante.NC_A,
-      TipoComprobante.ND_A
-    ].includes(this.ventaSeleccionada.idTipoComprobante!);
-
-    this.ventaSeleccionada.productos.forEach(producto => {
-      const unitario = Number(producto.unitario) || 0; // Precio con iva
-      const cantidad = Number(producto.cantidad) || 0;
-
-      let precioNeto = 0; // Precio neto
-      if(esTipoA)
-        precioNeto = unitario / 1.21;
-      else
-        precioNeto = unitario;
-
-      producto.precioMostrar = precioNeto;
-      let totalNeto = precioNeto * cantidad;
-      producto.total = totalNeto;
-
-      // Porcentaje del descuento
-      const descuentoAplicado = Math.min(this.ventaSeleccionada.descuento, producto.topeDescuento ?? 100);
-      producto.descuentoAplicado = descuentoAplicado;
-
-      // Importe del descuento
-      const importeDescuento = totalNeto * (descuentoAplicado / 100);
-      producto.importeDescuento = importeDescuento;
-
-      // Total bruto del item
-      const totalFinalNeto = totalNeto - importeDescuento;
-      producto.totalMostrar = totalFinalNeto ;
-
-      producto.stockInicial = Object.fromEntries(
-        Object.entries(producto)
-          .filter(([key]) => /^t\d+$/.test(key))
-      );
-    });
+    PrepararPreciosVenta(this.ventaSeleccionada);
   }
 }
