@@ -30,6 +30,10 @@ export class FilesService {
     return this.apiService.getFile('files/ventas-excel', filtros);
   }
 
+  DescargarLibroIvaVentasExcel(filtros: { idEmpresa: number, fechas: [Date, Date] }){
+    return this.apiService.getFile('files/libro-iva-ventas-excel', filtros);
+  }
+
   DescargarClientesExcel(filtros:FiltroClientes){
     return this.apiService.getFile('files/clientes-excel', filtros);
   }

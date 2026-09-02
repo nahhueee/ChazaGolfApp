@@ -1,4 +1,5 @@
 import { Component, ViewChild } from '@angular/core';
+import { map, of } from 'rxjs';
 import { ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { VentasService } from '../../../../services/ventas.service';
@@ -87,6 +88,13 @@ export class ListadoVentasComponent {
   bajaVisible: boolean = false;
   ventaBaja: number = 0;
   motivoBaja: string = '';
+
+  // Libro IVA Ventas (ver HANDOFF-libro-iva-ventas-y-compras.md). Reusa el
+  // mismo campo "fechas" del filtro del listado (igual que Exportar()) - no
+  // hace falta un período aparte: el botón solo está visible en la pestaña
+  // "factura" y el libro no depende de ningún otro filtro (cliente, proceso,
+  // nroProceso), así que no hay ambigüedad real en reusarlo.
+  empresaRI: any = null;
   
   filtros:FormGroup;
   clientes:Cliente[]=[];
@@ -198,6 +206,66 @@ export class ListadoVentasComponent {
       a.download = nombreArchivo; 
       a.click();
       window.URL.revokeObjectURL(url);
+    });
+  }
+
+  // Resuelve (y cachea) la única empresa Responsable Inscripto. Si el día de
+  // mañana hay más de una, no elige "la primera" en silencio: avisa, porque
+  // a partir de ahí hace falta un selector (ver handoff) y facturar contra
+  // la empresa equivocada en un documento fiscal es peor que frenar acá.
+  ResolverEmpresaRI(){
+    if(this.empresaRI) return of(this.empresaRI);
+
+    return this.miscService.ObtenerEmpresas().pipe(
+      map(empresas => {
+        const empresasRI = empresas.filter((e:any) => e.abrevCondicion === 'RI');
+
+        if(empresasRI.length === 0){
+          this.Notificaciones.Warn("No se encontró ninguna empresa Responsable Inscripto.");
+          return null;
+        }
+        if(empresasRI.length > 1){
+          this.Notificaciones.Warn("Hay más de una empresa Responsable Inscripto: falta agregar el selector para elegir cuál. Avisale a soporte.");
+          return null;
+        }
+
+        this.empresaRI = empresasRI[0];
+        return this.empresaRI;
+      })
+    );
+  }
+
+  DescargarLibroIva(){
+    const fechas = this.filtros.get('fechas')?.value;
+    if(!fechas || fechas.length !== 2 || !fechas[0] || !fechas[1]){
+      this.Notificaciones.Warn("Debe seleccionar un rango de fechas completo (desde y hasta).");
+      return;
+    }
+
+    this.ResolverEmpresaRI().subscribe(empresaRI => {
+      if(!empresaRI) return; // Ya se avisó adentro de ResolverEmpresaRI().
+
+      this.filesService.DescargarLibroIvaVentasExcel({
+        idEmpresa: empresaRI.id,
+        fechas
+      }).subscribe(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        // Nombre con las fechas del PERIODO (no la de hoy): el usuario va a
+        // regenerar el mismo período varias veces y necesita distinguirlos.
+        const formatear = (f:Date) => {
+          const dd = String(f.getDate()).padStart(2, '0');
+          const mm = String(f.getMonth() + 1).padStart(2, '0');
+          const yy = String(f.getFullYear()).slice(-2);
+          return `${dd}-${mm}-${yy}`;
+        };
+
+        a.href = url;
+        a.download = `Libro_IVA_Ventas_${formatear(fechas[0])}_a_${formatear(fechas[1])}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
     });
   }
 

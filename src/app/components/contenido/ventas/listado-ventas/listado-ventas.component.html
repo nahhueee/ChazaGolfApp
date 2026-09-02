@@ -6,6 +6,7 @@
         @if(tipo == 'factura'){
             <p-button label="Nota de Crédito X" icon="pi pi-replay" (onClick)="AbrirNotaCreditoX()"/>
             <p-button label="Nota de Débito X" icon="pi pi-replay" severity="danger" (onClick)="AbrirNotaDebitoX()"/>
+            <p-button variant="outlined" label="Libro IVA" severity="secondary" icon="pi pi-book" (onClick)="DescargarLibroIva()"/>
         }
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
     </app-encabezado-seccion>
