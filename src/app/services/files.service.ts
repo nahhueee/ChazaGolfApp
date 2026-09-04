@@ -5,6 +5,7 @@ import { FiltroProducto } from '../models/filtros/FiltroProducto';
 import { FiltroVenta } from '../models/filtros/FiltroVenta';
 import { FiltroClientes } from '../models/filtros/FiltroClientes';
 import { FiltroProveedores } from '../models/filtros/FiltroProveedores';
+import { FiltroCompras } from '../models/filtros/FiltroCompras';
 import { FiltrosFondos } from '../models/Fondos';
 
 @Injectable({
@@ -44,6 +45,10 @@ export class FilesService {
 
   DescargarProveedoresExcel(filtros:FiltroProveedores){
     return this.apiService.getFile('files/proveedores-excel', filtros);
+  }
+
+  DescargarComprasExcel(filtros:FiltroCompras){
+    return this.apiService.getFile('files/compras-excel', filtros);
   }
 
   DescargarFondosExcel(filtros: FiltrosFondos, cajaNombre?: string | null, fondoNombre?: string | null){

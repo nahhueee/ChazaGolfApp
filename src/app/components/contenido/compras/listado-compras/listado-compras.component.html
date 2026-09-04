@@ -3,6 +3,7 @@
 <div class="contenido">
     <app-encabezado-seccion titulo="Compras" icono="pi pi-shopping-cart">
         <p-button label="Nueva Compra" icon="pi pi-plus" routerLink="/compras/add" />
+        <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()" />
     </app-encabezado-seccion>
 
     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="Buscar()">
