@@ -1467,6 +1467,7 @@ export class AddModVentasComponent {
               this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
               this.AplicarDescuentoRelacionado(response, [...this.productosFactura, ...this.serviciosFactura]);
+              this.RecalcularPreciosSegunComprobante();
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -1573,6 +1574,12 @@ export class AddModVentasComponent {
         // Si el documento relacionado (Presupuesto/Pedido/Nota de Empaque) tenía un
         // descuento pactado, viaja y queda bloqueado acá - ver AplicarDescuentoRelacionado.
         this.AplicarDescuentoRelacionado(venta, [...this.productosFactura, ...this.serviciosFactura]);
+        // Fix ago/sep-2026: sin esto, un Pedido/Nota relacionado de un cliente mayorista
+        // con lista propia (o Lista 3.0) se facturaba con el precio del Pedido tal cual,
+        // sin sumarle el 21% de IVA (ver PrecioItemSegunComprobante) - la factura salía
+        // corta contra AFIP. Mismo criterio que ya usa PrepararFacturacionCliente: va
+        // ANTES de CalcularTotalGeneral().
+        this.RecalcularPreciosSegunComprobante();
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
