@@ -692,6 +692,16 @@ export class AddModVentasComponent {
     this.nroRelacionado = 0;
     this.tipoRelacionado = "";
 
+    // Bug real (ago-2026): estos dos campos no se reseteaban acá. Al reutilizar
+    // la misma instancia del componente para "nueva venta" sin recargar la
+    // página (ver switchMap de paramMap/queryParams en ngAfterViewInit), el
+    // nroRelacionado/tipoRelacionado de la venta relacionada anterior quedaba
+    // pegado y se colaba en la siguiente venta aunque el operador nunca haya
+    // tocado el selector de relación. Ver diagnóstico de Facturas mal
+    // relacionadas a Pedidos de otro cliente.
+    this.nroRelacionado = 0;
+    this.tipoRelacionado = "";
+
     this.ArmarFormularios();
     this.CalcularTotalGeneral();
   }
@@ -1457,6 +1467,7 @@ export class AddModVentasComponent {
               this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
               this.AplicarDescuentoRelacionado(response, [...this.productosFactura, ...this.serviciosFactura]);
+              this.RecalcularPreciosSegunComprobante();
               this.CalcularTotalGeneral();
 
               this.Notificaciones.Success("Nota de empaque cargada correctamente.")
@@ -1563,6 +1574,12 @@ export class AddModVentasComponent {
         // Si el documento relacionado (Presupuesto/Pedido/Nota de Empaque) tenía un
         // descuento pactado, viaja y queda bloqueado acá - ver AplicarDescuentoRelacionado.
         this.AplicarDescuentoRelacionado(venta, [...this.productosFactura, ...this.serviciosFactura]);
+        // Fix ago/sep-2026: sin esto, un Pedido/Nota relacionado de un cliente mayorista
+        // con lista propia (o Lista 3.0) se facturaba con el precio del Pedido tal cual,
+        // sin sumarle el 21% de IVA (ver PrecioItemSegunComprobante) - la factura salía
+        // corta contra AFIP. Mismo criterio que ya usa PrepararFacturacionCliente: va
+        // ANTES de CalcularTotalGeneral().
+        this.RecalcularPreciosSegunComprobante();
         this.CalcularTotalGeneral();
 
         if(venta.idProceso == ID_PROCESO.PEDIDO){
