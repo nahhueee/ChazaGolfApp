@@ -26,25 +26,45 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
   venta.productos?.forEach(producto => {
     CalcularPrecioItem(producto, esTipoA, venta.descuento);
 
+    // Cantidad ya acreditada por NC fiscales previas sobre esta misma línea
+    // (idLineaTalle) - devoluciones parciales sucesivas, sep-2026. Sin esto, el
+    // tope que ve notas-venta.component.ts sería siempre el de la venta original,
+    // permitiendo acreditar dos veces la misma unidad. NC internas (X) no restan
+    // acá (ver CantidadesAcreditadas en el backend).
+    const acreditado = venta.cantidadesAcreditadas?.productos
+      ?.find(a => a.idLineaTalle === producto.idLineaTalle);
+
     if (esItemNoCatalogado(producto.tipoItem)) {
       // Ítem de presupuesto: no tiene talles, así que el tope de cantidad para
       // la NC se guarda en cantidadOriginal (igual que en servicios) en vez de
       // stockInicial, que quedaría vacío (sin claves t1..t10).
-      producto.cantidadOriginal = producto.cantidad;
+      producto.cantidadOriginal = producto.cantidad - (acreditado?.cantidad ?? 0);
     } else {
-      producto.stockInicial = Object.fromEntries(
+      const stockInicial = Object.fromEntries(
         Object.entries(producto)
           .filter(([key]) => /^t\d+$/.test(key))
       );
+
+      if (acreditado) {
+        for (const talle of Object.keys(stockInicial)) {
+          const yaAcreditado = (acreditado as any)[talle] ?? 0;
+          stockInicial[talle] = Math.max(0, (stockInicial[talle] ?? 0) - yaAcreditado);
+        }
+      }
+
+      producto.stockInicial = stockInicial;
     }
   });
 
-  // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar).
-  // No tienen talles, por eso el tope de cantidad para la NC se guarda en
-  // cantidadOriginal en vez de stockInicial.
+  // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar), y mismo
+  // descuento de lo ya acreditado por NC fiscales previas (ver arriba).
   venta.servicios?.forEach(servicio => {
     CalcularPrecioItem(servicio, esTipoA, venta.descuento);
-    servicio.cantidadOriginal = servicio.cantidad;
+
+    const acreditado = venta.cantidadesAcreditadas?.servicios
+      ?.find(a => a.idServicio === servicio.idServicio);
+
+    servicio.cantidadOriginal = servicio.cantidad - (acreditado?.cantidad ?? 0);
   });
 };
 

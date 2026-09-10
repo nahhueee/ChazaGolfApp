@@ -235,7 +235,7 @@
         severity="primary"
         styleClass="p-button-sm w-full"
         [disabled]="TieneNotaFiscal(ventaSeleccionada)"
-        [pTooltip]="TieneNotaFiscal(ventaSeleccionada) ? 'Ya se emitió una fiscal sobre esta venta' : ''"
+        [pTooltip]="TieneNotaFiscal(ventaSeleccionada) ? 'No queda saldo disponible de esta factura para otra Nota de Crédito fiscal' : ''"
         tooltipPosition="left"
         (onClick)="EmitirNotaCredito('FISCAL'); tipoNC.hide()">
         </p-button>

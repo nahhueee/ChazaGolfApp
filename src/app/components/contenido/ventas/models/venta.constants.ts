@@ -163,6 +163,23 @@ export function tieneNotaInterna(notas?: Array<{ idTipoComprobante?: number }>):
 }
 
 /**
+ * Saldo ($) todavía disponible para emitir una NUEVA NC fiscal sobre una venta,
+ * descontando lo ya acreditado por NC fiscales previas (venta.cantidadesAcreditadas.
+ * totalAcreditado - ver ObtenerCantidadesAcreditadas en el backend). Reemplaza a
+ * tieneNotaFiscal como gate real: antes se bloqueaba directamente la segunda NC
+ * fiscal (ago-2026); ahora se permiten varias sobre la misma venta mientras quede
+ * saldo, para devoluciones parciales sucesivas (sep-2026). NC internas (X) no
+ * restan acá - no acreditan contra el comprobante fiscal original.
+ */
+export function saldoDisponibleNotaFiscal(
+  venta?: { total?: number; cantidadesAcreditadas?: { totalAcreditado?: number } }
+): number {
+  const total = venta?.total ?? 0;
+  const totalAcreditado = venta?.cantidadesAcreditadas?.totalAcreditado ?? 0;
+  return Math.max(0, total - totalAcreditado);
+}
+
+/**
  * IDs internos de condiciones de pago.
  */
 export const ID_CONDICION_PAGO = {

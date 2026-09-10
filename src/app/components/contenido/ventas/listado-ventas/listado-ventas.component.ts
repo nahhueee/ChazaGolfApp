@@ -34,7 +34,7 @@ import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.componen
 import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { puedeDarseDeBaja, tieneNotaFiscal, tieneNotaInterna, TipoNotaCredito } from '../models/venta.constants';
+import { puedeDarseDeBaja, saldoDisponibleNotaFiscal, tieneNotaInterna, TipoNotaCredito } from '../models/venta.constants';
 import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
@@ -295,8 +295,10 @@ export class ListadoVentasComponent {
     this.tipoNC.toggle(event);
   }
 
+  // true cuando no queda saldo de la factura para otra NC fiscal (sep-2026: ya
+  // no bloquea por "ya existe una", ver saldoDisponibleNotaFiscal).
   TieneNotaFiscal(venta: Venta): boolean {
-    return tieneNotaFiscal(venta.notas);
+    return saldoDisponibleNotaFiscal(venta) <= 0;
   }
 
   TieneNotaInterna(venta: Venta): boolean {
