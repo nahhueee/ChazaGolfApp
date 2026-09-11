@@ -119,10 +119,14 @@
                     </tr>
             </ng-template>
             <ng-template #body let-producto let-editing="editing">
-                <tr  [ngClass]="{'fila-deshabilitada': !EstaSeleccionado(producto)}">
-                    <td><p-tableCheckbox [value]="producto"></p-tableCheckbox></td>
+                <tr [ngClass]="{'fila-deshabilitada': !EstaSeleccionado(producto) && !SinRemanente(producto), 'fila-sin-remanente': SinRemanente(producto)}">
+                    <td>
+                        <p-tableCheckbox [value]="producto" [disabled]="SinRemanente(producto)"
+                            [pTooltip]="SinRemanente(producto) ? 'Ya se acreditó por completo en una Nota de Crédito fiscal anterior' : ''">
+                        </p-tableCheckbox>
+                    </td>
                     <td>{{ producto.codProducto }}</td>
-                    <td>{{ producto.nomProducto }}</td>
+                    <td>{{ producto.nomProducto }} @if(SinRemanente(producto)){<span class="badge-acreditado">Ya acreditado</span>}</td>
                     <td>
                         <div class="color-cell">
                             <div class="box-color" [ngStyle]="{'background': producto.hexa}"></div>
@@ -207,10 +211,14 @@
                 </tr>
             </ng-template>
             <ng-template #body let-servicio>
-                <tr [ngClass]="{'fila-deshabilitada': !EstaServicioSeleccionado(servicio)}">
-                    <td><p-tableCheckbox [value]="servicio"></p-tableCheckbox></td>
+                <tr [ngClass]="{'fila-deshabilitada': !EstaServicioSeleccionado(servicio) && !SinRemanenteServicio(servicio), 'fila-sin-remanente': SinRemanenteServicio(servicio)}">
+                    <td>
+                        <p-tableCheckbox [value]="servicio" [disabled]="SinRemanenteServicio(servicio)"
+                            [pTooltip]="SinRemanenteServicio(servicio) ? 'Ya se acreditó por completo en una Nota de Crédito fiscal anterior' : ''">
+                        </p-tableCheckbox>
+                    </td>
                     <td>{{ servicio.codServicio }}</td>
-                    <td>{{ servicio.nomServicio }}</td>
+                    <td>{{ servicio.nomServicio }} @if(SinRemanenteServicio(servicio)){<span class="badge-acreditado">Ya acreditado</span>}</td>
                     <td [pEditableColumn]="servicio.cantidad" pEditableColumnField="cantidad">
                         <p-cellEditor>
                         <ng-template pTemplate="input">

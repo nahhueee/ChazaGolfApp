@@ -38,7 +38,7 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
       // Ítem de presupuesto: no tiene talles, así que el tope de cantidad para
       // la NC se guarda en cantidadOriginal (igual que en servicios) en vez de
       // stockInicial, que quedaría vacío (sin claves t1..t10).
-      producto.cantidadOriginal = producto.cantidad - (acreditado?.cantidad ?? 0);
+      producto.cantidadOriginal = (producto.cantidad ?? 0) - (acreditado?.cantidad ?? 0);
     } else {
       const stockInicial = Object.fromEntries(
         Object.entries(producto)
@@ -64,7 +64,7 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
     const acreditado = venta.cantidadesAcreditadas?.servicios
       ?.find(a => a.idServicio === servicio.idServicio);
 
-    servicio.cantidadOriginal = servicio.cantidad - (acreditado?.cantidad ?? 0);
+    servicio.cantidadOriginal = (servicio.cantidad ?? 0) - (acreditado?.cantidad ?? 0);
   });
 };
 

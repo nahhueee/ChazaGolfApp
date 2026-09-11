@@ -65,6 +65,26 @@ p-divider {
   pointer-events: auto; 
 }
 
+// Fila cuyo remanente para NC fiscal ya se agotó (ver SinRemanente/
+// SinRemanenteServicio) - más marcada que fila-deshabilitada (que es solo el
+// estado transitorio "no seleccionada"), esta no se puede seleccionar en
+// absoluto (checkbox con [disabled], ver el .html).
+.fila-sin-remanente {
+  opacity: 0.45;
+  background: var(--surface-hover);
+  pointer-events: none;
+}
+
+.badge-acreditado {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+}
+
 
 // Selector Fiscal/Interna (ver puedeElegirFiscal en el .ts).
 .tipo-nota{

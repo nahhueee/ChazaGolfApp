@@ -9,6 +9,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { TooltipModule } from 'primeng/tooltip';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { VentasService } from '../../../../services/ventas.service';
 import { MiscService } from '../../../../services/misc.service';
@@ -36,6 +37,7 @@ import { esItemNoCatalogado, saldoDisponibleNotaFiscal, tieneNotaInterna, TipoNo
     ButtonModule,
     SelectModule,
     SelectButtonModule,
+    TooltipModule,
     ConfirmDialogModule,
     FacturarVentaComponent
   ],
@@ -185,7 +187,33 @@ export class NotasVentaComponent {
     return this.serviciosSeleccionados?.some(s => s === servicio);
   }
 
+  // true si el producto ya no tiene remanente para acreditar (se agotó en NC
+  // fiscales previas sobre esta misma línea/talle - ver stockInicial en
+  // PrepararPreciosVenta). Deshabilita la fila para que ni se pueda seleccionar,
+  // en vez de dejar que el usuario la marque y recién enterarse en Confirmar()
+  // (sep-2026, devoluciones parciales sucesivas).
+  SinRemanente(producto: any): boolean {
+    if (this.EsItemNoCatalogado(producto)) {
+      return (producto.cantidadOriginal ?? 0) <= 0;
+    }
+    return Array.from({ length: 10 }, (_, i) => Number(producto.stockInicial?.[`t${i + 1}`]) || 0)
+      .reduce((a, b) => a + b, 0) <= 0;
+  }
+
+  /** Análogo a SinRemanente, para servicios (sin talles, un único cantidadOriginal). */
+  SinRemanenteServicio(servicio: any): boolean {
+    return (servicio.cantidadOriginal ?? 0) <= 0;
+  }
+
+
+
   CalcularTotalGeneral() {
+    // "Seleccionar todo" (header checkbox) no distingue filas sin remanente -
+    // esta versión de p-table no expone isDataSelectable, así que se filtran acá
+    // en vez de en el toggle (cubre también cualquier otro camino de selección).
+    this.productosSeleccionados = this.productosSeleccionados?.filter(p => !this.SinRemanente(p)) ?? [];
+    this.serviciosSeleccionados = this.serviciosSeleccionados?.filter(s => !this.SinRemanenteServicio(s)) ?? [];
+
     const procesarItems = (items: any[]) => {
       return items?.reduce((acc, item) => {
 
