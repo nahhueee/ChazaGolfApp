@@ -19,6 +19,13 @@ export class UsuariosService {
     return sesion?.data?.usuario?.toString() || '';
   }
 
+  // Token JWT devuelto por el login (usuariosRoute.ts), usado por ApiService para
+  // el header Authorization. Reemplaza al viejo archivo de sesión del backend.
+  GetToken(): string | null {
+    const sesion = this.GetSesion();
+    return sesion?.data?.token || null;
+  }
+
   IsSesionValida(minutos = 30): boolean {
     const sesion = this.GetSesion();
     if (!sesion || !sesion.timestamp) return false;
@@ -27,15 +34,15 @@ export class UsuariosService {
     return (ahora - sesion.timestamp) < minutos * 60 * 1000;
   }
 
+  CerrarSesion(): void {
+    localStorage.removeItem('sesion');
+  }
+
   //#region OBTENER
   Login(usuario:string, pass:string): Observable<any> {
     return this.apiService.post('usuarios/login', { usuario, pass })
   }
 
-  GrabarSesion(usr:Usuario): Observable<any>{
-    return this.apiService.put('usuarios/guardar-sesion', usr)
-  }
-  
   ObtenerUsuarios(filtro:FiltroGral): Observable<any> {
     return this.apiService.post('usuarios/obtener', filtro)
   }

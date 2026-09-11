@@ -179,6 +179,13 @@ export class NavegacionComponent {
     this.router.navigateByUrl(ruta);
   }
 
+  // El botón ya existía pero solo navegaba a /ingresar sin limpiar la sesión (el
+  // token JWT quedaba en localStorage). Aprovechamos este cambio para corregirlo.
+  CerrarSesion(){
+    this.usuariosService.CerrarSesion();
+    this.router.navigateByUrl('ingresar');
+  }
+
   //#region PERSONALIZACIÓN TEMA
   CambiarModo() {
     this.AplicarTema();
