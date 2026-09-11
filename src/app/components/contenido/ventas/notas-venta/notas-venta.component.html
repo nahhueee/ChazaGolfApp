@@ -97,7 +97,7 @@
             </div>
         </div>
 
-       <p-table [value]="venta.productos"
+       <p-table [value]="productos"
                     #tablaProductos
                     [(selection)]="productosSeleccionados"
                     selectionMode="multiple"
@@ -189,9 +189,9 @@
             </ng-template>
         </p-table>
 
-        @if(venta.servicios && venta.servicios.length > 0){
+        @if(servicios && servicios.length > 0){
         <div class="titulo-tabla">Servicios</div>
-        <p-table [value]="venta.servicios"
+        <p-table [value]="servicios"
                     #tablaServicios
                     [(selection)]="serviciosSeleccionados"
                     selectionMode="multiple"

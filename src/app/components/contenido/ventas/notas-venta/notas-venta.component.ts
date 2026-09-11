@@ -65,6 +65,17 @@ export class NotasVentaComponent {
   totalIva:number = 0;
 
   mostrarIva:boolean = false;
+
+  // Copia local editable de venta.productos/venta.servicios (sep-2026). NO son
+  // los mismos objetos que venta.productos/venta.servicios: esos son referencias
+  // compartidas con el resto de la app (VerFactura/VerResumen los usan para
+  // mostrar la factura ORIGINAL sobre el mismo objeto - ver PrepararPreciosVenta).
+  // Editar acá encima de esas referencias corrompía la vista de la factura real
+  // en otras pantallas y además dejaba mutado el objeto si se cancelaba sin
+  // guardar (riesgo ya señalado en el proyecto). Ver ClonarProductos/ClonarServicios.
+  productos: ProductosFactura[] = [];
+  servicios: ServiciosFactura[] = [];
+
   productosSeleccionados: ProductosFactura[] = [];
   serviciosSeleccionados: ServiciosFactura[] = [];
   modalFacturarVisible: boolean = false;
@@ -145,6 +156,11 @@ export class NotasVentaComponent {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
+      // Clona ANTES de tocar nada: el form arranca ya mostrando el remanente
+      // real (no lo facturado), así el usuario no tiene que acordarse de bajar
+      // a mano cada talla ya acreditada - ver comentario en ClonarProductos.
+      this.productos = this.ClonarProductos(this.venta.productos);
+      this.servicios = this.ClonarServicios(this.venta.servicios);
       this.productosSeleccionados = [];
       this.serviciosSeleccionados = [];
       this.tipoNotaElegida = this.tipoNotaPreseleccionada;
@@ -170,6 +186,58 @@ export class NotasVentaComponent {
 
   CerrarModal(actualizar:boolean) {
     this.cerrar.emit(actualizar);
+  }
+
+  // Copia cada producto y, para ítems con talles, capea cada tN al remanente
+  // real (stockInicial[t], ya descontado lo acreditado por NC fiscales previas -
+  // ver PrepararPreciosVenta) en vez de dejar la cantidad ORIGINAL facturada.
+  // Bug real (sep-2026): sin este cap en el valor por default, una talla que el
+  // usuario no tocaba a mano viajaba con su cantidad original completa - sin
+  // pasar por ninguna validación, porque ActualizarCantidad solo corre cuando el
+  // campo se edita. Resultado: se podía re-acreditar dos veces la misma talla
+  // sin ningún aviso. cantidad/total/importeDescuento/totalMostrar se
+  // recalculan acorde, para que el resumen abra ya reflejando el remanente.
+  private ClonarProductos(productos: ProductosFactura[] = []): ProductosFactura[] {
+    return productos.map(p => {
+      const clon: any = { ...p, stockInicial: { ...(p.stockInicial ?? {}) } };
+
+      if (this.EsItemNoCatalogado(clon)) {
+        // Sin talles: cantidadOriginal ya viene descontado lo acreditado (ver
+        // PrepararPreciosVenta) - es directamente el tope a usar acá.
+        clon.cantidad = Math.min(Number(clon.cantidad) || 0, Number(clon.cantidadOriginal) || 0);
+      } else {
+        for (let i = 1; i <= 10; i++) {
+          const talle = `t${i}`;
+          const original = Number(clon[talle]) || 0;
+          const remanente = Number(clon.stockInicial?.[talle]) || 0;
+          clon[talle] = Math.min(original, remanente);
+        }
+        clon.cantidad = Array.from({ length: 10 }, (_, i) => clon[`t${i + 1}`] || 0)
+          .reduce((a: number, b: number) => a + b, 0);
+      }
+
+      this.RecalcularTotalesItem(clon);
+      return clon;
+    });
+  }
+
+  /** Análogo a ClonarProductos, sin talles: el tope es siempre cantidadOriginal. */
+  private ClonarServicios(servicios: ServiciosFactura[] = []): ServiciosFactura[] {
+    return servicios.map(s => {
+      const clon: any = { ...s };
+      clon.cantidad = Math.min(Number(clon.cantidad) || 0, Number(clon.cantidadOriginal) || 0);
+      this.RecalcularTotalesItem(clon);
+      return clon;
+    });
+  }
+
+  // Recalculo de total/importeDescuento/totalMostrar en base a item.cantidad,
+  // reutilizado por ClonarProductos/ClonarServicios y por
+  // RecalcularProducto/RecalcularProductoPresupuesto/RecalcularServicio.
+  private RecalcularTotalesItem(item: any) {
+    item.total = item.cantidad * (item.precioMostrar ?? item.unitario);
+    item.importeDescuento = item.total * ((item.descuentoAplicado ?? 0) / 100);
+    item.totalMostrar = item.total - item.importeDescuento;
   }
 
   SelectContent(event: FocusEvent) {
@@ -297,12 +365,9 @@ export class NotasVentaComponent {
 
     // precioMostrar es el precio unitario correcto (neto para Factura A, igual a unitario
     // para B/C), seteado por PrepararPrecios(). Usar producto.unitario acá reintroduciría
-    // el IVA en la línea editada (unitario siempre queda bruto).
-    producto.total = producto.cantidad * (producto.precioMostrar ?? producto.unitario);
-
-    // Prorratea el descuento a la cantidad efectivamente devuelta, no a la original.
-    producto.importeDescuento = producto.total * ((producto.descuentoAplicado ?? 0) / 100);
-    producto.totalMostrar = producto.total - producto.importeDescuento;
+    // el IVA en la línea editada (unitario siempre queda bruto). Prorratea el
+    // descuento a la cantidad efectivamente devuelta, no a la original.
+    this.RecalcularTotalesItem(producto);
 
     this.CalcularTotalGeneral();
   }
@@ -329,10 +394,7 @@ export class NotasVentaComponent {
   }
 
   private RecalcularProductoPresupuesto(producto: any) {
-    producto.total = producto.cantidad * (producto.precioMostrar ?? producto.unitario);
-    producto.importeDescuento = producto.total * ((producto.descuentoAplicado ?? 0) / 100);
-    producto.totalMostrar = producto.total - producto.importeDescuento;
-
+    this.RecalcularTotalesItem(producto);
     this.CalcularTotalGeneral();
   }
 
@@ -354,10 +416,7 @@ export class NotasVentaComponent {
   }
 
   private RecalcularServicio(servicio: any) {
-    servicio.total = servicio.cantidad * (servicio.precioMostrar ?? servicio.unitario);
-    servicio.importeDescuento = servicio.total * ((servicio.descuentoAplicado ?? 0) / 100);
-    servicio.totalMostrar = servicio.total - servicio.importeDescuento;
-
+    this.RecalcularTotalesItem(servicio);
     this.CalcularTotalGeneral();
   }
 

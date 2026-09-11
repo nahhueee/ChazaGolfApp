@@ -26,13 +26,20 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
   venta.productos?.forEach(producto => {
     CalcularPrecioItem(producto, esTipoA, venta.descuento);
 
-    // Cantidad ya acreditada por NC fiscales previas sobre esta misma línea
-    // (idLineaTalle) - devoluciones parciales sucesivas, sep-2026. Sin esto, el
-    // tope que ve notas-venta.component.ts sería siempre el de la venta original,
-    // permitiendo acreditar dos veces la misma unidad. NC internas (X) no restan
-    // acá (ver CantidadesAcreditadas en el backend).
+    // Cantidad ya acreditada por NC fiscales previas sobre esta misma línea -
+    // devoluciones parciales sucesivas, sep-2026. Sin esto, el tope que ve
+    // notas-venta.component.ts sería siempre el de la venta original, permitiendo
+    // acreditar dos veces la misma unidad. NC internas (X) no restan acá (ver
+    // CantidadesAcreditadas en el backend).
+    //
+    // Match por idProducto+tipoItem, NO por idLineaTalle: confirmado con datos
+    // reales (sep-2026) que idLineaTalle se repite entre líneas de DISTINTO
+    // color/idProducto dentro de la misma venta (es un id de "tanda" del alta en
+    // el carrito, no un identificador único por línea) - matchear por ahí hacía
+    // que acreditar 1 color marcara como acreditados los otros colores del mismo
+    // producto.
     const acreditado = venta.cantidadesAcreditadas?.productos
-      ?.find(a => a.idLineaTalle === producto.idLineaTalle);
+      ?.find(a => a.idProducto === producto.idProducto && a.tipoItem === producto.tipoItem);
 
     if (esItemNoCatalogado(producto.tipoItem)) {
       // Ítem de presupuesto: no tiene talles, así que el tope de cantidad para
