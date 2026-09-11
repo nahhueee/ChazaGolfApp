@@ -14,7 +14,7 @@
                 <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
                 <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
                 <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Perfil" tooltipPosition="bottom" icon="pi pi-user"/>
-                <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="Navegar('ingresar')"/>
+                <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="CerrarSesion()"/>
             </div>
         </ng-template>
     </p-menubar>

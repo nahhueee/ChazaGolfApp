@@ -1,5 +1,6 @@
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { NotificacionesService } from './notificaciones.service';
@@ -10,7 +11,8 @@ import { NotificacionesService } from './notificaciones.service';
 export class HttpErrorHandlerService  implements HttpInterceptor {
 
   constructor(
-    private Notificaciones:NotificacionesService,     
+    private Notificaciones:NotificacionesService,
+    private router:Router,
   ) { }
 
   //Intercepta todos los errores http en la app
@@ -24,6 +26,12 @@ export class HttpErrorHandlerService  implements HttpInterceptor {
 
           //Dependiendo el código de error mostramos un mensaje
           switch (err.status) {
+            case 401: {
+              this.Notificaciones.Warn('Sesión inválida o expirada. Volvé a iniciar sesión.');
+              localStorage.removeItem('sesion');
+              this.router.navigateByUrl('ingresar');
+              break;
+            }
             case 0:{
               this.Notificaciones.Error("No se logró la conexion con el servidor");
               break;

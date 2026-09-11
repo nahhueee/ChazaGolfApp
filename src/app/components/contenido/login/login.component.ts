@@ -7,7 +7,6 @@ import { NotificacionesService } from '../../../services/notificaciones.service'
 import { UsuariosService } from '../../../services/usuarios.service';
 import { ParametrosService } from '../../../services/parametros.service';
 import { FORMS_IMPORTS } from '../../../imports/forms.import';
-import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { APP_VERSION } from '../../../version';
 
@@ -93,21 +92,23 @@ export class LoginComponent {
       if (response) {
         this.usuario = response;
         const sesion = {
-          data: { 
+          data: {
             idUsuario: this.usuario.id?.toString()!,
             nombre: this.usuario.nombre!,
             cargo: this.usuario.cargo!,
             usuario: this.usuario.usuario,
-            idCaja: this.usuario.idCaja
+            idCaja: this.usuario.idCaja,
+            // Token JWT devuelto por el login: reemplaza al viejo archivo de sesión
+            // del backend (se pisaba con el último login). ApiService lo usa para
+            // el header Authorization en cada request.
+            token: (response as any).token
           },
-          timestamp: new Date().getTime(), 
+          timestamp: new Date().getTime(),
         };
         localStorage.setItem('sesion', JSON.stringify(sesion));
         this.spinner.show("welcomeSpinner");
-        
-        this.nombre = this.usuario.nombre!;
-        await firstValueFrom(this.usuariosService.GrabarSesion(this.usuario));
 
+        this.nombre = this.usuario.nombre!;
 
         setTimeout(() => {
           this.spinner.hide("welcomeSpinner");
