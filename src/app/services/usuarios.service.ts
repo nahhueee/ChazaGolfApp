@@ -26,16 +26,29 @@ export class UsuariosService {
     return sesion?.data?.token || null;
   }
 
-  IsSesionValida(minutos = 30): boolean {
-    const sesion = this.GetSesion();
-    if (!sesion || !sesion.timestamp) return false;
-
-    const ahora = Date.now();
-    return (ahora - sesion.timestamp) < minutos * 60 * 1000;
-  }
 
   CerrarSesion(): void {
     localStorage.removeItem('sesion');
+  }
+
+  // Gate de UI (mostrar/ocultar acciones) espejando requiereRol('ADMINISTRADOR','ENCARGADO')
+  // del backend. NO reemplaza esa validación - el backend es la fuente de verdad, esto solo
+  // evita mostrar botones que van a fallar con 403.
+  //
+  // sesion.data.cargo es el string plano que devuelve usuariosRepository.Login (columna
+  // "cargo" del JOIN a la tabla cargos, ver login.component.ts: se guarda tal cual llega de
+  // la API, sin pasar por el constructor de Usuario). NO es un objeto {nombre}, a pesar de
+  // que el modelo Usuario.cargo sí lo tipa como tal - por eso se soportan ambas formas acá.
+  GetCargoSesion(): string {
+    const sesion = this.GetSesion();
+    const cargo = sesion?.data?.cargo;
+    const nombreCargo = typeof cargo === 'string' ? cargo : cargo?.nombre;
+    return nombreCargo?.toString().toUpperCase() || '';
+  }
+
+  PuedeAjustarStock(): boolean {
+    const cargo = this.GetCargoSesion();
+    return cargo === 'ADMINISTRADOR' || cargo === 'ENCARGADO';
   }
 
   //#region OBTENER

@@ -7,7 +7,6 @@ import { MenubarModule } from 'primeng/menubar';
 import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { UsuariosService } from '../../../services/usuarios.service';
-import { NotificacionesService } from '../../../services/notificaciones.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -37,7 +36,6 @@ export class NavegacionComponent {
     private router:Router,
     private temaService:TemaService,
     private usuariosService:UsuariosService,
-    private Notificaciones:NotificacionesService
   ){}
 
   ngOnInit() {
@@ -47,13 +45,11 @@ export class NavegacionComponent {
       return;
     }
 
-    if (!this.usuariosService.IsSesionValida(30)) {
-      this.Notificaciones.Info("Es necesario volver a iniciar sesión");
-      localStorage.removeItem("sesion");
-      this.router.navigate(['/ingresar'])
-      return;
-    }
-
+    // Se sacó el chequeo de "más de 30 min desde el login -> forzar logout" (IsSesionValida):
+    // era un parche para el viejo session.json que se pisaba entre logins concurrentes, y quedó
+    // inconsistente con el JWT (expira a las 12hs, validado en el backend). El único disparador
+    // de logout forzado ahora es el 401 real de un token vencido/inválido (ver
+    // http-error-handler.service.ts / api.service.ts).
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         this.ActualizarActivo(event.urlAfterRedirects);
@@ -138,7 +134,8 @@ export class NavegacionComponent {
               { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ordenes-ingreso/adm', 0] },
               { label: 'Listado', icon: 'pi pi-list', routerLink: '/ordenes-ingreso' }
             ]
-          }
+          },
+          { label: 'Ajuste de Stock', icon: 'pi pi-sliders-h', routerLink: '/stock-ajuste' }
         ]
       },
       {
@@ -160,7 +157,7 @@ export class NavegacionComponent {
       this.activo = 'inicio';
     } else if (url.startsWith('/ventas')) {
       this.activo = 'ventas';
-    } else if (url.startsWith('/productos') || url.startsWith('/servicios') || url.startsWith('/ordenes-ingreso')) {
+    } else if (url.startsWith('/productos') || url.startsWith('/servicios') || url.startsWith('/ordenes-ingreso') || url.startsWith('/stock-ajuste')) {
       this.activo = 'stock';
     } else if (url.startsWith('/compras') || url.startsWith('/proveedores')) {
       this.activo = 'compras';

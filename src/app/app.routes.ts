@@ -21,6 +21,7 @@ import { ListadoComprasComponent } from './components/contenido/compras/listado-
 import { AddModComprasComponent } from './components/contenido/compras/addmod-compras/addmod-compras.component';
 import { ListadoCuentasProveedoresComponent } from './components/contenido/compras/listado-cuentas-proveedores/listado-cuentas-proveedores.component';
 import { CuentaProveedorComponent } from './components/contenido/compras/cuenta-proveedor/cuenta-proveedor.component';
+import { AjusteStockComponent } from './components/contenido/stock/ajuste-stock/ajuste-stock.component';
 
 export const routes: Routes = [
     {
@@ -115,5 +116,9 @@ export const routes: Routes = [
     {
         path: 'compras/cuentas/administrar/:idProveedor/:proveedor',
         component:CuentaProveedorComponent
+    },
+    {
+        path: 'stock-ajuste',
+        component:AjusteStockComponent
     },
 ];
