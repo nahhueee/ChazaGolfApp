@@ -189,6 +189,13 @@ export class AddModVentasComponent {
 
   productosPreFiltrados:ProductoPresupuesto[]=[];
 
+  // FiltrarProductos dispara un request por tecla sin cancelar el anterior (ni BuscarProductos ni
+  // BuscarProductosPresupuesto usan switchMap). Si la respuesta de un texto viejo tarda más que la
+  // del texto actual, llega después y pisa productosFiltrados/productosPreFiltrados con resultados
+  // de otra búsqueda (mismo bug reportado en ajuste-stock.component.ts). Se corrige con un id
+  // incremental: se descarta cualquier respuesta que no sea la del último request emitido.
+  private ultimaBusquedaProductosId = 0;
+
   //PANTALLA 3
   formServicios:FormGroup;
   servicios:Servicio[]=[];
@@ -1629,16 +1636,20 @@ export class AddModVentasComponent {
       return;
     }
     
+    const idBusqueda = ++this.ultimaBusquedaProductosId;
+
     if(this.ProcesoControl.id === ID_PROCESO.PRESUPUESTO){
       this.productosService.BuscarProductosPresupuesto(query)
-      .pipe(takeUntil(this.destroy$)) 
+      .pipe(takeUntil(this.destroy$))
       .subscribe(response => {
+        if(idBusqueda !== this.ultimaBusquedaProductosId) return;
         this.productosPreFiltrados = response;
       });
     }else{
       this.productosService.BuscarProductos(query)
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => {
+        if(idBusqueda !== this.ultimaBusquedaProductosId) return;
         this.resultadoBusqueda = response;
         this.productosFiltrados = this.AgruparProductos(this.resultadoBusqueda);
       });

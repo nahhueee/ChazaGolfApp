@@ -1,0 +1,190 @@
+<p-confirmpopup />
+<div class="contenido">
+    <app-encabezado-seccion titulo="Ajuste de Stock" icono="pi pi-sliders-h"></app-encabezado-seccion>
+
+    @if (!puedeAjustar) {
+      <div class="aviso-permiso">
+        <i class="pi pi-lock"></i>
+        Tu usuario no tiene permiso para ajustar stock. Podés consultar el historial más abajo.
+      </div>
+    }
+
+    <section class="seleccion-producto">
+        @if (!productoSeleccionado) {
+          <div class="buscador">
+            <p-floatlabel variant="on">
+              <p-autoComplete
+                [suggestions]="sugerencias"
+                (completeMethod)="BuscarProductos($event)"
+                (onSelect)="SeleccionarProducto($event.value)"
+                optionLabel="nombre"
+                [minLength]="2"
+                [forceSelection]="true">
+                <ng-template let-producto #item>
+                  <div class="sugerencia-row">
+                    <span class="swatch" [style.background]="producto.color?.hexa"></span>
+                    <span class="codigo">{{ producto.codigo }}</span>
+                    <span>- {{ producto.nombre }}</span>
+                    <span class="sep">|</span>
+                    <span class="color-nombre">{{ producto.color?.descripcion }}</span>
+                  </div>
+                </ng-template>
+              </p-autoComplete>
+              <label>Buscar producto por código o nombre</label>
+            </p-floatlabel>
+          </div>
+        } @else {
+          <div class="producto-elegido">
+            <span class="swatch" [style.background]="productoSeleccionado.color?.hexa"></span>
+            <div class="info">
+              <span class="codigo">{{ productoSeleccionado.codigo }}</span>
+              <span class="nombre">{{ productoSeleccionado.nombre }} · {{ productoSeleccionado.color?.descripcion }}</span>
+            </div>
+            <p-button icon="pi pi-times" [text]="true" severity="secondary" label="Cambiar producto" (onClick)="QuitarProducto()"/>
+          </div>
+
+          <div class="split">
+            <div class="lista-talles">
+              <div class="hint">Elegí un talle para ajustar</div>
+              @for (talle of productoSeleccionado.talles; track talle.talle) {
+                <button type="button" class="fila-talle" [class.activa]="talleSeleccionado?.talle === talle.talle" (click)="SeleccionarTalle(talle)">
+                  <span class="talle-label">{{ talle.talle }}</span>
+                  <span class="talle-cant" [class.cero]="talle.cantidad === 0">{{ talle.cantidad }}</span>
+                </button>
+              }
+            </div>
+
+            <div class="panel-ajuste">
+              @if (!talleSeleccionado) {
+                <div class="vacio">
+                  <i class="pi pi-arrow-left" style="font-size:1.4rem"></i>
+                  Elegí un talle de la lista para ajustar su cantidad
+                </div>
+              } @else {
+                <form [formGroup]="formAjuste" (ngSubmit)="GuardarAjuste()">
+                  <div class="ajuste-encabezado">
+                    <div class="talle-actual">Ajustando talle <span class="chip">{{ talleSeleccionado.talle }}</span></div>
+                  </div>
+
+                  <div class="comparativa">
+                    <div class="lado">
+                      <span class="etiqueta">Cantidad actual</span>
+                      <span class="valor">{{ talleSeleccionado.cantidad }}</span>
+                    </div>
+                    <span class="flecha pi pi-arrow-right"></span>
+                    <div class="lado derecha">
+                      <span class="etiqueta">Cantidad nueva</span>
+                      <p-inputnumber formControlName="cantidadNueva" [min]="0" [showButtons]="false" [invalid]="CampoInvalido('cantidadNueva')"/>
+                    </div>
+                    @if (diferencia !== 0) {
+                      <span class="diferencia-pill" [class.pos]="diferencia > 0" [class.neg]="diferencia < 0">
+                        {{ diferencia > 0 ? '+' : '' }}{{ diferencia }} unidades
+                      </span>
+                    }
+                  </div>
+
+                  <div class="campo">
+                    <label>Motivo del ajuste *</label>
+                    <textarea pTextarea formControlName="motivo" rows="2" [autoResize]="true" placeholder="Ej: diferencia detectada en conteo físico de local"></textarea>
+                    @if (CampoInvalido('motivo')) {
+                      <small class="error">El motivo es obligatorio.</small>
+                    }
+                  </div>
+
+                  <div class="acciones-ajuste">
+                    <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="guardando" (onClick)="CancelarAjuste()"/>
+                    <p-button type="submit" [label]="'Confirmar ajuste de talle ' + talleSeleccionado.talle" icon="pi pi-check" [loading]="guardando"/>
+                  </div>
+                </form>
+              }
+            </div>
+          </div>
+        }
+    </section>
+
+    <app-encabezado-seccion titulo="Historial de ajustes" icono="pi pi-history"></app-encabezado-seccion>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="Buscar()">
+      <div class="izq">
+        <p-floatlabel variant="on">
+          <input pInputText formControlName="usuario" type="text"/>
+          <label>Usuario</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <p-datepicker formControlName="fechas" selectionMode="range" />
+          <label>Rango de Fecha</label>
+        </p-floatlabel>
+      </div>
+      <div class="der">
+        <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
+        <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+      </div>
+    </form>
+
+    <div class="tabla-scroll">
+        <p-table
+          class="historial"
+          [value]="movimientos"
+          [lazy]="true"
+          [paginator]="true"
+          [rows]="15"
+          [totalRecords]="totalRecords"
+          (onLazyLoad)="Buscar($event)"
+          [loading]="loading"
+          [rowsPerPageOptions]="[15,30,50]"
+          [tableStyle]="{ 'min-width': '60rem' }">
+
+            <ng-template #header>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Talle</th>
+                    <th>Ant.</th>
+                    <th>Nueva</th>
+                    <th>Dif.</th>
+                    <th>Motivo</th>
+                    <th>Usuario</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-mov>
+                <tr>
+                    <td>{{ mov.alta | date:'dd-MM-yy HH:mm' }}</td>
+                    <td>
+                      <div class="producto-cell">
+                        <span class="swatch" [style.background]="mov.hexaProducto"></span>
+                        <div class="txt">
+                          <span class="codigo">{{ mov.codigoProducto }}</span>
+                          <span class="nombre">{{ mov.producto }} · {{ mov.colorProducto }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="talle-pill">{{ mov.talle }}</span></td>
+                    <td>{{ mov.cantidadAnterior }}</td>
+                    <td>{{ mov.cantidadNueva }}</td>
+                    <td class="diff-cell" [class.pos]="mov.diferencia > 0" [class.neg]="mov.diferencia < 0">
+                      {{ mov.diferencia > 0 ? '+' + mov.diferencia : mov.diferencia }}
+                    </td>
+                    <td class="motivo-cell" [pTooltip]="mov.motivo" tooltipPosition="top">{{ mov.motivo }}</td>
+                    <td>{{ mov.usuario }}</td>
+                    <td>
+                      @if (mov.baja) {
+                        <span class="estado-pill revertido" [pTooltip]="'Revertido por ' + mov.usuarioBaja + ': ' + mov.motivoBaja">Revertido</span>
+                      } @else {
+                        <span class="estado-pill vigente"><span class="dot"></span>Vigente</span>
+                      }
+                    </td>
+                    <td>
+                      @if (puedeAjustar) {
+                        <button type="button" class="btn-icono" [disabled]="!!mov.baja" pTooltip="Revertir" tooltipPosition="bottom" (click)="ConfirmarRevertir($event, mov)">
+                          <i class="pi pi-replay"></i>
+                        </button>
+                      }
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
