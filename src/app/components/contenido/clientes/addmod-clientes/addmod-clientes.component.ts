@@ -105,6 +105,7 @@ export class AddModClientesComponent {
       categoria: new FormControl([null]),
       lista: new FormControl([null]),
       inicial: new FormControl("0"),
+      diasVencimiento: new FormControl(0),
 
       calle: new FormControl(''),
       numero: new FormControl(''),
@@ -206,6 +207,7 @@ export class AddModClientesComponent {
     this.formulario.get('razonSocial')?.setValue(cliente.razonSocial);
     this.formulario.get('documento')?.setValue(cliente.documento);
     this.formulario.get('inicial')?.setValue(cliente.inicial.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    this.formulario.get('diasVencimiento')?.setValue(cliente.diasVencimiento ?? 0);
 
     this.formulario.get('lista')?.setValue(this.listasPrecio.find(l => l.id == cliente.idListaPrecio));
 
@@ -394,6 +396,7 @@ export class AddModClientesComponent {
     this.cliente.idListaPrecio = this.formulario.get('lista')?.value.id;
     this.cliente.documento = this.formulario.get('documento')?.value;
     this.cliente.inicial = this.globalesService.EstandarizarDecimal(this.formulario.get('inicial')?.value) || 0;
+    this.cliente.diasVencimiento = this.formulario.get('diasVencimiento')?.value || 0;
 
     const v = (path: string, prop?: string) => {
       const val = this.formulario.get(path)?.value;

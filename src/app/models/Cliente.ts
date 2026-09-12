@@ -18,6 +18,9 @@ export class Cliente {
     idCategoria?:number;
     inicial?:number;
     fechaAlta?:Date;
+    // Plazo de pago habitual, en días. 0 = no configurado. Se usa en el backend
+    // para calcular ventas.fechaVencimiento al emitir Factura/Cotización.
+    diasVencimiento?:number;
     direcciones?:DireccionesCliente[];
     ultimoDescuento?:UltimoDescuentoCliente;
     saldo?:number;
