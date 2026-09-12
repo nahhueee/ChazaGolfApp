@@ -148,7 +148,13 @@ export class NavegacionComponent {
           { label: 'Cuentas Corrientes', icon: 'pi pi-wallet', routerLink: '/cuentas' }
         ]
       },
-      
+      {
+        label: 'Administración',
+        icon: 'pi pi-briefcase',
+        styleClass: this.activo === 'administracion' ? 'activo' : undefined,
+        routerLink: '/administracion',
+      },
+
     ];
   }
 
@@ -166,6 +172,8 @@ export class NavegacionComponent {
       this.activo = 'clientes';
     } else if (url.startsWith('/fondos')) {
       this.activo = 'fondos';
+    } else if (url.startsWith('/administracion')) {
+      this.activo = 'administracion';
     } else {
       this.activo = '';
     }

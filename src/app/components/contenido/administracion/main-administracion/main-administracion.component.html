@@ -1,0 +1,51 @@
+<div class="contenido">
+    <app-encabezado-seccion titulo="Administración" icono="pi pi-briefcase"></app-encabezado-seccion>
+
+    <div class="cards-grid">
+
+        <p-card class="card-admin" (click)="AbrirLibroIva()" pTooltip="Click para elegir el período" tooltipPosition="bottom">
+            <div class="contenido-card">
+                <div class="header">
+                    <i class="pi pi-book"></i>
+                </div>
+                <div class="nombre">Libro IVA Ventas</div>
+                <div class="descripcion">Excel con Facturas, NC y ND del período elegido, por mes.</div>
+            </div>
+        </p-card>
+
+        <p-card class="card-admin deshabilitada" pTooltip="Todavía no está disponible" tooltipPosition="bottom">
+            <div class="contenido-card">
+                <div class="header">
+                    <i class="pi pi-file-check"></i>
+                    <p-tag value="Próximamente" severity="info" styleClass="badge-proximamente"/>
+                </div>
+                <div class="nombre">Ventas para Conciliación</div>
+                <div class="descripcion">Reporte de ventas ampliado, pensado para conciliar contra otros sistemas.</div>
+            </div>
+        </p-card>
+
+    </div>
+</div>
+
+<p-dialog
+    header="Libro IVA Ventas"
+    [(visible)]="libroIvaVisible"
+    [modal]="true"
+    [style]="{width: '360px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>Elegí el mes a exportar.</p>
+    <div class="selector-periodo">
+        <p-datepicker
+            [(ngModel)]="mesSeleccionado"
+            view="month"
+            dateFormat="mm/yy"
+            [showIcon]="true"
+            [appendTo]="'body'"/>
+    </div>
+    <div class="acciones-dialog">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="libroIvaVisible = false" [disabled]="descargando"/>
+        <p-button label="Descargar" icon="pi pi-download" [loading]="descargando" (onClick)="DescargarLibroIva()"/>
+    </div>
+</p-dialog>
