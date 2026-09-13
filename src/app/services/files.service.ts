@@ -54,4 +54,17 @@ export class FilesService {
   DescargarFondosExcel(filtros: FiltrosFondos, cajaNombre?: string | null, fondoNombre?: string | null){
     return this.apiService.getFile('files/fondos-excel', { filtros, cajaNombre, fondoNombre });
   }
+
+  // Informe "Ventas para Conciliación" (Administración, R1 - ver
+  // HANDOFF-informes-administracion-R1.md). filtroProcesoNombre/filtroClienteNombre/
+  // usuario: igual que fondos-excel (cajaNombre/fondoNombre), ya resueltos en el
+  // frontend, solo para el encabezado del excel.
+  DescargarConciliacionExcel(
+    filtros: { fechas: [Date, Date], idProceso: number, cliente: number, nroProceso: number, incluirAnuladas: boolean },
+    filtroProcesoNombre?: string | null,
+    filtroClienteNombre?: string | null,
+    usuario?: string | null,
+  ){
+    return this.apiService.getFile('files/ventas-conciliacion-excel', { filtros, filtroProcesoNombre, filtroClienteNombre, usuario });
+  }
 }

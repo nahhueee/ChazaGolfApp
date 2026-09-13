@@ -13,11 +13,10 @@
             </div>
         </p-card>
 
-        <p-card class="card-admin deshabilitada" pTooltip="Todavía no está disponible" tooltipPosition="bottom">
+        <p-card class="card-admin" (click)="AbrirConciliacion()" pTooltip="Click para elegir el período y los filtros" tooltipPosition="bottom">
             <div class="contenido-card">
                 <div class="header">
                     <i class="pi pi-file-check"></i>
-                    <p-tag value="Próximamente" severity="info" styleClass="badge-proximamente"/>
                 </div>
                 <div class="nombre">Ventas para Conciliación</div>
                 <div class="descripcion">Reporte de ventas ampliado, pensado para conciliar contra otros sistemas.</div>
@@ -47,5 +46,64 @@
     <div class="acciones-dialog">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="libroIvaVisible = false" [disabled]="descargando"/>
         <p-button label="Descargar" icon="pi pi-download" [loading]="descargando" (onClick)="DescargarLibroIva()"/>
+    </div>
+</p-dialog>
+
+<p-dialog
+    header="Ventas para Conciliación"
+    [(visible)]="conciliacionVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <div class="filtros-conciliacion" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: .5rem;">
+        <p-floatlabel variant="on">
+            <p-datepicker
+                [(ngModel)]="rangoFechasConciliacion"
+                selectionMode="range"
+                [showIcon]="true"
+                [appendTo]="'body'"
+                inputId="rangoFechasConciliacion"/>
+            <label for="rangoFechasConciliacion">Rango de fechas</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+            <p-select
+                [(ngModel)]="procesoConciliacion"
+                [options]="procesos"
+                optionLabel="descripcion"
+                [showClear]="true"
+                [appendTo]="'body'"
+                inputId="procesoConciliacion"/>
+            <label for="procesoConciliacion">Proceso (opcional)</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+            <p-autocomplete
+                [(ngModel)]="clienteConciliacion"
+                [suggestions]="clientesFiltrados"
+                placeholder="Buscar por nombre o DNI"
+                emptyMessage="No se encontraron resultados"
+                (completeMethod)="FiltrarClientesConciliacion($event)"
+                optionLabel="nombre"
+                [dropdown]="true"
+                [appendTo]="'body'"
+            >
+                <ng-template let-cliente pTemplate="item">
+                    {{ cliente.nombre }} - {{ cliente.documento }}
+                </ng-template>
+            </p-autocomplete>
+            <label>Cliente (opcional)</label>
+        </p-floatlabel>
+
+        <div class="incluir-anulados" style="display: flex; align-items: center; gap: .5rem;">
+            <p-checkbox [(ngModel)]="incluirAnuladas" [binary]="true" inputId="incluirAnuladas"/>
+            <label for="incluirAnuladas">Incluir anulados</label>
+        </div>
+    </div>
+    <div class="acciones-dialog">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="conciliacionVisible = false" [disabled]="descargandoConciliacion"/>
+        <p-button label="Descargar" icon="pi pi-download" [loading]="descargandoConciliacion" (onClick)="DescargarConciliacion()"/>
     </div>
 </p-dialog>

@@ -4,24 +4,26 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { DatePicker } from 'primeng/datepicker';
-import { ButtonModule } from 'primeng/button';
-import { FormsModule } from '@angular/forms';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 import { FilesService } from '../../../../services/files.service';
 import { MiscService } from '../../../../services/misc.service';
+import { ClientesService } from '../../../../services/clientes.service';
+import { UsuariosService } from '../../../../services/usuarios.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { FORMS_IMPORTS } from '../../../../imports/forms.import';
+import { ProcesoVenta } from '../../../../models/ProcesoVenta';
+import { Cliente } from '../../../../models/Cliente';
 
 @Component({
   selector: 'app-main-administracion',
   standalone: true,
   imports: [
+    ...FORMS_IMPORTS,
     CardModule,
     TagModule,
     TooltipModule,
     DialogModule,
     DatePicker,
-    ButtonModule,
-    FormsModule,
     EncabezadoSeccionComponent,
   ],
   templateUrl: './main-administracion.component.html',
@@ -36,9 +38,26 @@ export class MainAdministracionComponent {
   mesSeleccionado: Date = new Date();
   descargando: boolean = false;
 
+  // Dialog de filtros de "Ventas para Conciliación" (R1 - ver
+  // HANDOFF-informes-administracion-R1.md). A diferencia del Libro IVA (por
+  // CUIT/mes), acá el caso de uso es más parecido al Exportar() de
+  // listado-ventas: rango de fechas libre + proceso/cliente opcionales.
+  conciliacionVisible: boolean = false;
+  rangoFechasConciliacion: Date[] | null = null;
+  procesoConciliacion: ProcesoVenta | null = null;
+  clienteConciliacion: Cliente | null = null;
+  incluirAnuladas: boolean = false;
+  descargandoConciliacion: boolean = false;
+
+  procesos: ProcesoVenta[] = [];
+  clientes: Cliente[] = [];
+  clientesFiltrados: Cliente[] = [];
+
   constructor(
     private filesService: FilesService,
     private miscService: MiscService,
+    private clientesService: ClientesService,
+    private usuariosService: UsuariosService,
     private notificaciones: NotificacionesService,
   ) {}
 
@@ -88,6 +107,83 @@ export class MainAdministracionComponent {
           this.descargando = false;
         }
       });
+    });
+  }
+
+  AbrirConciliacion() {
+    this.rangoFechasConciliacion = null;
+    this.procesoConciliacion = null;
+    this.clienteConciliacion = null;
+    this.incluirAnuladas = false;
+
+    // Solo procesos "facturables" (Factura/Cotización/NC/ND) - es el mismo
+    // universo que ya cubre ConciliacionRepo.ObtenerVentasConciliacion en el
+    // backend (no incluye Presupuesto/Pedido/Nota de Empaque).
+    if (!this.procesos.length) {
+      this.miscService.ObtenerProcesosVenta('factura').subscribe(response => {
+        this.procesos = response;
+      });
+    }
+    if (!this.clientes.length) {
+      this.clientesService.SelectorClientes().subscribe(response => {
+        this.clientes = response;
+      });
+    }
+
+    this.conciliacionVisible = true;
+  }
+
+  FiltrarClientesConciliacion(event: any) {
+    const query = event.query.toLowerCase();
+    this.clientesFiltrados = this.clientes.filter(c => {
+      const nombre = (c.nombre ?? '').toLowerCase();
+      const dni = (c.documento ?? '').toString();
+      return nombre.includes(query) || dni.includes(query);
+    });
+  }
+
+  DescargarConciliacion() {
+    const fechas = this.rangoFechasConciliacion;
+    if (!fechas || fechas.length !== 2 || !fechas[0] || !fechas[1]) {
+      this.notificaciones.Warn("Debe seleccionar un rango de fechas completo (desde y hasta).");
+      return;
+    }
+
+    this.descargandoConciliacion = true;
+
+    const filtros = {
+      fechas: fechas as [Date, Date],
+      idProceso: this.procesoConciliacion?.id ?? 0,
+      cliente: this.clienteConciliacion?.id ?? 0,
+      nroProceso: 0,
+      incluirAnuladas: this.incluirAnuladas,
+    };
+
+    this.filesService.DescargarConciliacionExcel(
+      filtros,
+      this.procesoConciliacion?.descripcion ?? 'Todos',
+      this.clienteConciliacion?.nombre ?? 'Todos',
+      this.usuariosService.GetUsuarioSesion(),
+    ).subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const dd = String(new Date().getDate()).padStart(2, '0');
+        const mm = String(new Date().getMonth() + 1).padStart(2, '0');
+        const yy = String(new Date().getFullYear()).slice(-2);
+
+        a.href = url;
+        a.download = `Ventas_Conciliacion_${dd}-${mm}-${yy}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        this.descargandoConciliacion = false;
+        this.conciliacionVisible = false;
+      },
+      error: () => {
+        this.descargandoConciliacion = false;
+      }
     });
   }
 }
