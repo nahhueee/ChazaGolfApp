@@ -33,7 +33,7 @@ import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.componen
 import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { puedeDarseDeBaja, saldoDisponibleNotaFiscal, tieneNotaInterna, TipoNotaCredito } from '../models/venta.constants';
+import { puedeDarseDeBaja, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito } from '../models/venta.constants';
 import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
@@ -233,14 +233,17 @@ export class ListadoVentasComponent {
     return saldoDisponibleNotaFiscal(venta) <= 0;
   }
 
+  // true cuando no queda saldo para otra NC interna (X) - mismo mecanismo que
+  // TieneNotaFiscal, ya no bloquea por "ya existe una" (sep-2026, ver
+  // saldoDisponibleNotaInterna).
   TieneNotaInterna(venta: Venta): boolean {
-    return tieneNotaInterna(venta.notas);
+    return saldoDisponibleNotaInterna(venta) <= 0;
   }
 
   EmitirNotaCredito(tipo: TipoNotaCredito){
     this.tipoNota = 'Crédito';
     this.tipoNotaCreditoElegida = tipo;
-    this.PrepararPrecios();
+    this.PrepararPrecios(tipo);
     this.notasVisible = true;
   }
   Actualizar(actualiza){
@@ -393,8 +396,11 @@ export class ListadoVentasComponent {
 
   // Delegado al helper compartido (ago-2026): la misma lógica la necesita Cuentas
   // Corrientes (ventas-cliente.components.ts), que tenía una copia vieja y desincronizada
-  // - ver precios-venta.helper.ts.
-  PrepararPrecios(){
-    PrepararPreciosVenta(this.ventaSeleccionada);
+  // - ver precios-venta.helper.ts. tipoNota: contra qué bucket (fiscal/interna)
+  // calcular el remanente - solo relevante para EmitirNotaCredito, que lo pasa
+  // explícito; el resto de los llamadores (VerResumen, etc.) no eligen tipo y usan
+  // el default ('FISCAL') del helper.
+  PrepararPrecios(tipoNota?: TipoNotaCredito){
+    PrepararPreciosVenta(this.ventaSeleccionada, tipoNota);
   }
 }

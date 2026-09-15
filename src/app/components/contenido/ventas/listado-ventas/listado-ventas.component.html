@@ -224,8 +224,9 @@
 </p-popover>
 
 <!-- Elegir Fiscal vs Interna (X) para la Nota de Crédito - ver
-     ElegirTipoNotaCredito. Se deshabilita la opción ya emitida sobre esta
-     venta (no se puede repetir el mismo tipo); el guard real y definitivo
+     ElegirTipoNotaCredito. Se deshabilita la opción sin saldo restante (devoluciones
+     parciales sucesivas, sep-2026 - mismo mecanismo para los dos tipos, ver
+     saldoDisponibleNotaFiscal/saldoDisponibleNotaInterna); el guard real y definitivo
      igual vive en notas-venta.component (Confirmar) - esto es solo UX. -->
 <p-popover #tipoNC>
     <div class="opciones-notas">
@@ -244,7 +245,7 @@
         severity="secondary"
         styleClass="p-button-sm w-full"
         [disabled]="TieneNotaInterna(ventaSeleccionada)"
-        [pTooltip]="TieneNotaInterna(ventaSeleccionada) ? 'Ya se emitió una interna sobre esta venta' : ''"
+        [pTooltip]="TieneNotaInterna(ventaSeleccionada) ? 'No queda saldo disponible de esta venta para otra Nota de Crédito interna' : ''"
         tooltipPosition="left"
         (onClick)="EmitirNotaCredito('INTERNA'); tipoNC.hide()">
         </p-button>

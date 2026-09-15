@@ -13,7 +13,7 @@
             </div>
         </p-card>
 
-        <p-card class="card-admin" (click)="AbrirConciliacion()" pTooltip="Click para elegir el período y los filtros" tooltipPosition="bottom">
+        <!-- <p-card class="card-admin" (click)="AbrirConciliacion()" pTooltip="Click para elegir el período y los filtros" tooltipPosition="bottom">
             <div class="contenido-card">
                 <div class="header">
                     <i class="pi pi-file-check"></i>
@@ -21,7 +21,7 @@
                 <div class="nombre">Ventas para Conciliación</div>
                 <div class="descripcion">Reporte de ventas ampliado, pensado para conciliar contra otros sistemas.</div>
             </div>
-        </p-card>
+        </p-card> -->
 
     </div>
 </div>
@@ -100,6 +100,11 @@
         <div class="incluir-anulados" style="display: flex; align-items: center; gap: .5rem;">
             <p-checkbox [(ngModel)]="incluirAnuladas" [binary]="true" inputId="incluirAnuladas"/>
             <label for="incluirAnuladas">Incluir anulados</label>
+        </div>
+
+        <div class="formato-largo" style="display: flex; align-items: center; gap: .5rem;" pTooltip="Una fila por artículo + color + talle en vez de una fila por línea. El control de la hoja 'Detalle valorizado' sigue cerrando igual." tooltipPosition="bottom">
+            <p-checkbox [(ngModel)]="formatoLargoConciliacion" [binary]="true" inputId="formatoLargoConciliacion"/>
+            <label for="formatoLargoConciliacion">Exportar talles en formato largo</label>
         </div>
     </div>
     <div class="acciones-dialog">

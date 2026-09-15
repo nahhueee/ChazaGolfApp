@@ -1,6 +1,6 @@
 import { ProductosFactura, ServiciosFactura, Venta } from '../../models/Factura';
 import { TipoComprobante } from '../../models/ObjFacturar';
-import { esItemNoCatalogado } from '../../components/contenido/ventas/models/venta.constants';
+import { esItemNoCatalogado, TipoNotaCredito } from '../../components/contenido/ventas/models/venta.constants';
 
 // Extraído de listado-ventas.component.ts (ago-2026) para que TODA pantalla que imprima
 // una venta con factura.service.ts calcule los precios de la misma forma.
@@ -16,7 +16,17 @@ import { esItemNoCatalogado } from '../../components/contenido/ventas/models/ven
 //
 // Regla: si una pantalla nueva llama a facturaService.VerFactura(venta), llama antes a
 // PrepararPreciosVenta(venta). No dupliques esta lógica.
-export const PrepararPreciosVenta = (venta: Venta): void => {
+//
+// tipoNota: contra qué bucket de acreditado se calcula el remanente (stockInicial/
+// cantidadOriginal) - 'FISCAL' (venta.cantidadesAcreditadas) o 'INTERNA'
+// (venta.cantidadesAcreditadasInterna), buckets independientes (sep-2026, ver
+// ObtenerCantidadesAcreditadas/ObtenerCantidadesAcreditadasInterna en el backend).
+// Default 'FISCAL' para no tocar el comportamiento de los llamadores que no eligen
+// tipo de NC (VerFactura/VerResumen, etc.) - solo listado-ventas.component.ts
+// (EmitirNotaCredito) pasa el tipo elegido por el usuario.
+export const PrepararPreciosVenta = (venta: Venta, tipoNota: TipoNotaCredito = 'FISCAL'): void => {
+  const acreditadoVenta = tipoNota === 'INTERNA' ? venta.cantidadesAcreditadasInterna : venta.cantidadesAcreditadas;
+
   const esTipoA = [
     TipoComprobante.FACTURA_A,
     TipoComprobante.NC_A,
@@ -26,11 +36,12 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
   venta.productos?.forEach(producto => {
     CalcularPrecioItem(producto, esTipoA, venta.descuento);
 
-    // Cantidad ya acreditada por NC fiscales previas sobre esta misma línea -
-    // devoluciones parciales sucesivas, sep-2026. Sin esto, el tope que ve
-    // notas-venta.component.ts sería siempre el de la venta original, permitiendo
-    // acreditar dos veces la misma unidad. NC internas (X) no restan acá (ver
-    // CantidadesAcreditadas en el backend).
+    // Cantidad ya acreditada por NC previas del MISMO tipo (fiscal o interna, según
+    // tipoNota) sobre esta misma línea - devoluciones parciales sucesivas, sep-2026.
+    // Sin esto, el tope que ve notas-venta.component.ts sería siempre el de la venta
+    // original, permitiendo acreditar dos veces la misma unidad. Los dos buckets son
+    // independientes: una NC interna no resta del acreditado fiscal ni viceversa
+    // (ver CantidadesAcreditadas en el backend).
     //
     // Match por idProducto+tipoItem, NO por idLineaTalle: confirmado con datos
     // reales (sep-2026) que idLineaTalle se repite entre líneas de DISTINTO
@@ -38,7 +49,7 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
     // el carrito, no un identificador único por línea) - matchear por ahí hacía
     // que acreditar 1 color marcara como acreditados los otros colores del mismo
     // producto.
-    const acreditado = venta.cantidadesAcreditadas?.productos
+    const acreditado = acreditadoVenta?.productos
       ?.find(a => a.idProducto === producto.idProducto && a.tipoItem === producto.tipoItem);
 
     if (esItemNoCatalogado(producto.tipoItem)) {
@@ -64,11 +75,11 @@ export const PrepararPreciosVenta = (venta: Venta): void => {
   });
 
   // Servicios: mismo cálculo que productos (neto, descuento, totalMostrar), y mismo
-  // descuento de lo ya acreditado por NC fiscales previas (ver arriba).
+  // descuento de lo ya acreditado por NC previas del mismo tipo (ver arriba).
   venta.servicios?.forEach(servicio => {
     CalcularPrecioItem(servicio, esTipoA, venta.descuento);
 
-    const acreditado = venta.cantidadesAcreditadas?.servicios
+    const acreditado = acreditadoVenta?.servicios
       ?.find(a => a.idServicio === servicio.idServicio);
 
     servicio.cantidadOriginal = (servicio.cantidad ?? 0) - (acreditado?.cantidad ?? 0);

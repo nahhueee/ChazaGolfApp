@@ -47,6 +47,11 @@ export class MainAdministracionComponent {
   procesoConciliacion: ProcesoVenta | null = null;
   clienteConciliacion: Cliente | null = null;
   incluirAnuladas: boolean = false;
+  // Checkbox "Exportar talles en formato largo" (R2, B4-212 - ver
+  // HANDOFF-informes-administracion-R2.md §7). Default false: 1 fila por línea
+  // de ventas_productos, que es el grano que garantiza que el control de la
+  // hoja "Detalle valorizado" cierre exacto.
+  formatoLargoConciliacion: boolean = false;
   descargandoConciliacion: boolean = false;
 
   procesos: ProcesoVenta[] = [];
@@ -115,6 +120,7 @@ export class MainAdministracionComponent {
     this.procesoConciliacion = null;
     this.clienteConciliacion = null;
     this.incluirAnuladas = false;
+    this.formatoLargoConciliacion = false;
 
     // Solo procesos "facturables" (Factura/Cotización/NC/ND) - es el mismo
     // universo que ya cubre ConciliacionRepo.ObtenerVentasConciliacion en el
@@ -164,6 +170,7 @@ export class MainAdministracionComponent {
       this.procesoConciliacion?.descripcion ?? 'Todos',
       this.clienteConciliacion?.nombre ?? 'Todos',
       this.usuariosService.GetUsuarioSesion(),
+      this.formatoLargoConciliacion,
     ).subscribe({
       next: blob => {
         const url = window.URL.createObjectURL(blob);

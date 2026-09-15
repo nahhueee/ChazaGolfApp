@@ -42,6 +42,10 @@ import { TallesProducto } from "./Producto";
     // Cantidades ya acreditadas por NC FISCALES previas sobre esta venta (sep-2026,
     // devoluciones parciales sucesivas) - ver PrepararPreciosVenta.
     cantidadesAcreditadas?: CantidadesAcreditadas;
+    // Análogo a cantidadesAcreditadas pero para NC INTERNAS (X) - bucket
+    // independiente, no resta contra el anterior (sep-2026, misma mecánica aplicada
+    // a ventas que solo pueden emitir NC interna, ej. Cotización).
+    cantidadesAcreditadasInterna?: CantidadesAcreditadas;
 
     nroRelacionado?:number;
     tipoRelacionado?:string;
@@ -236,12 +240,13 @@ import { TallesProducto } from "./Producto";
   }
 
   /**
-   * Cantidades ya acreditadas por NCs FISCALES previas sobre esta venta (NC_A/B/C -
-   * ver TipoComprobante en ObjFacturar.ts), agrupadas por idProducto+tipoItem
-   * (productos) e idServicio (servicios). Usado por PrepararPreciosVenta
-   * (precios-venta.helper.ts) para calcular el remanente disponible al emitir una
-   * nueva NC fiscal (devoluciones parciales sucesivas, sep-2026). NO incluye NC
-   * internas (X).
+   * Cantidades ya acreditadas por NC de un tipo (agrupadas por idProducto+tipoItem
+   * en productos, idServicio en servicios). Misma forma para dos buckets
+   * independientes que trae la venta: `cantidadesAcreditadas` (NC_A/B/C, fiscal) y
+   * `cantidadesAcreditadasInterna` (NC_X, sep-2026) - cada uno solo cuenta las NC de
+   * su propio tipo. Usado por PrepararPreciosVenta (precios-venta.helper.ts) para
+   * calcular el remanente disponible al emitir una nueva NC del tipo elegido
+   * (devoluciones parciales sucesivas).
    */
   export class CantidadesAcreditadas{
     totalAcreditado:number = 0;

@@ -180,6 +180,23 @@ export function saldoDisponibleNotaFiscal(
 }
 
 /**
+ * Análogo a saldoDisponibleNotaFiscal, pero para NC INTERNAS (X) - bucket
+ * independiente (venta.cantidadesAcreditadasInterna, ver
+ * ObtenerCantidadesAcreditadasInterna en el backend). Reemplaza a tieneNotaInterna
+ * como gate real: antes se bloqueaba directamente la segunda NC interna (ago-2026);
+ * ahora se permiten varias mientras quede saldo, mismo mecanismo ya aprobado para
+ * la fiscal (sep-2026) - necesario para ventas que solo pueden emitir NC interna
+ * (Cotización, Ticket X, etc. - ver puedeElegirFiscal). NC fiscales no restan acá.
+ */
+export function saldoDisponibleNotaInterna(
+  venta?: { total?: number; cantidadesAcreditadasInterna?: { totalAcreditado?: number } }
+): number {
+  const total = venta?.total ?? 0;
+  const totalAcreditado = venta?.cantidadesAcreditadasInterna?.totalAcreditado ?? 0;
+  return Math.max(0, total - totalAcreditado);
+}
+
+/**
  * IDs internos de condiciones de pago.
  */
 export const ID_CONDICION_PAGO = {

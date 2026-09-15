@@ -21,7 +21,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
-import { esItemNoCatalogado, saldoDisponibleNotaFiscal, tieneNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
+import { esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -96,11 +96,11 @@ export class NotasVentaComponent {
   // Fiscal (pide CAE de NC A/B a ARCA) vs Interna/NC X (no pasa por ARCA, no
   // anula ni modifica la venta original - mismo comportamiento que ya usaba
   // esta pantalla cuando la venta origen era una Cotización, ver
-  // armarObjetoVenta). Pedido del cliente (ago-2026): no repetir el mismo tipo
-  // de NC interna dos veces (ver yaTieneNotaInterna). La fiscal SÍ se puede
-  // repetir (sep-2026, devoluciones parciales sucesivas) mientras quede saldo
-  // de la factura sin acreditar - ver yaTieneNotaFiscal/saldoDisponibleFiscal
-  // y el guard en Confirmar().
+  // armarObjetoVenta). Las dos se pueden repetir mientras quede saldo sin
+  // acreditar de su propio tipo (devoluciones parciales sucesivas) - fiscal desde
+  // sep-2026, interna desde este mismo cambio (antes bloqueaba tras la primera,
+  // ver yaTieneNotaFiscal/saldoDisponibleFiscal, yaTieneNotaInterna/
+  // saldoDisponibleInterna, y el guard en Confirmar()).
   tipoNotaElegida: TipoNotaCredito = 'FISCAL';
 
   // Opciones del selector con el disable ya resuelto por tipo (optionDisabled
@@ -139,8 +139,16 @@ export class NotasVentaComponent {
     return this.saldoDisponibleFiscal <= 0;
   }
 
+  // Análogo a saldoDisponibleFiscal/yaTieneNotaFiscal, para NC internas (X) -
+  // bucket independiente (venta.cantidadesAcreditadasInterna). Reemplaza al viejo
+  // bloqueo "ya existe una NC interna" por uno real de saldo, mismo mecanismo ya
+  // aprobado para la fiscal.
+  get saldoDisponibleInterna(): number {
+    return saldoDisponibleNotaInterna(this.venta);
+  }
+
   get yaTieneNotaInterna(): boolean {
-    return tieneNotaInterna(this.venta.notas);
+    return this.saldoDisponibleInterna <= 0;
   }
 
   get hayNotasExistentes(): boolean {
@@ -431,11 +439,12 @@ export class NotasVentaComponent {
       return;
     }
 
-    // Bloqueo real (no solo cosmético en el selector). NC interna: no repetir
-    // el mismo tipo sobre la misma venta (ago-2026). NC fiscal: se permiten
-    // varias (devoluciones parciales sucesivas, sep-2026), pero ninguna puede
-    // dejar el acumulado por encima de lo facturado - se valida contra
-    // saldoDisponibleFiscal, no contra "ya existe una".
+    // Bloqueo real (no solo cosmético en el selector). Se permiten varias NC de un
+    // mismo tipo sobre la misma venta (devoluciones parciales sucesivas) mientras
+    // quede saldo de ESE tipo sin acreditar - fiscal desde sep-2026, interna desde
+    // este mismo cambio (antes bloqueaba directo tras la primera). Ninguna puede
+    // dejar el acumulado de su tipo por encima de lo facturado - se valida contra
+    // saldoDisponibleFiscal/saldoDisponibleInterna, no contra "ya existe una".
     if (this.emiteFiscal) {
       const saldoDisponible = this.saldoDisponibleFiscal;
 
@@ -452,10 +461,20 @@ export class NotasVentaComponent {
         );
         return;
       }
-    }
-    if (!this.emiteFiscal && this.yaTieneNotaInterna) {
-      this.Notificaciones.Warn("Ya existe una Nota de Crédito interna (X) sobre esta venta.");
-      return;
+    } else {
+      const saldoDisponible = this.saldoDisponibleInterna;
+
+      if (saldoDisponible <= 0) {
+        this.Notificaciones.Warn("No queda saldo disponible de esta venta para emitir otra Nota de Crédito interna.");
+        return;
+      }
+
+      if (this.totalGeneral > saldoDisponible + 0.01) {
+        this.Notificaciones.Warn(
+          `El importe de la Nota de Crédito ($${this.totalGeneral.toFixed(2)}) supera el saldo disponible ($${saldoDisponible.toFixed(2)}).`
+        );
+        return;
+      }
     }
 
     this.ventasService.ObtenerProximoNroProceso(3)
