@@ -25,6 +25,8 @@ export class NavegacionComponent {
   items: MenuItem[] = [];
   esDark: boolean = false;
   activo: string = 'inicio';
+  nombreUsuario: string = '';
+  cargoUsuario: string = '';
 
   // Pill de ambiente en el menú: solo se muestra fuera de producción real. No usamos
   // environment.production para esto porque environment.test.ts también lo deja en true
@@ -57,6 +59,8 @@ export class NavegacionComponent {
     });
 
     this.esDark = localStorage.getItem('theme') === 'dark';
+    this.nombreUsuario = this.usuariosService.GetNombreSesion();
+    this.cargoUsuario = this.usuariosService.GetCargoSesion();
     this.items = this.ConstruirItems();
   }
 

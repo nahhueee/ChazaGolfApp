@@ -19,6 +19,13 @@ export class UsuariosService {
     return sesion?.data?.usuario?.toString() || '';
   }
 
+  // Nombre real del usuario logueado (sesion.data.nombre - ver login.component.ts), a
+  // diferencia de GetUsuarioSesion() que devuelve el nombre de usuario/login.
+  GetNombreSesion(): string {
+    const sesion = this.GetSesion();
+    return sesion?.data?.nombre?.toString() || '';
+  }
+
   // Token JWT devuelto por el login (usuariosRoute.ts), usado por ApiService para
   // el header Authorization. Reemplaza al viejo archivo de sesión del backend.
   GetToken(): string | null {
