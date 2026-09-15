@@ -3,6 +3,11 @@
 <div class="contenedor">
     <p-menubar [model]="items" class="menu-principal">
         <ng-template #start>
+            <div class="usuario-info">
+                <span class="usuario-nombre">{{ nombreUsuario }}</span>
+                <span class="usuario-separador">·</span>
+                <span class="usuario-cargo">{{ cargoUsuario }}</span>
+            </div>
             @if(!esProduccion){
                 <span class="pill-entorno" pTooltip="Este ambiente no es de producción: los datos no son reales." tooltipPosition="bottom">
                     {{ nombreEntorno }}
@@ -11,10 +16,6 @@
         </ng-template>
         <ng-template #end>
             <div class="opciones">
-                <div class="usuario-info">
-                    <span class="usuario-nombre">{{ nombreUsuario }}</span>
-                    <span class="usuario-cargo">{{ cargoUsuario }}</span>
-                </div>
                 <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
                 <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
                 <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="CerrarSesion()"/>
