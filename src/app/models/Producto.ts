@@ -182,6 +182,10 @@ export class TallesProducto {
     idLineaTalle?:number;
     cantidad?:number;
     precio?:number;
+    // Costo neto (sin IVA de compra) del talle. undefined cuando el rol logueado no puede
+    // verlo (el backend lo saca de la respuesta, ver ocultarCostoTalles en productosRoute.ts)
+    // o cuando todavía no se cargó.
+    costo?:number;
     codigoBarra?: string;
     cantAgregar?:number = 0; //Propiedad para generar una venta
     disponible?:number = 0; //Propiedad para nota de empaque
@@ -195,6 +199,7 @@ export class TallesProducto {
           this.idTalle = data.idTalle;
           this.cantidad = data.cantidad;
           this.precio = data.precio;
+          this.costo = data.costo;
           this.idLineaTalle = data.idLineaTalle;
           this.codigoBarra = data.codigoBarra;
         }

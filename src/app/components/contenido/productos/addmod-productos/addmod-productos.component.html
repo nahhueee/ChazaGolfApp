@@ -218,8 +218,9 @@
                     <div [formGroupName]="$index" class="row-talle">
                     <h5>Talle {{item.get('talle')?.value}}</h5>
 
-                    <div class="inputs price-wrapper">
+                    <div class="inputs price-wrapper campo-precio">
 
+                        <span class="campo-tag">Precio</span>
                         <input 
                         type="text"
                         pInputText
@@ -238,6 +239,32 @@
                         }
 
                     </div>
+
+                    @if (puedeVerCosto) {
+                    <div class="inputs price-wrapper campo-costo">
+
+                        <span class="campo-tag">Costo</span>
+                        <input 
+                        type="text"
+                        pInputText
+                        placeholder="Costo"
+                        [imask]="decimal_mask"
+                        formControlName="costo"
+                        pTooltip="Costo neto del talle, sin IVA de compra. No puede superar el precio de venta."
+                        tooltipPosition="top"
+                        (focus)="SelectContent($event)" />
+
+                        @if ($index === 0) {
+                        <button 
+                            type="button"
+                            class="copy-btn"
+                            (click)="CopiarCostoPrimerTalle()">
+                            Aplicar a todos
+                        </button>
+                        }
+
+                    </div>
+                    }
                     </div>
 
                 }

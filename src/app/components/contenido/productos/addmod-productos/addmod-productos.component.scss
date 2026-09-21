@@ -210,6 +210,33 @@ p-inputgroup-addon{
 
 .price-wrapper input {
   padding-right: 30px;
+  padding-left: 52px; /* deja lugar a .campo-tag, siempre visible aunque el input tenga valor */
+}
+
+// Etiqueta fija dentro del input (Precio/Costo): a diferencia del placeholder, no
+// desaparece al cargar un valor - es la forma en que se distinguen ambos campos
+// cuando ya están completos (antes eran dos inputs oscuros idénticos, sin forma de
+// saber cuál era cuál de un vistazo). El acento de color (borde izquierdo) refuerza
+// la diferencia para que se note incluso sin leer el texto, útil con la grilla llena
+// de valores.
+.campo-tag {
+  position: absolute;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.campo-precio input {
+  border-left: 3px solid var(--p-primary-color);
+}
+
+.campo-costo input {
+  border-left: 3px solid #d9822b; // acento cálido, deliberadamente distinto del primario (precio)
 }
 
 .copy-btn {

@@ -58,6 +58,16 @@ export class UsuariosService {
     return cargo === 'ADMINISTRADOR' || cargo === 'ENCARGADO';
   }
 
+  // Gate de UI para costo/margen (B4-209) - espeja ocultarCostoTalles() del backend
+  // (productosRoute.ts). Hoy coincide con PuedeAjustarStock() porque el cliente definió
+  // los mismos dos roles para ambos permisos, pero son conceptualmente distintos (ver
+  // costo, no ajustar stock) y pueden divergir a futuro - se mantienen como métodos
+  // separados a propósito, no como uno reusado.
+  PuedeVerCostoYMargen(): boolean {
+    const cargo = this.GetCargoSesion();
+    return cargo === 'ADMINISTRADOR' || cargo === 'ENCARGADO';
+  }
+
   //#region OBTENER
   Login(usuario:string, pass:string): Observable<any> {
     return this.apiService.post('usuarios/login', { usuario, pass })

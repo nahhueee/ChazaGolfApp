@@ -8,6 +8,7 @@ import { GlobalesService } from '../../../../services/globales.service';
 import { Cliente } from '../../../../models/Cliente';
 import { Color, Genero, LineasTalle, Material, Producto, SubtipoProducto, TalleSeleccionable, Temporada, TipoProducto } from '../../../../models/Producto';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { UsuariosService } from '../../../../services/usuarios.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Tooltip } from "primeng/tooltip";
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -77,6 +78,12 @@ export class AddmodProductosComponent {
 
   talles:Talle[]=[];
 
+  // Gate de UI (B4-209): oculta el campo costo y el botón "aplicar a todos" de costo
+  // para quien no tenga el rol. NO reemplaza la validación del backend
+  // (ocultarCostoTalles() en productosRoute.ts es la fuente de verdad, esto solo evita
+  // mostrar un input que de todas formas el server va a ignorar/no va a mandar de vuelta).
+  puedeVerCosto: boolean;
+
   constructor(
     private rutaActiva: ActivatedRoute,
     private router:Router,
@@ -87,7 +94,9 @@ export class AddmodProductosComponent {
     private Globales:GlobalesService,
     private Notificaciones:NotificacionesService,
     private confirmationService: ConfirmationService,
+    private usuariosService:UsuariosService,
   ){
+     this.puedeVerCosto = this.usuariosService.PuedeVerCostoYMargen();
      this.formulario = new FormGroup({
       empresa: new FormControl(70),
       cliente: new FormControl(''),
@@ -316,6 +325,12 @@ export class AddmodProductosComponent {
             if (indexInForm !== -1) {
               this.tallesProductoControl.at(indexInForm).get('id')?.setValue(pTalle.id);
               this.tallesProductoControl.at(indexInForm).get('precio')?.setValue(pTalle.precio!.toString().replace('.', ','));
+              // pTalle.costo viene undefined si el rol no puede verlo (el backend ya lo saca
+              // de la respuesta) o si el talle no tiene costo cargado todavía - en ambos
+              // casos dejamos el control en '', nunca en '0'.
+              if (pTalle.costo != null) {
+                this.tallesProductoControl.at(indexInForm).get('costo')?.setValue(pTalle.costo.toString().replace('.', ','));
+              }
             }
           }, 100);
         }
@@ -491,6 +506,10 @@ export class AddmodProductosComponent {
       ubicacion: indice,
       talle: [item.talle],
       precio: [''],
+      // Se crea siempre, para cualquier rol: si el usuario no puede ver costo, el input
+      // simplemente no se muestra (*puedeVerCosto en el html) y el control queda en '' -
+      // Guardar() lo traduce a "no enviar el campo", nunca a 0. Ver ValidarYSerializarCostos.
+      costo: [''],
       idLineaTalle: [this.lineaTalleControl.id]
     });
   }
@@ -509,6 +528,22 @@ export class AddmodProductosComponent {
     });
 
   }
+
+  // Mismo patrón que CopiarPrecioPrimerTalle: copia el costo del talle 0 a los demás.
+  // No se agrega confirmación ni ningún comportamiento nuevo - el de precio no la tiene.
+  CopiarCostoPrimerTalle() {
+    const formArray = this.tallesProductoControl;
+    if (!formArray.length) return;
+
+    const costoBase = formArray.at(0).get('costo')?.value;
+    if (!costoBase) return;
+
+    formArray.controls.forEach((group, index) => {
+      if (index !== 0) {
+        group.get('costo')?.setValue(costoBase);
+      }
+    });
+  }
   //#endregion
 
   async Guardar(){
@@ -521,12 +556,42 @@ export class AddmodProductosComponent {
 
     // }
 
+    // Bloqueo duro (pedido explícito del cliente, B4-209): el costo de un talle no puede
+    // superar su propio precio de venta. Corre siempre, incluso si el usuario no ve el campo
+    // costo, para no dejar pasar un valor ya cargado antes que ahora quedó inconsistente
+    // porque se bajó el precio. Se valida ANTES de tocar los controles (misma fuente que
+    // "aplicar a todos": si el problema vino de ahí, este chequeo lo agarra igual porque mira
+    // el estado final de la grilla, no cómo se llegó a él).
+    const tallesConCostoMayorAPrecio = this.tallesProductoControl.controls
+      .map(ctrl => {
+        const costoTexto = (ctrl.get('costo')?.value ?? '').toString().trim();
+        if (!costoTexto) return null; // sin costo cargado: nada que validar en este talle
+        const costo = this.Globales.EstandarizarDecimal(costoTexto);
+        const precio = this.Globales.EstandarizarDecimal((ctrl.get('precio')?.value ?? '').toString());
+        return costo > precio ? ctrl.get('talle')?.value : null;
+      })
+      .filter((talle): talle is string => !!talle);
+
+    if (tallesConCostoMayorAPrecio.length) {
+      this.Notificaciones.Warn(
+        `El costo no puede ser mayor al precio de venta. Revisá el/los talle/s: ${tallesConCostoMayorAPrecio.join(', ')}.`
+      );
+      return;
+    }
+
     if(!this.producto){
       this.producto = new Producto();
     }
 
     this.tallesProductoControl.value.forEach(element => {
       element.precio = this.Globales.EstandarizarDecimal(element.precio.toString());
+
+      // costo: si vino vacío (talle sin costo cargado, o rol sin permiso de verlo - el
+      // control existe igual pero nadie lo tocó) NO lo mandamos como 0. Undefined acá
+      // significa "no enviar el campo", y el backend lo respeta con un COALESCE en el UPDATE
+      // (ver productosRepository.ts) en vez de pisar el costo ya cargado con cero.
+      const costoTexto = (element.costo ?? '').toString().trim();
+      element.costo = costoTexto ? this.Globales.EstandarizarDecimal(costoTexto) : undefined;
     });
 
     if(this.clienteControl) this.producto.cliente = this.clienteControl.id;
