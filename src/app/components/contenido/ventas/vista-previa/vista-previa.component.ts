@@ -51,7 +51,6 @@ export class VistaPreviaComponent implements OnInit {
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   totalIva:number = 0;
-  totalAjuste:number = 0;
 
   mostrarIva:boolean = false;
   saldoAplicado:number = 0;
@@ -146,11 +145,10 @@ export class VistaPreviaComponent implements OnInit {
     const productos = procesarItems(this.venta.productos);
     const servicios = procesarItems(this.venta.servicios);
 
-    //Sumamos ajuste si corresponde a los productos
-    this.totalAjuste = this.venta.total! * 0.10;
-    const totalAjuste = this.venta.ajuste == 1 ? this.totalAjuste : 0;
-
-    this.totalProductos = productos.total + totalAjuste;
+    // El recargo por transferencia (si corresponde) ya es una línea más de
+    // venta.productos (HANDOFF-recargo-transferencia-10.md, bug 1/2/3) - entra
+    // solo en `productos.total`, no hay que recalcularlo ni sumarlo aparte.
+    this.totalProductos = productos.total;
     this.totalServicios = servicios.total;
 
     //Importes base (bruto, sin descuento aplicado por ítem — ver fix de ítems en bruto)

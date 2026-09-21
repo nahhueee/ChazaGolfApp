@@ -129,6 +129,41 @@ export const TIPO_ITEM = {
 
 export type TipoItem = ValueOf<typeof TIPO_ITEM>;
 
+/**
+ * Recargo por transferencia (HANDOFF-recargo-transferencia-10.md). Se persiste
+ * como una línea más de `ventas_productos` (tipoItem=PRESUPUESTO, idProducto
+ * NULL - ver esItemNoCatalogado) con esta descripción fija.
+ *
+ * OJO: no uses codProducto para identificarla al recargar la venta. Con
+ * idProducto NULL, ObtenerProductosVenta (ventasRepository.ts, backend) la
+ * resuelve con un LEFT JOIN contra productos/productos_presupuesto que nunca
+ * matchea -> codProducto vuelve NULL después de guardar y reabrir. El único
+ * campo que viaja intacto ida y vuelta (INSERT ventas_productos.descripcion /
+ * SELECT vp.descripcion) es `descripcion` - por eso es lo que usan
+ * ArmarItemRecargoTransferencia y CargarProductosDesdeVenta en
+ * addmod-ventas.component.ts, tanto para el texto impreso (§5.f: nunca
+ * "ajuste"/"diferencia", ya usados por las pseudolíneas de R2) como para la
+ * identidad.
+ */
+export const DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA = 'Recargo transferencia 10%';
+
+/**
+ * Porcentaje fijo del recargo por transferencia (10%, decisión del cliente -
+ * ver handoff §3.d). Constante única: no se ABMea ni se parametriza por
+ * empresa - si mañana cambia, se edita acá y en ningún otro lado.
+ */
+export const PORCENTAJE_RECARGO_TRANSFERENCIA = 0.10;
+
+/**
+ * empresas.condicion tal cual está en la base (ver seed en EasyStoreApi/src/db/
+ * script.sql y CONDICION_RESPONSABLE_INSCRIPTO en aperturaIva.ts, backend) -
+ * usado para gatear el check de recargo por transferencia a monotributistas
+ * (handoff §3.a). No confundir con CondicionIva (condición del CLIENTE ante
+ * IVA, ya importado en este archivo) - esto es la condición de la EMPRESA
+ * emisora.
+ */
+export const CONDICION_IVA_RESPONSABLE_INSCRIPTO = 'Responsable Inscripto';
+
 /** true si la línea NO es del catálogo real (sin stock, sin talles, sin descuento). */
 export function esItemNoCatalogado(tipoItem?: string | null): boolean {
   return tipoItem === TIPO_ITEM.PRESUPUESTO;

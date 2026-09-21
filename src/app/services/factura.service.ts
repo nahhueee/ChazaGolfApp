@@ -77,12 +77,10 @@ export class FacturaService {
         }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
       };
 
-      //Sumamos ajuste si corresponde a los productos
-      const ajusteTransferencia = venta.total! * 0.10;
-      const totalAjuste = venta.ajuste == 1 ? ajusteTransferencia : 0;
-
+      // El recargo por transferencia (si corresponde) ya es una línea más de
+      // venta.productos (HANDOFF-recargo-transferencia-10.md, bug 1/2/3) - entra
+      // solo en `productos.total`, no hay que recalcularlo ni sumarlo aparte.
       const productos = procesarItems(venta.productos);
-      productos.total += totalAjuste;
 
       const servicios = procesarItems(venta.servicios);
 
@@ -398,22 +396,6 @@ export class FacturaService {
             : [...filaBase, { text: item.descuentoAplicado + "%", alignment: 'right' }, totalNetoDescuento]
         );
       });
-
-      const ajusteTransferencia = venta.total! * 0.10;
-      const ajusteTransferenciaFormateado = ajusteTransferencia.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
-      if(venta.ajuste == 1){
-        const filaAjuste = [
-          { text: 'AJUSTE DE TRANSFERENCIA', style: 'tableHeader', alignment: 'left' },
-          { text: '1', style: 'tableHeader', alignment: 'left' },
-          { text: ajusteTransferenciaFormateado, style: 'tableHeader', alignment: 'right' },
-        ];
-        comprobante.filasProducto.push(
-          ocultarDescuento
-            ? [...filaAjuste, { text: ajusteTransferenciaFormateado, style: 'tableHeader', alignment: 'right' }]
-            : [...filaAjuste, { text: '0%', style: 'tableHeader', alignment: 'right' }, { text: ajusteTransferenciaFormateado, style: 'tableHeader', alignment: 'right' }]
-        );
-      }
 
       //Servicios
       comprobante.filasServicio = [

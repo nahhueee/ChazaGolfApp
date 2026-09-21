@@ -734,7 +734,7 @@
                     </div>
                 }
                 @if(tipo == 'factura'){
-                    <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1">
+                    <div class="ajuste" *ngIf="TipoComprobanteControl == 11 && clienteSeleccionado?.idListaPrecio != 1 && empresaPuedeAplicarRecargoTransferencia">
                         <p-checkbox
                             inputId="check1"
                             formControlName="ajuste"

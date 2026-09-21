@@ -110,27 +110,6 @@
                         <td style="width: 150px;">${{ producto.totalMostrar | decimalFormat }}</td>
                     </tr>
 
-                    @if(venta.ajuste === 1){
-                        <tr>
-                            <td>AJUSTE</td>
-                            <td>AJUSTE DE TRANSFERENCIA</td>
-                            <td></td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td style="width: 150px;">1</td>
-                            <td style="width: 150px;">${{ totalAjuste | decimalFormat}}</td>
-                            <td style="width: 150px;">0%</td>
-                            <td style="width: 150px;">${{ totalAjuste | decimalFormat }}</td>
-                        </tr>
-                    }
                 </ng-template>
             </p-table>
             
@@ -241,13 +220,6 @@
                         <span>Subtotal:</span>
                         <span class="monto">${{subTotal | decimalFormat}}</span>
                     </div>
-                    @if(venta.ajuste === 1){
-                    <div class="fila">
-                        <span>Recargo Transferencia (10%):</span>
-                        <span class="monto">${{totalAjuste | decimalFormat}}</span>
-                    </div>
-                    }
-
                     <div class="fila">
                         <span>Descuento:</span>
                         <span class="monto">${{totalDescuento | decimalFormat}}</span>

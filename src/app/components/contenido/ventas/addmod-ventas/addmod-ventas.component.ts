@@ -73,6 +73,9 @@ import {
   TALLES_ESTANDAR,
   TIPO_ITEM,
   esMayoristaConListaPropia,
+  DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
+  PORCENTAJE_RECARGO_TRANSFERENCIA,
+  CONDICION_IVA_RESPONSABLE_INSCRIPTO,
 } from '../models/venta.constants';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
@@ -605,6 +608,18 @@ export class AddModVentasComponent {
     return this.clienteSeleccionado?.idCondicionPago === ID_CONDICION_PAGO.CUENTA_CORRIENTE;
   }
   //#endregion
+
+  // Alcance §3.a del handoff: el recargo por transferencia solo aplica a
+  // empresas monotributistas - si se aplicara en una Factura A (Responsable
+  // Inscripto) sería base gravada y generaría IVA al 21%, circuito no resuelto
+  // hoy (ver comentario de ajusteTransferencia en recalcularTotales). Se
+  // resuelve por empresas.condicion, no por una lista de ids ni por el tipo de
+  // comprobante seleccionado - así no depende de que el operador haya elegido
+  // Factura C todavía.
+  get empresaPuedeAplicarRecargoTransferencia(): boolean {
+    const empresa = this.empresas?.find(e => e.id == this.formFacturacion.get('empresa')?.value);
+    return !!empresa && empresa.condicion !== CONDICION_IVA_RESPONSABLE_INSCRIPTO;
+  }
   
   //#region INICIALIZACION
   private cargarDatosMaestros() {
@@ -1068,7 +1083,7 @@ export class AddModVentasComponent {
     const base = items - descuento;
 
     const ajusteTransferencia =
-      this.formFacturacion.get('ajuste')?.value === true ? base * 0.10 : 0;
+      this.formFacturacion.get('ajuste')?.value === true ? Number((base * PORCENTAJE_RECARGO_TRANSFERENCIA).toFixed(2)) : 0;
 
     // IVA aplica solo cuando hay un comprobante fiscal real (A o B) - ver
     // EsComprobanteConIvaExplicito(), que centraliza este mismo criterio (también lo usa
@@ -1404,7 +1419,7 @@ export class AddModVentasComponent {
 
     this.formGenerales.get('cliente')?.setValue(this.venta.cliente);
 
-    if(this.venta.productos) this.productosFactura = this.venta.productos;
+    this.CargarProductosDesdeVenta();
     this.MarcarPreciosEditados(this.productosFactura);
     this.OrdenarProductosPorLineaTalle();
     if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
@@ -1469,7 +1484,7 @@ export class AddModVentasComponent {
               this.nroRelacionado = response.nroProceso!;
               this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
 
-              if(this.venta.productos) this.productosFactura = this.venta.productos;
+              this.CargarProductosDesdeVenta();
               this.MarcarPreciosEditados(this.productosFactura);
               this.OrdenarProductosPorLineaTalle();
               if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
@@ -1573,7 +1588,7 @@ export class AddModVentasComponent {
       },
       accept: () => {
         this.venta = venta;
-        if(this.venta.productos) this.productosFactura = this.venta.productos;
+        this.CargarProductosDesdeVenta();
         this.MarcarPreciosEditados(this.productosFactura);
         this.OrdenarProductosPorLineaTalle();
         if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
@@ -2591,8 +2606,8 @@ export class AddModVentasComponent {
     }
 
     const empresaSeleccionada = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value);
-    this.objFacturar.total = Number(this.totales.general.toFixed(2));
-    this.objFacturar.neto  = Number(this.totales.subtotal.toFixed(2));
+    this.objFacturar.total = Number((this.totales.general + (this.totales.ajusteTransferencia ?? 0)).toFixed(2));
+    this.objFacturar.neto  = Number((this.totales.subtotal + (this.totales.ajusteTransferencia ?? 0)).toFixed(2));
     this.objFacturar.iva   = Number(this.totales.iva.toFixed(2));
     this.objFacturar.tipoComprobante = this.formFacturacion.get('tComprobante')?.value;
     this.objFacturar.tipoFacturaDesc = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
@@ -2622,6 +2637,55 @@ export class AddModVentasComponent {
     }
 
     this.modalFacturarVisible = false;
+  }
+
+  // Arma la línea persistible del recargo por transferencia (bug 1 del
+  // HANDOFF-recargo-transferencia-10.md: hasta acá el 10% solo vivía como
+  // recálculo client-side en 3 lugares distintos - vista previa, factura.service
+  // y acá - y nunca llegaba a ventas_productos ni al neto que se manda a
+  // facturar). Se arma con tipoItem=PRESUPUESTO (mismo que cualquier ítem sin
+  // catálogo: sin stock, sin talle, sin costo - ver TIPO_ITEM en
+  // venta.constants.ts) y monto = this.totales.ajusteTransferencia, que ya sale
+  // de la única fórmula correcta (10% de subtotal-descuento, ver
+  // recalcularTotales). codProducto=COD_ITEM_RECARGO_TRANSFERENCIA es lo único
+  // que la distingue de un ítem no catalogado real - la usa
+  // CargarProductosDesdeVenta para excluirla de la grilla editable al reabrir.
+  private ArmarItemRecargoTransferencia(): ProductosFactura {
+    const monto = Number((this.totales.ajusteTransferencia ?? 0).toFixed(2));
+    return new ProductosFactura({
+      idProducto: null,
+      tipoItem: TIPO_ITEM.PRESUPUESTO,
+      // descripcion es lo que persiste y vuelve intacto al reabrir (ver comentario
+      // de DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA) - nomProducto se arma igual acá
+      // para que se imprima bien ANTES del primer guardado, pero al recargar desde
+      // el backend nomProducto sale de COALESCE(cat.nombre, pre.nombre,
+      // vp.descripcion) = esta misma descripcion, así que coinciden siempre.
+      descripcion: DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
+      nomProducto: DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
+      cantidad: 1,
+      precio: monto,
+      precioMostrar: monto,
+      unitario: monto,
+      total: monto,
+      totalMostrar: monto,
+      descuentoAplicado: 0,
+      importeDescuento: 0,
+      tallesSeleccionados: '',
+    });
+  }
+
+  // Reemplaza a `this.productosFactura = this.venta.productos` en los 3 puntos
+  // donde se recarga una venta ya guardada (editar, relacionar Nota de Empaque,
+  // facturar un Presupuesto/Pedido relacionado). Filtra la línea de recargo:
+  // esa línea NO es un ítem editable de la grilla, es un derivado del check +
+  // recalcularTotales() - si entrara a productosFactura, CalcularTotalGeneral()
+  // la sumaría en `items` Y volvería a calcular ajusteTransferencia sobre esa
+  // base ya inflada (recargo sobre recargo). Al guardar de nuevo,
+  // ArmarObjetoVenta() la vuelve a armar desde cero - así queda la idempotencia
+  // del handoff §5.a sin necesidad de buscar-y-actualizar una línea existente.
+  private CargarProductosDesdeVenta(): void {
+    this.productosFactura = (this.venta.productos ?? [])
+      .filter(p => p.descripcion !== DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA);
   }
 
   ArmarObjetoVenta(){
@@ -2696,6 +2760,13 @@ export class AddModVentasComponent {
     // No mutamos productosFactura: la grilla en pantalla sigue mostrando la fila para que el
     // operador pueda completarla.
     this.venta.productos = this.productosFactura.filter(p => (p.cantidad ?? 0) > 0);
+    // Bug 1 del handoff: la línea de recargo se arma acá, no en productosFactura
+    // (ver CargarProductosDesdeVenta) - así ArmarObjetoVenta() siempre la
+    // reconstruye desde total.ajusteTransferencia actual, nunca acumula una
+    // vieja (idempotencia §5.a) y desaparece sola al destildar el check (§5.c).
+    if (this.venta.ajuste === 1 && (this.totales.ajusteTransferencia ?? 0) > 0) {
+      this.venta.productos.push(this.ArmarItemRecargoTransferencia());
+    }
     this.venta.servicios = this.serviciosFactura;
     this.venta.pagos = this.pagosFactura;
   }
