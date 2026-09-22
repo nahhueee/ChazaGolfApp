@@ -57,6 +57,12 @@ import { TallesProducto } from "./Producto";
     entregado:number = 0;
     deuda:number = 0;
     ajuste:number = 0;
+    // Factura backfilleada por regularización de correlatividad ARCA (sep-2026, ver
+    // migración regularizacionarca_ventas en EasyStoreApi): sin cobro real, su NC no
+    // genera saldo a favor (ver ventasRepository.RegistrarMovimientoNotaCredito). Viaja
+    // en SELECT v.* así que llega solo, sin tocar ninguna query - se usa acá únicamente
+    // para pintar el aviso en listado-ventas y el tooltip de "Emitir Nota de Crédito".
+    regularizacionArca?: boolean;
   }
 
   export class ProductosFactura{

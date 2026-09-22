@@ -112,6 +112,11 @@
                     }
                     <td>
                         <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
+                        @if(venta.regularizacionArca){
+                            <p-tag styleClass="ml-1" severity="info" value="Regularización ARCA"
+                            pTooltip="Factura corregida por correlatividad ARCA (nunca se cobró). Al emitirle la Nota de Crédito el sistema NO genera saldo a favor del cliente."
+                            tooltipPosition="bottom" />
+                        }
                     </td>
                     <td>
                         <div class="acciones">
@@ -124,7 +129,8 @@
                                 <p-button severity="primary" styleClass="p-button-sm"
                                 [rounded]="true" [outlined]="true" icon="pi pi-file-edit"
                                 (onClick)="ElegirTipoNotaCredito($event, venta)"
-                                pTooltip="Emitir Nota de Crédito" tooltipPosition="bottom"/>
+                                [pTooltip]="venta.regularizacionArca ? 'Emitir Nota de Crédito (regularización ARCA - no genera saldo a favor)' : 'Emitir Nota de Crédito'"
+                                tooltipPosition="bottom"/>
                             }
 
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
