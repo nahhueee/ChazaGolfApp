@@ -681,7 +681,13 @@ export class AddmodProductosComponent {
       
       const ok = respuestas.filter(r => r === 'OK').length;
       const existen = respuestas.filter(r => r === 'Ya existe un producto con el mismo código y color.').length;
-      const fallos = respuestas.filter(r => r !== 'OK' && r !== 'Ya existe un producto con el mismo código y color.').length;
+      // Cualquier otra respuesta (ni 'OK' ni el mensaje de código+color) es un mensaje
+      // específico que mandó el backend (ej. código de barra duplicado con el artículo
+      // que choca) - se muestra tal cual en vez de esconderlo en un genérico.
+      const otrosMensajes = respuestas.filter(r =>
+        r !== 'OK' && r !== 'Ya existe un producto con el mismo código y color.'
+      ) as string[];
+      const fallos = otrosMensajes.length;
 
       if (ok === respuestas.length) {
         this.coloresExistentes = this.coloresSeleccionados.value.map((c: any) => c.id);
@@ -690,7 +696,7 @@ export class AddmodProductosComponent {
         this.Notificaciones.Warn("Ya existen productos con el mismo código y color seleccionado.");
         return;
       }else if(fallos === respuestas.length){
-        this.Notificaciones.Warn("Los productos no pudieron ser procesados.");
+        new Set(otrosMensajes).forEach(msg => this.Notificaciones.Warn(msg));
         return;
       }else {
         this.coloresExistentes = this.coloresSeleccionados.value.map((c: any) => c.id);
@@ -698,6 +704,7 @@ export class AddmodProductosComponent {
         if(existen > 0){
           this.Notificaciones.Warn(`Hay ${existen} productos con el mismo código y color seleccionado.`);
         }
+        new Set(otrosMensajes).forEach(msg => this.Notificaciones.Warn(msg));
       }
 
       if(this.desdeRouting)
