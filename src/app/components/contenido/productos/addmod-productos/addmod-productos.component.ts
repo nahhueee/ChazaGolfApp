@@ -614,8 +614,15 @@ export class AddmodProductosComponent {
     if(this.producto.id == 0){
       operaciones$ = this.coloresSeleccionados.value.map(color => {
         const productoAInsertar = { ...this.producto };
+        // Clonamos los talles por color: coloresSeleccionados.value.map() arma N
+        // operaciones que forkJoin dispara recien al subscribe(), todas juntas. Si
+        // seguimos mutando this.producto.talles (array compartido entre iteraciones)
+        // cada vuelta del forEach pisa el codigoBarra de los colores anteriores con
+        // el del ultimo color procesado, antes de que salga ningun request (bug real
+        // detectado en produccion, sep-2026 - "ya existe" al agregar 2+ colores juntos).
+        productoAInsertar.talles = this.producto.talles!.map(t => ({ ...t }));
 
-        this.producto.talles!.forEach(elemento => {
+        productoAInsertar.talles.forEach(elemento => {
           const idTalle = this.talles.find(x => x.descripcion === elemento.talle && x.idLineaTalle === elemento.idLineaTalle)?.id;
           elemento.codigoBarra = this.GenerarCodigo(this.producto.empresa!, this.producto.codigo!, idTalle!, color.id);
         });
@@ -658,9 +665,18 @@ export class AddmodProductosComponent {
 
         coloresNuevos.forEach((color: any) => {
           const productoAInsertar = { ...this.producto };
+          // Mismo fix que en el alta: clonamos los talles por color para no compartir
+          // referencia entre las N operaciones en paralelo del forkJoin.
+          productoAInsertar.talles = this.producto.talles!.map(t => ({ ...t }));
 
-          this.producto.talles!.forEach(elemento => {
-            const idTalle = this.talles.find(x => x.descripcion === elemento.talle)?.id;
+          productoAInsertar.talles.forEach(elemento => {
+            // Filtramos tambien por idLineaTalle (antes solo por descripcion): si el
+            // catalogo tiene el mismo nombre de talla en mas de una linea (ej. "M"/"L"
+            // conviven en linea 4 y linea 6), find() sin este filtro podia traer el
+            // idTalle de la linea equivocada y generar un codigo_barra que no
+            // corresponde a este producto (bug real confirmado en datos de produccion,
+            // sep-2026 - producto 1251).
+            const idTalle = this.talles.find(x => x.descripcion === elemento.talle && x.idLineaTalle === elemento.idLineaTalle)?.id;
             elemento.codigoBarra = this.GenerarCodigo(
               this.producto.empresa!,
               this.producto.codigo!,
@@ -723,13 +739,17 @@ export class AddmodProductosComponent {
       talles: this.producto.talles?.map(t => ({ ...t })) ?? []
     };
 
-    const mapaTalles = new Map(
-      this.talles.map(t => [t.descripcion, t.id])
-    );
-
     producto.talles!.forEach(elemento => {
 
-      const idTalle = mapaTalles.get(elemento.talle);
+      // Buscamos por descripcion + idLineaTalle (antes era un Map solo por
+      // descripcion: con talles duplicados entre lineas - ej. "M"/"L" en linea 4 y
+      // linea 6 - el Map se quedaba con el ultimo que pisara la clave y recalculaba
+      // el codigo_barra de CUALQUIER producto con esa talla ambigua usando el idTalle
+      // de la linea equivocada, en cada guardado. Bug real confirmado en datos de
+      // produccion, sep-2026 - producto 1251).
+      const idTalle = this.talles.find(
+        t => t.descripcion === elemento.talle && t.idLineaTalle === elemento.idLineaTalle
+      )?.id;
       if (!idTalle) return;
 
       elemento.codigoBarra = this.GenerarCodigo(
