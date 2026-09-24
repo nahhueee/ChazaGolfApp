@@ -1863,7 +1863,35 @@ export class AddModVentasComponent {
           }
         }else{
           // Tomar solo el talle seleccionado
-          tallesSeleccionados.push(this.productoSeleccionado.talles!.find((t: any) => t.idTalle === idTalle));
+          const talleEscaneado = this.productoSeleccionado.talles!.find((t: any) => t.idTalle === idTalle);
+          if (!talleEscaneado) {
+            this.Notificaciones.Warn("No se encontró el talle escaneado para este producto.");
+            return;
+          }
+
+          // Mismo chequeo que ActualizarCantidad (más abajo): el escaneo por código de
+          // barras venía sin validar contra el stock disponible, a diferencia de la
+          // selección manual de talle (DefinirCantidadAgregarTalle). Eso permitía
+          // escanear un talle sin stock (o repetir el escaneo superándolo) y llegar a
+          // negativo directo desde caja - caso real producto 827 (sep-2026). Pedido
+          // queda afuera a propósito: es venta a futuro, puede exceder el stock actual.
+          const linea = this.lineasTalles.find(l => l.id === talleEscaneado.idLineaTalle);
+          const indexTalle = linea?.talles ? linea.talles!.indexOf(talleEscaneado.talle ?? '') : -1;
+          const campoTx = indexTalle >= 0 ? `t${indexTalle + 1}` : null;
+          const yaCargado = campoTx
+            ? this.productosFactura
+                .filter(p => p.idProducto === this.productoSeleccionado.id)
+                .reduce((acc, p) => acc + ((p as any)[campoTx] ?? 0), 0)
+            : 0;
+
+          if (this.ProcesoControl.id !== ID_PROCESO.PEDIDO && (yaCargado + 1) > (talleEscaneado.cantidad ?? 0)) {
+            this.Notificaciones.Warn(
+              `La cantidad ingresada supera el stock disponible (${talleEscaneado.cantidad}) para el talle ${talleEscaneado.talle}.`
+            );
+            return;
+          }
+
+          tallesSeleccionados.push(talleEscaneado);
           tallesSeleccionados[0].cantAgregar = 1;
         }
       }
@@ -2514,21 +2542,27 @@ export class AddModVentasComponent {
         },
         error: (err) => {
           this.venta.estado = "";
+          this.Notificaciones.Error(err?.error?.message || "No se pudo guardar la venta.");
         }
       });
     }else{
       this.ventasService.Modificar(this.venta)
-      .subscribe(response => {
-        if(response){
+      .subscribe({
+        next: (response) => {
+          if(response){
 
-          if(!finalizando){
-            this.Notificaciones.Success(this.venta.proceso + " actualizado/a correctamente");
-            this.router.navigateByUrl("/ventas?tipo=" + this.tipo)
-          }else{
-            this.Notificaciones.Success("Venta actualizada y facturada correctamente");
-            this.router.navigateByUrl("/ventas?tipo=" + this.tipo)
-          } 
-        }   
+            if(!finalizando){
+              this.Notificaciones.Success(this.venta.proceso + " actualizado/a correctamente");
+              this.router.navigateByUrl("/ventas?tipo=" + this.tipo)
+            }else{
+              this.Notificaciones.Success("Venta actualizada y facturada correctamente");
+              this.router.navigateByUrl("/ventas?tipo=" + this.tipo)
+            } 
+          }   
+        },
+        error: (err) => {
+          this.Notificaciones.Error(err?.error?.message || "No se pudo guardar la venta.");
+        }
       });
     }
   }
