@@ -68,7 +68,10 @@ button{
   text-align: center;
   margin-top: 12px;
   font-size: 12px;
-  opacity: 0.6;
+  // Color fijo (no var(--text-color)): el fondo de esta pantalla (.fondo, mas arriba)
+  // es una imagen con overlay oscuro fijo, no cambia con el tema. Con --text-color el
+  // texto se ponia oscuro en modo light y se perdia contra ese fondo, siempre oscuro.
+  color: rgba(255, 255, 255, 0.7);
 }
 
 //Mobile

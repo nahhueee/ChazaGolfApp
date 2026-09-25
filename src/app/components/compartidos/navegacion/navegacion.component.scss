@@ -2,7 +2,7 @@
     display: flex;
     justify-content: center;
     background: var(--surface-section);
-    padding: 0% 5%;
+    padding: 0% 30px;
 }
 
 :host ::ng-deep .menu-principal{
@@ -53,12 +53,24 @@
     color: var(--text-color-secondary);
 }
 
+// Version de la app (ver NavegacionComponent.version), al lado de los botones de la
+// derecha (inicio/tema/cerrar sesion). var(--text-color-secondary) porque el fondo de
+// este menu si cambia con el tema (a diferencia del login, que tiene fondo oscuro fijo
+// - ahi se fijo un color propio, ver login.component.scss).
+.version-info{
+    font-size: 11px;
+    color: var(--text-color-secondary);
+    margin-left: 8px;
+    white-space: nowrap;
+    cursor: help;
+}
+
 // Pill de ambiente (ver NavegacionComponent.esProduccion): avisa cuando NO se está en
 // producción real, para no confundir datos de test/local con datos reales de un comercio.
 .pill-entorno{
     display: inline-flex;
     align-items: center;
-    margin-right: 12px;
+    margin-left: 12px;
     padding: 3px 10px;
     border-radius: 999px;
     background-color: #ff9800;

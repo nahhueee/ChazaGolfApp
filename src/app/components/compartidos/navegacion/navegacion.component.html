@@ -8,17 +8,20 @@
                 <span class="usuario-separador">·</span>
                 <span class="usuario-cargo">{{ cargoUsuario }}</span>
             </div>
-            @if(!esProduccion){
-                <span class="pill-entorno" pTooltip="Este ambiente no es de producción: los datos no son reales." tooltipPosition="bottom">
-                    {{ nombreEntorno }}
-                </span>
-            }
         </ng-template>
         <ng-template #end>
             <div class="opciones">
+               
                 <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
                 <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
                 <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="CerrarSesion()"/>
+
+                @if(!esProduccion){
+                    <span class="pill-entorno" pTooltip="Este ambiente no es de producción: los datos no son reales." tooltipPosition="bottom">
+                        {{ nombreEntorno }}
+                    </span>
+                }
+                <span class="version-info" pTooltip="Version de la app" tooltipPosition="bottom">v{{ version }}</span>
             </div>
         </ng-template>
     </p-menubar>

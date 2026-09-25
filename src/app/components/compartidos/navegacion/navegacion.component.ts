@@ -8,6 +8,7 @@ import { TemaService } from '../../../services/tema.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { UsuariosService } from '../../../services/usuarios.service';
 import { environment } from '../../../environments/environment';
+import { APP_VERSION } from '../../../version';
 
 @Component({
   selector: 'app-navegacion',
@@ -33,6 +34,7 @@ export class NavegacionComponent {
   // (build optimizado apuntando a la API de test) - ver environment.envName.
   nombreEntorno: string = environment.envName.toUpperCase();
   esProduccion: boolean = environment.envName === 'production';
+  version: string = APP_VERSION;
 
   constructor(
     private router:Router,

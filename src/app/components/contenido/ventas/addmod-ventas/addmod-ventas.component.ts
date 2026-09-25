@@ -1721,8 +1721,18 @@ export class AddModVentasComponent {
     if(!linea) return;
     this.tallesProducto = linea.talles!;
 
-    //Para nota de empaque buscamos la disponibilidad actual
-    if(this.ProcesoControl.id === ID_PROCESO.NOTA_EMPAQUE){
+    // Refrescar stock real (con disponible neteado contra Pedidos vigentes, ver
+    // ObtenerStockDisponiblePorProducto) al momento de seleccionar el producto, en vez
+    // de confiar en el snapshot que trajo la busqueda inicial - ese snapshot puede
+    // haber quedado desactualizado si paso tiempo o si otra venta consumio el mismo
+    // talle mientras esta pantalla seguia abierta. Antes esto solo corria para Nota de
+    // Empaque; se extiende a todo proceso que puede llegar a facturar (Factura,
+    // Cotizacion, Nota de Credito, Presupuesto) - Pedido queda afuera a proposito, es
+    // venta a futuro y puede exceder el stock actual (mismo criterio que el escaneo
+    // por codigo de barras, ver AgregarProducto). Caso real que motivo esto: Factura A
+    // PtoVenta 12 Nro 80 (sep-2026) - CAE ya emitido en ARCA cuando el guardado
+    // rechazo por stock insuficiente.
+    if(this.ProcesoControl.id !== ID_PROCESO.PEDIDO){
       this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString())
       .pipe(takeUntil(this.destroy$)) 
       .subscribe(response => {
@@ -2639,6 +2649,24 @@ export class AddModVentasComponent {
       }
     }
 
+    // Chequeo preventivo de stock real contra la base (ver ValidarStockVenta en el
+    // backend), justo antes de abrir el modal de Facturar - o sea, antes de pedir el
+    // CAE a AFIP, que es el punto de no retorno fiscal. No reemplaza el chequeo con
+    // lock que sigue en Guardar()/ActualizarInventario (esa es la garantia real contra
+    // una condicion de carrera entre esta consulta y el guardado final); esto corta el
+    // caso comun ANTES de facturar en vez de despues. Caso real que motivo esto:
+    // Factura A PtoVenta 12 Nro 80 (sep-2026).
+    this.ventasService.ValidarStockVenta(this.productosFactura)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => this.AbrirModalFacturar(),
+      error: (err) => {
+        this.Notificaciones.Error(err?.error?.message || 'No hay stock suficiente para facturar. Revisa las cantidades cargadas.');
+      }
+    });
+  }
+
+  private AbrirModalFacturar(){
     const empresaSeleccionada = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value);
     this.objFacturar.total = Number((this.totales.general + (this.totales.ajusteTransferencia ?? 0)).toFixed(2));
     this.objFacturar.neto  = Number((this.totales.subtotal + (this.totales.ajusteTransferencia ?? 0)).toFixed(2));
