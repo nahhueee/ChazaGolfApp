@@ -110,6 +110,10 @@ export class FacturarVentaComponent {
       return;
     }
 
+    // F1.6/F1.7 (HANDOFF blindaje facturacion) - todos los errores 5xx llevan el Ref
+    // del requestId para poder cruzarlos con error.log del lado del administrador.
+    const ref = (err?.status >= 500 && apiError.ref) ? ` (Ref: ${apiError.ref})` : '';
+
     switch (code) {
 
       case 'AFIP_RECHAZO':
@@ -117,15 +121,30 @@ export class FacturarVentaComponent {
         break;
 
       case 'AFIP_TIMEOUT':
-        this.Notificaciones.Error('ARCA no respondió. Intente nuevamente en unos minutos');
+        // Ya no dice "intente nuevamente": un timeout no significa que ARCA no haya
+        // emitido el comprobante (ver Incidente A del handoff).
+        this.Notificaciones.Error('ARCA no respondió. Verifique el estado del comprobante antes de reintentar.' + ref);
+        break;
+
+      case 'COMPROBANTE_INCIERTO':
+        // Persistente a propósito: no se puede reintentar sin verificar en ARCA primero.
+        this.Notificaciones.Persistente(
+          'No se pudo confirmar si ARCA emitió el comprobante. NO vuelva a facturar esta venta. Avise al administrador' + ref + '.'
+        );
+        break;
+
+      case 'CORRELATIVIDAD_ARCA':
+      case 'FACTURACION_EN_CURSO':
+      case 'ENTORNO_INVALIDO':
+        this.Notificaciones.Error(apiError.message + ref);
         break;
 
       case 'AFIP_NO_DISPONIBLE':
-        this.Notificaciones.Warn('El servicio de ARCA no está disponible en este momento');
+        this.Notificaciones.Warn('El servicio de ARCA no está disponible en este momento' + ref);
         break;
 
       case 'AFIP_ERROR':
-        this.Notificaciones.Error(apiError.message);
+        this.Notificaciones.Error(apiError.message + ref);
         break;
 
       case 'CERTIFICADOS':
@@ -134,8 +153,7 @@ export class FacturarVentaComponent {
 
      default:
         this.Notificaciones.Error(
-          apiError.message ??
-          'Ocurrió un error inesperado al comunicarse con ARCA'
+          (apiError.message ?? 'Ocurrió un error inesperado al comunicarse con ARCA') + ref
         );
         break;
     }
