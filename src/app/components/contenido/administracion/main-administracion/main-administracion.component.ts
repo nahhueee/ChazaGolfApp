@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -19,6 +20,7 @@ import { Cliente } from '../../../../models/Cliente';
   standalone: true,
   imports: [
     ...FORMS_IMPORTS,
+    RouterLink,
     CardModule,
     TagModule,
     TooltipModule,

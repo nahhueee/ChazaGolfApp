@@ -1,0 +1,128 @@
+<p-confirmdialog/>
+
+<div class="contenido">
+    <app-encabezado-seccion titulo="Errores" icono="pi pi-exclamation-triangle">
+        <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="Buscar(ultimoEvent, true)"/>
+        @if (esAdministrador) {
+            <p-button label="Limpiar log" icon="pi pi-trash" severity="danger" [outlined]="true" [loading]="limpiando" (onClick)="LimpiarLog($event)"/>
+        }
+    </app-encabezado-seccion>
+
+    <div class="pills-severidad">
+        @for (sev of severidades; track sev) {
+            <p-tag
+                [value]="sev"
+                [severity]="SeverityTag(sev)"
+                [style]="{ cursor: 'pointer', opacity: severidadesActivas.size === 0 || severidadesActivas.has(sev) ? 1 : 0.45 }"
+                (click)="ToggleSeveridad(sev)"
+            />
+        }
+    </div>
+
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="Buscar(ultimoEvent, true)">
+        <div class="izq">
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="code" type="text"/>
+                <label>Código</label>
+            </p-floatlabel>
+
+            <p-floatlabel variant="on">
+                <input pInputText formControlName="requestId" type="text"/>
+                <label>Ref</label>
+            </p-floatlabel>
+        </div>
+        <div class="der">
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar(ultimoEvent, true)"/>
+            <p-button label="Limpiar filtros" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()"/>
+        </div>
+    </form>
+
+    <div class="tabla">
+        <p-table
+            [value]="entradas"
+            dataKey="_key"
+            [expandedRowKeys]="expandedRows"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="20"
+            [totalRecords]="totalRecords"
+            (onLazyLoad)="Buscar($event)"
+            [loading]="loading"
+            [rowsPerPageOptions]="[20,50,100]"
+            [tableStyle]="{ 'min-width': '60rem' }"
+        >
+            <ng-template #header>
+                <tr>
+                    <th></th>
+                    <th>Fecha</th>
+                    <th>Severidad</th>
+                    <th>Código</th>
+                    <th>Mensaje</th>
+                    <th>Ruta</th>
+                    <th>Ref</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-entrada>
+                <tr>
+                    <td>
+                        <button
+                            pButton
+                            type="button"
+                            pRowToggler
+                            [pRowToggler]="entrada"
+                            class="p-button-text p-button-sm"
+                            [icon]="expandedRows[entrada._key] ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                        ></button>
+                    </td>
+                    <td>{{ entrada.timestamp }}</td>
+                    <td><p-tag [value]="entrada.severity || 'SIN_CODIGO'" [severity]="SeverityTag(entrada.severity)"/></td>
+                    <td>{{ entrada.code || '-' }}</td>
+                    <td class="mensaje">{{ entrada.message }}</td>
+                    <td>{{ entrada.route || '-' }}</td>
+                    <td>{{ entrada.requestId || '-' }}</td>
+                </tr>
+            </ng-template>
+            <ng-template #expandedrow let-entrada>
+                <tr>
+                    <td [attr.colspan]="7">
+                        <div class="detalle-entrada">
+                            @if (entrada.status) {
+                                <div><strong>Status:</strong> {{ entrada.status }} &nbsp; <strong>Método:</strong> {{ entrada.method }}</div>
+                            }
+                            @if (entrada.cause) {
+                                <div><strong>Causa:</strong> {{ entrada.cause }}</div>
+                            }
+                            @if (DetallesAfip(entrada).length) {
+                                <div>
+                                    <strong>Detalles AFIP:</strong>
+                                    <ul>
+                                        @for (d of DetallesAfip(entrada); track d) {
+                                            <li>{{ d }}</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            @if (entrada.context) {
+                                <div>
+                                    <strong>Contexto:</strong>
+                                    <pre>{{ FormatearContexto(entrada.context) }}</pre>
+                                </div>
+                            }
+                            @if (entrada.stack) {
+                                <div>
+                                    <strong>Stack:</strong>
+                                    <pre>{{ entrada.stack }}</pre>
+                                </div>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr>
+                    <td [attr.colspan]="7">No hay entradas para los filtros seleccionados.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -8,6 +8,7 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@a
 import { MessageService } from 'primeng/api';
 import { HttpErrorHandlerService } from './services/http-error-handler.service';
 import { InterceptorService } from './services/interceptor.service';
+import { GlobalErrorHandlerService } from './services/global-error-handler.service';
 import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
@@ -26,6 +27,10 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: HttpErrorHandlerService, multi: true },
     //Inicia el spinner en cada petición http
     { provide: HTTP_INTERCEPTORS, useClass: InterceptorService, multi: true },
+
+    // F2 - HANDOFF blindaje facturacion y logs. ErrorHandler global para excepciones
+    // de JS/Angular no atrapadas (ver global-error-handler.service.ts).
+    { provide: ErrorHandler, useClass: GlobalErrorHandlerService },
     //Aplica la estrategia # para las recargas, error 404
     { provide: LocationStrategy, useClass: HashLocationStrategy },
 
