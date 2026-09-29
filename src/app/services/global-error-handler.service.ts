@@ -104,20 +104,17 @@ export class GlobalErrorHandlerService implements ErrorHandler {
       error: (err) => console.error('No se pudo guardar el log de error en el backend', err)
     });
 
-    // NOTA (F2 - revisar, no resuelto en esta fase): ApiService.requestTauri()
-    // ya muestra su propio toast para errores de red (tcp connect error,
-    // ECONNRESET, catch genérico) ANTES de relanzarlos - ver api.service.ts.
-    // Esos errores llegan acá como Error genérico (no HttpErrorResponse) y
-    // este handler les muestra un SEGUNDO toast. No lo resolví en F2 porque
-    // implica decidir un cambio en api.service.ts (fuera del alcance original
-    // de esta fase) y prefiero que lo valides antes de tocarlo. Alternativas:
-    //  (a) que ApiService deje de notificar en esos catches y delegue el aviso
-    //      acá (cambio más parecido a como quedó EasySales, pero más grande);
-    //  (b) marcar esos errores (ej. una clase ErrorYaNotificado extends Error)
-    //      para que este handler los reconozca y no vuelva a notificar - cambio
-    //      chico, no toca la rama web;
-    //  (c) dejarlo así: hoy son solo 2 casos puntuales (falla de conexión TCP,
-    //      ECONNRESET) y el doble toast, aunque molesto, no oculta información.
+    // F2 - HANDOFF blindaje facturacion y logs: ApiService.requestTauri() ya
+    // muestra su propio toast (con mensaje específico) para errores de red (tcp
+    // connect error, ECONNRESET, catch genérico) y marca el error relanzado con
+    // `.yaNotificado = true` (ver api.service.ts) para que este handler no lo
+    // muestre una segunda vez. El log a /logs/front de arriba SÍ se hace igual
+    // (para que quede trazado en la pantalla de Errores), solo se evita el toast
+    // duplicado.
+    if (error?.yaNotificado) {
+      return;
+    }
+
     this.Notificaciones.Warn(
       'Ocurrió un error en la app, si el error persiste probá reiniciar la aplicación'
     );

@@ -33,6 +33,15 @@ import { Cliente } from '../../../../models/Cliente';
 })
 export class MainAdministracionComponent {
 
+  // F2 - HANDOFF blindaje facturacion y logs. Gate de UI para la card de
+  // "Errores": a pedido, restringido por nombre de usuario (no por cargo/rol
+  // como el resto de la app) — solo lo ve la cuenta 'ADMIN'. Comparación
+  // case-insensitive, mismo criterio que usa GetCargoSesion() en otros lados.
+  // OJO: esto solo oculta el botón. La ruta /administracion/errores y el
+  // GET /logs del backend siguen accesibles para cualquier usuario logueado
+  // si entra por URL directa - si también querés bloquear eso, avisame.
+  esUsuarioAdmin: boolean = false;
+
   // Dialog de selección de período para el Libro IVA. Se pide mes+año (no
   // rango libre, a diferencia del botón que existía antes en Listado de
   // Ventas): acá el caso de uso es "generar el libro de tal mes", punto.
@@ -66,7 +75,9 @@ export class MainAdministracionComponent {
     private clientesService: ClientesService,
     private usuariosService: UsuariosService,
     private notificaciones: NotificacionesService,
-  ) {}
+  ) {
+    this.esUsuarioAdmin = this.usuariosService.GetUsuarioSesion()?.toUpperCase() === 'ADMIN';
+  }
 
   AbrirLibroIva() {
     this.mesSeleccionado = new Date();

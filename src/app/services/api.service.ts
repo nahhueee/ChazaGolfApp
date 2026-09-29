@@ -166,7 +166,11 @@ export class ApiService {
       const errorMessage = err?.toString() ?? '';
       if (errorMessage.includes('tcp connect error') || errorMessage.includes('os error 10061')) {
         this.Notificaciones.Error('No se pudo conectar con el servidor');
-        throw new Error('No se pudo conectar con el servidor');
+        // F2 - HANDOFF blindaje facturacion y logs: marcado para que GlobalErrorHandlerService
+        // no muestre un segundo toast al relanzar este error (ya se notificó acá).
+        const error: any = new Error('No se pudo conectar con el servidor');
+        error.yaNotificado = true;
+        throw error;
       }
 
       if (errorMessage.includes('ECONNRESET')) {
@@ -174,6 +178,9 @@ export class ApiService {
       }
       
       this.Notificaciones.Error('Ocurrió un error inesperado');
+      // F2 - HANDOFF blindaje facturacion y logs: idem, evita el doble toast en
+      // GlobalErrorHandlerService para cualquier otro error de red no reconocido.
+      err.yaNotificado = true;
       throw err;
     }
   }

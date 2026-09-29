@@ -86,6 +86,7 @@
                 <tr>
                     <td [attr.colspan]="7">
                         <div class="detalle-entrada">
+                            <div><strong>Mensaje completo:</strong> {{ entrada.message }}</div>
                             @if (entrada.status) {
                                 <div><strong>Status:</strong> {{ entrada.status }} &nbsp; <strong>Método:</strong> {{ entrada.method }}</div>
                             }
