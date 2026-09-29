@@ -65,6 +65,9 @@ export class FacturarVentaComponent {
           next: response => {
             const factura:FacturaVenta = new FacturaVenta({
               estado: response.estado,
+              // F3 - HANDOFF blindaje facturacion y logs. Viaja con la venta hasta
+              // Agregar/Modificar para que el backend vincule fe_emisiones.idVenta.
+              idEmision: response.idEmision,
               cae: response.cae,
               caeVto: response.caeVto,
               ticket: response.ticket,

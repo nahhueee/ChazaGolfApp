@@ -2,6 +2,10 @@ import { TipoComprobante } from "./ObjFacturar";
 
 export class FacturaVenta{
     estado?: string;
+    // F3 - HANDOFF blindaje facturacion y logs. Id de fe_emisiones devuelto por
+    // /ventas/facturar: viaja con la venta a /agregar o /modificar para que el backend
+    // vincule fe_emisiones.idVenta (ver ventasRepository.ts, InsertFacturaVenta).
+    idEmision?: number;
     cae?: string;
     caeVto?: Date;
     ticket? : number;
@@ -23,6 +27,7 @@ export class FacturaVenta{
     constructor(data?: any) {
       if (data) {
         this.estado = data.estado;
+        this.idEmision = data.idEmision;
         this.cae = data.cae;
         this.caeVto = data.caeVto;
         this.ticket = data.ticket;
