@@ -278,4 +278,4 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<app-facturar-venta [objFacturar]="objFacturar" [visible]="modalFacturarVisible" [titulo]="'Facturar Nota de Crédito'" (cerrar)="Guardar($event)"/>
+<app-facturar-venta [objFacturar]="objFacturar" [venta]="nuevaVenta" [modificando]="false" [visible]="modalFacturarVisible" [titulo]="'Facturar Nota de Crédito'" (cerrar)="Guardar($event)"/>

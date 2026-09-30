@@ -48,6 +48,15 @@ export class VentasService {
   Facturar(objFacturar:ObjFacturar): Observable<any>{
     return this.apiService.post('ventas/facturar', objFacturar)
   }
+
+  // F4.2 - HANDOFF blindaje facturacion y logs. Endpoint unificado: pide el CAE a
+  // ARCA y persiste la venta (alta o modificacion, segun `modificando`) en una sola
+  // transaccion del lado del backend. Reemplaza a Facturar()+Agregar()|Modificar()
+  // para Factura A/B/C y NC/ND A/B/C - Cotizacion y NC X siguen sin pedir CAE, asi
+  // que nunca llaman a este metodo (ver facturar-venta.component.ts).
+  Emitir(venta:Venta, objFacturar:ObjFacturar, modificando:boolean): Observable<any>{
+    return this.apiService.post('ventas/emitir', {venta, objFacturar, modificando})
+  }
   // Chequeo preventivo de stock contra la base (ver ValidarStockVenta en el backend) -
   // se llama desde ConfirmarFacturacion() ANTES de abrir el modal de Facturar, para
   // cortar el flujo antes de pedir el CAE a AFIP (accion irreversible).

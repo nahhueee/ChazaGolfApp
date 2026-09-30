@@ -1,0 +1,100 @@
+<div class="contenido">
+    <app-encabezado-seccion titulo="Pendientes fiscales" icono="pi pi-exclamation-circle">
+        <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="Buscar()"/>
+        <p-button [label]="mostrarHistorial ? 'Ocultar historial' : 'Ver historial'" icon="pi pi-history" severity="secondary" [outlined]="true" (onClick)="ToggleHistorial()"/>
+    </app-encabezado-seccion>
+
+    <div class="tabla">
+        <p-table [value]="pendientes" [loading]="loading" [tableStyle]="{ 'min-width': '60rem' }">
+            <ng-template #header>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Comprobante</th>
+                    <th>CAE</th>
+                    <th>Usuario</th>
+                    <th>Ref</th>
+                    <th></th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-fila>
+                <tr>
+                    <td>{{ fila.fechaAlta | date:'dd/MM/yy HH:mm' }}</td>
+                    <td>
+                        <p-tag [value]="fila.estado" [severity]="TagSeverity(fila.estado)" [pTooltip]="DESCRIPCION_ESTADO[fila.estado]" tooltipPosition="right"/>
+                    </td>
+                    <td>Tipo {{ fila.tipoCbte }} - PtoVta {{ fila.ptoVenta }} - Nro {{ fila.nro }}</td>
+                    <td>{{ fila.cae || '-' }}</td>
+                    <td>{{ fila.usuario || '-' }}</td>
+                    <td>{{ fila.requestId || '-' }}</td>
+                    <td>
+                        @if (fila.estado === 'INCIERTO') {
+                            <p-button label="Verificar en ARCA" icon="pi pi-search" size="small" [loading]="verificando === fila.id" (onClick)="VerificarEnArca(fila)"/>
+                        } @else {
+                            <p-button label="Regularizar" icon="pi pi-check" size="small" severity="warn" (onClick)="AbrirRegularizar(fila)"/>
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr>
+                    <td [attr.colspan]="7">No hay pendientes fiscales.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    @if (mostrarHistorial) {
+        <div class="tabla historial">
+            <h3>Historial de regularizaciones</h3>
+            <p-table [value]="historial" [loading]="loadingHistorial" [tableStyle]="{ 'min-width': '60rem' }">
+                <ng-template #header>
+                    <tr>
+                        <th>Comprobante</th>
+                        <th>CAE</th>
+                        <th>Regularizado por</th>
+                        <th>Fecha</th>
+                        <th>Motivo</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-fila>
+                    <tr>
+                        <td>Tipo {{ fila.tipoCbte }} - PtoVta {{ fila.ptoVenta }} - Nro {{ fila.nro }}</td>
+                        <td>{{ fila.cae || '-' }}</td>
+                        <td>{{ fila.usuarioRegulariza || '-' }}</td>
+                        <td>{{ fila.fechaRegulariza | date:'dd/MM/yy HH:mm' }}</td>
+                        <td>{{ fila.motivoRegulariza || '-' }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                    <tr>
+                        <td [attr.colspan]="5">Todavía no se regularizó ningún comprobante.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    }
+</div>
+
+<p-dialog header="Regularizar comprobante" [(visible)]="regularizarVisible" [modal]="true" [style]="{ width: '30rem' }">
+    @if (filaRegularizando) {
+        <div class="detalle-regularizar">
+            <p>
+                Se va a registrar la venta del comprobante <strong>Tipo {{ filaRegularizando.tipoCbte }} - PtoVta {{ filaRegularizando.ptoVenta }} - Nro {{ filaRegularizando.nro }}</strong>
+                (CAE {{ filaRegularizando.cae }}) usando el mismo CAE ya emitido en ARCA, <strong>sin volver a facturar</strong>.
+                Si el stock no alcanza, se va a permitir que quede negativo (el comprobante fiscal tiene prioridad).
+            </p>
+            <form [formGroup]="formRegularizar" autocomplete="off">
+                <label for="motivo">Motivo (obligatorio)</label>
+                <textarea pTextarea id="motivo" formControlName="motivo" rows="3" style="width:100%"></textarea>
+                @if (formRegularizar.get('motivo')?.invalid && formRegularizar.get('motivo')?.touched) {
+                    <small class="p-error">El motivo es obligatorio (máximo 250 caracteres).</small>
+                }
+            </form>
+        </div>
+    }
+    <ng-template #footer>
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="regularizarVisible = false"/>
+        <p-button label="Regularizar" severity="warn" [loading]="regularizando" (onClick)="ConfirmarRegularizar()"/>
+    </ng-template>
+</p-dialog>

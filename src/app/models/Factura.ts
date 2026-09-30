@@ -57,11 +57,13 @@ import { TallesProducto } from "./Producto";
     entregado:number = 0;
     deuda:number = 0;
     ajuste:number = 0;
-    // Factura backfilleada por regularización de correlatividad ARCA (sep-2026, ver
-    // migración regularizacionarca_ventas en EasyStoreApi): sin cobro real, su NC no
-    // genera saldo a favor (ver ventasRepository.RegistrarMovimientoNotaCredito). Viaja
-    // en SELECT v.* así que llega solo, sin tocar ninguna query - se usa acá únicamente
-    // para pintar el aviso en listado-ventas y el tooltip de "Emitir Nota de Crédito".
+    // Venta regularizada manualmente por un problema de correlatividad/registro ARCA
+    // (sep-2026, ver migración regularizacionarca_ventas en EasyStoreApi y F4.3 del
+    // HANDOFF blindaje facturacion y logs - pantalla "Pendientes fiscales"). Puramente
+    // informativo: ya NO afecta el movimiento de la NC (ver comentario histórico en
+    // ventasRepository.RegistrarMovimientoNotaCredito). Viaja en SELECT v.* así que
+    // llega solo, sin tocar ninguna query - se usa acá únicamente para pintar el aviso
+    // en listado-ventas.
     regularizacionArca?: boolean;
   }
 

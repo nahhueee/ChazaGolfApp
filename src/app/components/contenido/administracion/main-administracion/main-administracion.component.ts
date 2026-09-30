@@ -10,6 +10,7 @@ import { FilesService } from '../../../../services/files.service';
 import { MiscService } from '../../../../services/misc.service';
 import { ClientesService } from '../../../../services/clientes.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
+import { FeEmisionesService } from '../../../../services/fe-emisiones.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { ProcesoVenta } from '../../../../models/ProcesoVenta';
@@ -41,6 +42,14 @@ export class MainAdministracionComponent {
   // GET /logs del backend siguen accesibles para cualquier usuario logueado
   // si entra por URL directa - si también querés bloquear eso, avisame.
   esUsuarioAdmin: boolean = false;
+
+  // F4.3 - HANDOFF blindaje facturacion y logs. Card de "Pendientes fiscales":
+  // gate por rol real (ADMINISTRADOR), a diferencia del gate de "Errores" de arriba
+  // (por nombre de usuario 'ADMIN' - ver su comentario). El backend ya lo exige con
+  // requiereRol('ADMINISTRADOR') en las 4 rutas de fe-emisiones; esto solo oculta el
+  // botón para quien no tiene el rol.
+  esAdministrador: boolean = false;
+  pendientesFiscalesCount: number = 0;
 
   // Dialog de selección de período para el Libro IVA. Se pide mes+año (no
   // rango libre, a diferencia del botón que existía antes en Listado de
@@ -74,9 +83,18 @@ export class MainAdministracionComponent {
     private miscService: MiscService,
     private clientesService: ClientesService,
     private usuariosService: UsuariosService,
+    private feEmisionesService: FeEmisionesService,
     private notificaciones: NotificacionesService,
   ) {
     this.esUsuarioAdmin = this.usuariosService.GetUsuarioSesion()?.toUpperCase() === 'ADMIN';
+    this.esAdministrador = this.usuariosService.GetCargoSesion() === 'ADMINISTRADOR';
+
+    if (this.esAdministrador) {
+      this.feEmisionesService.ObtenerPendientes().subscribe({
+        next: (respuesta: any[]) => this.pendientesFiscalesCount = respuesta?.length ?? 0,
+        error: () => { /* no bloquea la pantalla de Administración por esto */ }
+      });
+    }
   }
 
   AbrirLibroIva() {

@@ -501,6 +501,17 @@ export class NotasVentaComponent {
         if(this.emiteFiscal)
           this.nuevaVenta.factura = factura;
 
+        // F4.2 - HANDOFF blindaje facturacion y logs. Si emiteFiscal, `factura` vino
+        // de /ventas/emitir (siempre trae idVenta): el backend YA persistió la NC en
+        // la misma transacción que pidió el CAE - volver a llamar a Agregar() acá
+        // duplicaría el alta. Solo la NC/ND interna (X, no emiteFiscal, factura.estado
+        // === 'Cotizacion') sigue llamando a Agregar() como siempre.
+        if (this.emiteFiscal && factura.idVenta) {
+          this.Notificaciones.Success("Se agregó correctamente la nota de credito.");
+          this.CerrarModal(true);
+          return;
+        }
+
         // idProceso ya viene seteado a NOTA_CREDITO (ver armarObjetoVenta): el backend
         // decide devolver stock por ese campo, ya no hace falta pasar un flag aparte.
         this.ventasService.Agregar(this.nuevaVenta)

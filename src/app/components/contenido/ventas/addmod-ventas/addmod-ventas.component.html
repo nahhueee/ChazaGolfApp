@@ -902,7 +902,13 @@
         <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura || (venta.estado == 'Facturado' || venta.estado == 'Facturada')"/>
     }
     @if(tipo == 'factura'){
-        <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada')" />
+        <!-- Fix sep-2026 (HANDOFF blindaje facturacion y logs): antes solo chequeaba 'Finalizada',
+        inconsistente con el botón Guardar (que sí chequea 'Facturada'/'Facturado'). Con eso, si
+        /ventas/emitir fallaba con un error no recuperable (COMPROBANTE_INCIERTO/COMPROBANTE_SIN_REGISTRAR,
+        ver AbrirModalFacturar/GuardarFacturar en el .ts), Guardar quedaba bloqueado pero Facturar
+        seguía habilitado, permitiendo reintentar facturar una venta que ya puede tener un CAE real
+        emitido en ARCA. -->
+        <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada' || venta.estado == 'Facturada' || venta.estado == 'Facturado')" />
     }
 </div>
 
@@ -959,7 +965,7 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<app-facturar-venta [objFacturar]="objFacturar" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" (cerrar)="GuardarFacturar($event)"/>
+<app-facturar-venta [objFacturar]="objFacturar" [venta]="venta" [modificando]="modificando" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" (cerrar)="GuardarFacturar($event)"/>
 
 <!-- Dialog Cheque -->
 <app-dialog-cheque

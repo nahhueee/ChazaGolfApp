@@ -157,6 +157,10 @@ export class AddModVentasComponent {
   modalClienteVisible:boolean = false;
   modalAddClienteVisible:boolean = false;
   modalFacturarVisible:boolean = false;
+  // F4.2 fix (sep-2026, HANDOFF blindaje facturacion y logs) - guarda el estado previo
+  // a la mutación optimista que hace AbrirModalFacturar(), para poder revertirla si
+  // /ventas/emitir falla con un error recuperable (ver GuardarFacturar()).
+  private estadoVentaAntesDeFacturar?: string;
 
   
   //PANTALLA 1
@@ -2408,6 +2412,23 @@ export class AddModVentasComponent {
 
   //#region GUARDAR Y FACTURAR
   Guardar(factura?:FacturaVenta, finalizando:boolean = false){
+    // F4.2 - HANDOFF blindaje facturacion y logs. Un `factura` Aprobado CON idVenta
+    // viene de /ventas/emitir: el backend YA persistio la venta (alta o modificacion,
+    // segun `modificando`) en la misma transaccion que pidio el CAE. Volver a llamar
+    // a Agregar()/Modificar() acá duplicaría el alta. El camino de Cotización sigue
+    // intacto más abajo (factura.estado === 'Cotizacion', sin idVenta, nunca pasó por
+    // /emitir) y también el guardado sin facturar (factura undefined).
+    if (factura && factura.estado === ESTADO_VENTA.APROBADO && factura.idVenta) {
+      this.venta.factura = factura;
+      this.venta.estado = ESTADO_VENTA.FACTURADA;
+      this.venta.id = Number(factura.idVenta);
+      this.Notificaciones.Success(
+        !this.modificando ? "Se guardaron los cambios y se facturó correctamente" : "Venta actualizada y facturada correctamente"
+      );
+      this.router.navigateByUrl("/ventas?tipo=" + this.tipo);
+      return;
+    }
+
     if (this.modificando) {
       if (estadoVenta.esFacturado(this.venta.estado as EstadoVenta)) {
         this.Notificaciones.Warn("No puedes editar una venta en estado facturada.");
@@ -2685,17 +2706,51 @@ export class AddModVentasComponent {
     this.objFacturar.pagos = this.pagosFactura;
     this.objFacturar.saldoPendiente = this.getSaldoPendiente;
 
+    // F4.2 - HANDOFF blindaje facturacion y logs. Armamos `this.venta` ACA (antes se
+    // armaba recien en Guardar(), despues de cerrar el modal) porque /ventas/emitir
+    // necesita la venta completa para persistirla en la MISMA transaccion que pide el
+    // CAE - a diferencia del viejo Facturar()+Agregar()|Modificar(), ya no hay un
+    // segundo paso donde armarla. Para Cotizacion (unico caso que no pasa por
+    // /emitir, ver esCotizacion en facturar-venta.component) esto no cambia nada:
+    // Guardar() vuelve a llamar a ArmarObjetoVenta() como siempre antes de persistir.
+    this.ArmarObjetoVenta();
+    if (this.objFacturar.tipoComprobante !== TIPO_COMPROBANTE.SIN_COMPROBANTE) {
+      // Anticipa el estado final (igual que hacia Guardar() al recibir un factura
+      // Aprobado): si el commit de /emitir no llega a pasar - CAE rechazado, timeout,
+      // etc. - esta venta nunca se persiste. Guardamos el estado previo porque, a
+      // diferencia de lo que decía este comentario antes, SÍ deja un dato inconsistente
+      // en pantalla: los botones Guardar/Facturar leen venta.estado directo (ver HTML) y
+      // quedaban bloqueados (Guardar) o sin bloquear (Facturar, bug real reportado) para
+      // siempre tras un error recuperable. GuardarFacturar() lo revierte salvo que el
+      // error sea COMPROBANTE_INCIERTO/COMPROBANTE_SIN_REGISTRAR (ahí el bloqueo es
+      // intencional: ya existe un CAE real, no hay que permitir reintentar).
+      this.estadoVentaAntesDeFacturar = this.venta.estado;
+      this.venta.estado = ESTADO_VENTA.FACTURADA;
+    }
+
     this.modalFacturarVisible = true;
   }
 
   GuardarFacturar(factura?:FacturaVenta){
-    if(factura && factura!=undefined){
-      if(factura.estado == ESTADO_FACTURA.APROBADO || factura.estado == ESTADO_FACTURA.COTIZACION){
-        this.Guardar(factura, true);
-      }else{
+    if(factura && (factura.estado == ESTADO_FACTURA.APROBADO || factura.estado == ESTADO_FACTURA.COTIZACION)){
+      this.Guardar(factura, true);
+    }else{
+      // factura llega undefined cuando se cierra el modal con "Volver" (ver
+      // facturar-venta.component.html: (click)="onHide()" sin pasar por Facturar()) -
+      // ahí no hubo ningún intento de facturar, así que no corresponde el mensaje de
+      // error, solo revertir la mutación optimista de AbrirModalFacturar().
+      if (factura?.estado === "Error") {
         this.Notificaciones.Error("No se pudo realizar la facturación electrónica, consulte los registros.")
       }
 
+      // F4.2 fix (sep-2026) - ver comentario en AbrirModalFacturar(). Solo revertimos
+      // si el error es recuperable (o si directamente no hubo intento, caso "Volver"):
+      // factura.bloqueaReintento viene en true desde facturar-venta.component para
+      // COMPROBANTE_INCIERTO/COMPROBANTE_SIN_REGISTRAR, los únicos casos donde ya puede
+      // existir un CAE real emitido y no hay que dejar reintentar facturar esta venta.
+      if (!factura?.bloqueaReintento) {
+        this.venta.estado = this.estadoVentaAntesDeFacturar ?? this.venta.estado;
+      }
     }
 
     this.modalFacturarVisible = false;

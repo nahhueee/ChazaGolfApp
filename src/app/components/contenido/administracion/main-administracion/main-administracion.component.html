@@ -23,6 +23,22 @@
             </div>
         </p-card>
 
+        <!-- F4.3 - HANDOFF blindaje facturacion y logs -->
+        @if (esAdministrador) {
+            <p-card class="card-admin" routerLink="/administracion/pendientes-fiscales" pTooltip="Click para ver los comprobantes pendientes de regularizar" tooltipPosition="bottom">
+                <div class="contenido-card">
+                    <div class="header">
+                        <i class="pi pi-exclamation-circle"></i>
+                        @if (pendientesFiscalesCount > 0) {
+                            <p-tag [value]="pendientesFiscalesCount.toString()" severity="danger" class="badge-pendientes"/>
+                        }
+                    </div>
+                    <div class="nombre">Pendientes fiscales</div>
+                    <div class="descripcion">Comprobantes emitidos en ARCA que quedaron sin registrar en el sistema.</div>
+                </div>
+            </p-card>
+        }
+
         <!-- F2 - HANDOFF blindaje facturacion y logs -->
         @if (esUsuarioAdmin) {
             <p-card class="card-admin" routerLink="/administracion/errores" pTooltip="Click para ver el log de errores" tooltipPosition="bottom">
