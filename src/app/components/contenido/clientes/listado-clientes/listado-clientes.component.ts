@@ -14,6 +14,7 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { FiltroClientes } from '../../../../models/filtros/FiltroClientes';
 import { MiscService } from '../../../../services/misc.service';
 import { CondicionesIva } from '../../../../models/CondicionesIva';
+import { CategoriaCliente } from '../../../../models/CategoriaCliente';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { FilesService } from '../../../../services/files.service';
 import { TextareaModule } from 'primeng/textarea';
@@ -44,13 +45,15 @@ export class ListadoClientesComponent {
   clientes: Cliente[] = [];
   condicionesIva: CondicionesIva[] = [];
 
-  // Misma lista fija usada en listado-cuentas.component.ts (no surge de una tabla en BD,
-  // son los IDs de ID_CONDICION_PAGO en venta.constants.ts).
-  condicionesPago = [
-    {id: 1, descripcion: 'CONTADO'},
-    {id: 2, descripcion: 'CUENTA CORRIENTE'},
-    {id: 3, descripcion: 'PAGO DIGITAL'},
-    {id: 4, descripcion: 'OTRO'},
+  categorias: CategoriaCliente[] = [];
+
+  // Mismos ids que listasPrecio en addmod-clientes.component.ts (no hay tabla en BD).
+  listasPrecio = [
+    {id: 1, descripcion: 'CONSUMIDOR FINAL'},
+    {id: 2, descripcion: 'LISTA 3'},
+    {id: 4, descripcion: 'LISTA 4'},
+    {id: 5, descripcion: 'LISTA 4.5'},
+    {id: 6, descripcion: 'LISTA 5'},
   ];
 
   clienteSeleccionado!: Cliente | undefined;
@@ -72,19 +75,28 @@ export class ListadoClientesComponent {
     this.filtros = new FormGroup({
       nombre: new FormControl(''),
       condicionIva: new FormControl(''),
-      condicionPago: new FormControl(''),
+      categoria: new FormControl(''),
+      listaPrecio: new FormControl(''),
       documento: new FormControl('')
     });
   }
 
   ngOnInit(){
     this.ObtenerCondicionesIva();
+    this.ObtenerCategorias();
   }
 
   ObtenerCondicionesIva(){
     this.miscService.ObtenerCondicionesIva()
       .subscribe(response => {
         this.condicionesIva = response;
+      });
+  }
+
+  ObtenerCategorias(){
+    this.miscService.ObtenerCategoriasCliente()
+      .subscribe(response => {
+        this.categorias = response;
       });
   }
 
@@ -101,7 +113,8 @@ export class ListadoClientesComponent {
         tamanioPagina: pageSize,
         nombre: this.filtros.get('nombre')?.value ?? '',
         condicionIva: this.filtros.get('condicionIva')?.value ?? '',
-        condicionPago: this.filtros.get('condicionPago')?.value ?? '',
+        categoria: this.filtros.get('categoria')?.value ?? '',
+        listaPrecio: this.filtros.get('listaPrecio')?.value ?? '',
         documento: this.filtros.get('documento')?.value ?? ''
       });
     }

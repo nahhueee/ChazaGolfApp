@@ -1,3 +1,4 @@
+import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
 import { Injectable } from '@angular/core';
 
 
@@ -102,6 +103,9 @@ export class ComprobanteService {
       // documento-comercial.service.ts (ver tabla-productos-talles.helper.ts).
       const descuentoGeneral = Number(venta.descuento) || 0;
       const productos = ProcesarItemsConDescuento(venta.productos, descuentoGeneral);
+      // Lista fija sin descuento real (oct-2026): ni columna "Desc" ni línea "Descuento" - ver OcultarDescuentoListaNeta.
+      const ocultarDescuento = OcultarDescuentoListaNeta(venta);
+      comprobante.ocultarDescuento = ocultarDescuento;
       const servicios = ProcesarItemsConDescuento(venta.servicios, descuentoGeneral);
 
       // NC X "sin productos" (ver nota-credito-x.component.ts): sin ítems, el importe
@@ -119,7 +123,7 @@ export class ComprobanteService {
       const productosOrdenados = [...(venta.productos ?? [])]
         .sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
 
-      const tablaProductos = ArmarFilasProductosConTalles(productosOrdenados, lineasTalle);
+      const tablaProductos = ArmarFilasProductosConTalles(productosOrdenados, lineasTalle, ocultarDescuento);
       comprobante.filasProducto = tablaProductos.filasProducto;
       comprobante.filasProductoGrupos = tablaProductos.filasProductoGrupos;
       comprobante.filasProductoContinuacion = tablaProductos.filasProductoContinuacion;
@@ -131,7 +135,7 @@ export class ComprobanteService {
           { text: 'Servicio', style: 'tableHeader', alignment: 'left' },
           { text: 'Cant', style: 'tableHeader', alignment: 'center' },
           { text: 'Precio', style: 'tableHeader', alignment: 'right' },
-          { text: 'Desc', style: 'tableHeader', alignment: 'right' },
+          ...(ocultarDescuento ? [] : [{ text: 'Desc', style: 'tableHeader', alignment: 'right' }]),
           { text: 'Total', style: 'tableHeader', alignment: 'right' },
         ]
       ];
@@ -142,7 +146,7 @@ export class ComprobanteService {
           CortarNombreProducto(item.nomServicio),
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
-          { text: item.descuentoAplicado + "%", alignment: 'right' },
+          ...(ocultarDescuento ? [] : [{ text: item.descuentoAplicado + "%", alignment: 'right' }]),
           { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
@@ -230,7 +234,7 @@ export class ComprobanteService {
           ] : [
           {
             table: {
-              widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+              widths: ['auto', '*', ...Array(comprobante.ocultarDescuento ? 14 : 15).fill('auto')],
               body: comprobante.filasProducto
             },
             layout: {
@@ -276,7 +280,7 @@ export class ComprobanteService {
             { text: `Servicios`, style: 'recargaDescuento', alignment: 'left' },
             {
               table: {
-                widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
+                widths: ['auto', '*', ...Array(comprobante.ocultarDescuento ? 3 : 4).fill('auto')],
                 body: comprobante.filasServicio
               },
               layout: {
@@ -319,8 +323,10 @@ export class ComprobanteService {
                   },
                   {
                     stack: [
-                      { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
-                      { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ...(comprobante.ocultarDescuento ? [] : [
+                        { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
+                        { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ]),
 
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },
                       { text: `Redondeo: $${comprobante.redondeo?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },

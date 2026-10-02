@@ -130,7 +130,8 @@ export const ProcesarItemsConDescuento = (items: any[] | undefined, descuentoGen
 // queden contiguos.
 export const ArmarFilasProductosConTalles = (
   productosOrdenados: any[],
-  lineasTalle: LineasTalle[]
+  lineasTalle: LineasTalle[],
+  ocultarDescuento: boolean = false
 ): FilasProductosTalles => {
   const filasProducto: any[] = [
     [
@@ -141,7 +142,7 @@ export const ArmarFilasProductosConTalles = (
       {}, {}, {}, {}, {}, {}, {}, {}, {},
       { text: 'Cant', style: 'tableHeader', alignment: 'center' },
       { text: 'Precio', style: 'tableHeader', alignment: 'right' },
-      { text: 'Desc', style: 'tableHeader', alignment: 'right' },
+      ...(ocultarDescuento ? [] : [{ text: 'Desc', style: 'tableHeader', alignment: 'right' }]),
       { text: 'Total', style: 'tableHeader', alignment: 'right' },
     ]
   ];
@@ -165,7 +166,7 @@ export const ArmarFilasProductosConTalles = (
       filasProducto.push([
         '', '', '',
         ...tallesFila.map(t => ({ text: t, alignment: 'center', bold: true })),
-        '', '', '', '',
+        '', '', '', ...(ocultarDescuento ? [] : ['']),
       ]);
     }
 
@@ -203,7 +204,7 @@ export const ArmarFilasProductosConTalles = (
       { text: FormatearTalle(item.t10), alignment: 'center' },
       { text: FormatearCantidad(item.cantidad), alignment: 'center' },
       { text: FormatearPrecio(item.unitario), alignment: 'right' },
-      { text: item.descuentoAplicado + "%", alignment: 'right' },
+      ...(ocultarDescuento ? [] : [{ text: item.descuentoAplicado + "%", alignment: 'right' }]),
       { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
     ]);
 

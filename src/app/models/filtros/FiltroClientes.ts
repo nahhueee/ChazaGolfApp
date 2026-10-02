@@ -5,6 +5,8 @@ export class FiltroClientes{
   nombre: string = "";
   condicionIva: string = "";
   condicionPago: string = "";
+  categoria: string = "";
+  listaPrecio: string = "";
   documento: number = 0;
   orden = "";
   direccion = "";
@@ -19,6 +21,8 @@ export class FiltroClientes{
       this.nombre = data.nombre;
       this.condicionIva = data.condicionIva;
       this.condicionPago = data.condicionPago;
+      this.categoria = data.categoria;
+      this.listaPrecio = data.listaPrecio;
       this.documento = data.documento;
     }
   }

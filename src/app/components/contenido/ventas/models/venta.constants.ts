@@ -386,6 +386,27 @@ export function listaPrecioEditablePorItem(idListaPrecio?: number | null): boole
 }
 
 /**
+ * true si la lista del cliente es "fija" (LISTA_PRECIO_CONFIG con editable:false - hoy Lista
+ * 4.0/4.5/5.0). Para estas listas el % NO es un descuento visible (oct-2026, pedido del
+ * cliente): la lista ES el precio, así que se hornea en el precio unitario del ítem (ver
+ * PrecioItemSegunComprobante en addmod-ventas) y no aparece "Desc." en ninguna pantalla ni
+ * comprobante. Lista 3.0 (editable) queda afuera: conserva su % por ítem visible.
+ * Espejo backend: esListaPrecioNeto en ventaEstados.ts (EasyStoreApi) - mantener ambos
+ * sincronizados si se agrega/quita una lista fija.
+ */
+export function listaConPrecioNeto(idListaPrecio?: number | null): boolean {
+  if (idListaPrecio == null) return false;
+  const config = LISTA_PRECIO_CONFIG[idListaPrecio as IdListaPrecio];
+  return !!config && !config.editable;
+}
+
+/** % de la lista fija (ver listaConPrecioNeto); 0 si la lista no es fija. */
+export function descuentoListaPrecioNeto(idListaPrecio?: number | null): number {
+  if (!listaConPrecioNeto(idListaPrecio)) return 0;
+  return LISTA_PRECIO_CONFIG[idListaPrecio as IdListaPrecio]!.descuento;
+}
+
+/**
  * true si la lista del cliente prohíbe el descuento general de cabecera, incondicionalmente
  * (no solo cuando ya hay % cargado por ítem, a diferencia de hayDescuentoPorItem). Aplica a
  * TODA lista con entrada en LISTA_PRECIO_CONFIG (fija o editable), no solo a Lista 3.0.

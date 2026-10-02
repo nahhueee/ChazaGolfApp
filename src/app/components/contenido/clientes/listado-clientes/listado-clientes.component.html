@@ -6,10 +6,10 @@
 
     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
-            <!-- Nombre -->
+            <!-- Código o nombre -->
             <p-floatlabel variant="on">
                 <input pInputText formControlName="nombre"  type="text"/>
-                <label>Nombre</label>
+                <label>Código o nombre</label>
             </p-floatlabel>
 
             <!-- Condicion -->
@@ -18,10 +18,16 @@
                 <label>Condición IVA</label>
             </p-floatlabel>
 
-            <!-- Condicion Pago -->
+            <!-- Categoria -->
             <p-floatlabel variant="on">
-                <p-select [options]="condicionesPago" formControlName="condicionPago" optionValue="id" optionLabel="descripcion"/>
-                <label>Condición Pago</label>
+                <p-select [options]="categorias" formControlName="categoria" optionValue="id" optionLabel="descripcion"/>
+                <label>Categoría</label>
+            </p-floatlabel>
+
+            <!-- Lista de precio -->
+            <p-floatlabel variant="on">
+                <p-select [options]="listasPrecio" formControlName="listaPrecio" optionValue="id" optionLabel="descripcion"/>
+                <label>Lista de precio</label>
             </p-floatlabel>
 
             <!-- Documento -->
@@ -53,9 +59,9 @@
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Email</th>
-                    <th>Telefono</th>
                     <th>Celular</th>
                     <th>Condición</th>
+                    <th>Lista de precio</th>
                     <th>Documento</th>
                     <th>Acciones</th>
                 </tr>
@@ -65,9 +71,9 @@
                     <td>{{ cliente.id }}</td>
                     <td>{{ cliente.nombre }}</td>
                     <td>{{ cliente.email }}</td>
-                    <td>{{ cliente.telefono }}</td>
                     <td>{{ cliente.celular }}</td>
                     <td>{{ cliente.condicionIva }}</td>
+                    <td>{{ cliente.listaPrecio }}</td>
                     <td>{{ cliente.documento }}</td>
                     <td>
                         <div class="acciones">

@@ -13,6 +13,7 @@ import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { MiscService } from '../../../../services/misc.service';
 import { LineasTalle } from '../../../../models/Producto';
 import { ID_PROCESO } from '../models/venta.constants';
+import { OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
   selector: 'app-vista-previa',
@@ -48,6 +49,15 @@ export class VistaPreviaComponent implements OnInit {
   // "Neto" en addmod-ventas/factura.service.ts).
   totalNeto:number = 0;
   totalDescuento:number = 0;
+
+  // Lista fija (4.0/4.5/5.0) sin descuento real: la lista es el precio, no se muestra "Desc." ni
+  // "Descuento" en ningún lado (oct-2026) - ver OcultarDescuentoListaNeta.
+  get ocultarDescuento(): boolean { return OcultarDescuentoListaNeta(this.venta); }
+
+  // Factura/NC/ND A discriminan el IVA; el resto lo muestra incluido (igual que el comprobante impreso).
+  get ivaDiscriminado(): boolean {
+    return [TipoComprobante.FACTURA_A, TipoComprobante.NC_A, TipoComprobante.ND_A].includes(this.venta.idTipoComprobante!);
+  }
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   totalIva:number = 0;

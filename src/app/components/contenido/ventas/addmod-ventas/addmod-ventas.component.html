@@ -324,7 +324,7 @@
 
                         <th>Cant.</th>
                         <th>Precio</th>
-                        <th>Desc. %</th>
+                        @if(!ocultarColumnaDescuento){ <th>Desc. %</th> }
                         <th>Total</th>
                         @if(!itemsSoloLectura){
                             <th>Quitar</th>
@@ -342,7 +342,7 @@
                         <td></td>
                         <td></td>
                         <td></td>
-                        <td></td>
+                        @if(!ocultarColumnaDescuento){ <td></td> }
                         @if(!itemsSoloLectura){
                             <td></td>
                         }
@@ -360,7 +360,14 @@
                                 {{ producto.codProducto }}
                             }
                         </td>
-                        <td>{{ EsContinuacionMismoProducto(rowIndex) ? '' : producto.nomProducto }}</td>
+                        <td>
+                            {{ EsContinuacionMismoProducto(rowIndex) ? '' : producto.nomProducto }}
+                            @if(!EsContinuacionMismoProducto(rowIndex) && TopeListaLimitaItem(producto)){
+                                <span class="indicador-continuacion" [pTooltip]="TextoTopeDescuento(producto)" tooltipPosition="top">
+                                    <i class="pi pi-info-circle"></i>
+                                </span>
+                            }
+                        </td>
                         @if(ProcesoControl && ProcesoControl.descripcion != 'PRESUPUESTO'){
                             <td>
                                 @if(!EsContinuacionMismoProducto(rowIndex)){
@@ -469,7 +476,7 @@
                              excluyente con él (ver hayDescuentoPorItem/ActualizarDescuentoManual en el .ts).
                              Editable solo si no está bloqueado por relación/venta guardada y no hay
                              descuento general activo. -->
-                        <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? producto.descuentoManual : null"
+                        @if(!ocultarColumnaDescuento){ <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? producto.descuentoManual : null"
                             pEditableColumnField="descuentoManual">
 
                             <ng-container *ngIf="!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo; else soloLecturaDescItem">
@@ -499,7 +506,7 @@
                             <ng-template #soloLecturaDescItem>
                                 {{ producto.descuentoManual ?? 0 }}%
                             </ng-template>
-                        </td>
+                        </td> }
 
                         <td>{{ producto.totalMostrar | decimalFormat }}</td>
                         @if(!itemsSoloLectura){
@@ -520,7 +527,7 @@
                             }
                             <td><strong>{{ totalUnidadesProductos }}</strong></td>
                             <td></td>
-                            <td></td>
+                            @if(!ocultarColumnaDescuento){ <td></td> }
                             <td></td>
                             @if(!itemsSoloLectura){
                                 <td></td>
@@ -591,7 +598,7 @@
                     <th>Nombre</th>
                     <th>Cant.</th>
                     <th>Precio</th>
-                    <th>Desc. %</th>
+                    @if(!ocultarColumnaDescuento){ <th>Desc. %</th> }
                     <th>Total</th>
                     @if(!itemsSoloLectura){
                         <th>Quitar</th>
@@ -601,12 +608,19 @@
             <ng-template #body let-servicio let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ servicio.codServicio }}</td>
-                    <td>{{ servicio.nomServicio }}</td>
+                    <td>
+                        {{ servicio.nomServicio }}
+                        @if(TopeListaLimitaItem(servicio)){
+                            <span class="indicador-continuacion" [pTooltip]="TextoTopeDescuento(servicio)" tooltipPosition="top">
+                                <i class="pi pi-info-circle"></i>
+                            </span>
+                        }
+                    </td>
                     <td>{{ servicio.cantidad }}</td>
                     <td>{{ servicio.unitario | decimalFormat}}</td>
 
                     <!-- Desc. % por ítem: ver comentario equivalente en la tabla de Productos. -->
-                    <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? servicio.descuentoManual : null"
+                    @if(!ocultarColumnaDescuento){ <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? servicio.descuentoManual : null"
                         pEditableColumnField="descuentoManual">
 
                         <ng-container *ngIf="!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo; else soloLecturaDescServicio">
@@ -636,7 +650,7 @@
                         <ng-template #soloLecturaDescServicio>
                             {{ servicio.descuentoManual ?? 0 }}%
                         </ng-template>
-                    </td>
+                    </td> }
 
                     <td>{{ servicio.totalMostrar | decimalFormat }}</td>
                     @if(!itemsSoloLectura){
@@ -653,7 +667,7 @@
                         <td></td>
                         <td><strong>{{ totalUnidadesServicios }}</strong></td>
                         <td></td>
-                        <td></td>
+                        @if(!ocultarColumnaDescuento){ <td></td> }
                         <td></td>
                         @if(!itemsSoloLectura){
                             <td></td>
@@ -862,7 +876,7 @@
                         <span class="monto">${{totales.subtotal| decimalFormat}}</span>
                     </div>
                     <div class="fila" *ngIf="totales.mostrarIva">
-                        <span>IVA 21% (Incluido):</span>
+                        <span>IVA 21% ({{ ivaDiscriminado ? 'Discriminado' : 'Incluido' }}):</span>
                         <span class="monto">${{totales.iva | decimalFormat}}</span>
                     </div>
                 }

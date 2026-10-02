@@ -1,6 +1,6 @@
 import { ProductosFactura, ServiciosFactura, Venta } from '../../models/Factura';
 import { TipoComprobante } from '../../models/ObjFacturar';
-import { esItemNoCatalogado, TipoNotaCredito } from '../../components/contenido/ventas/models/venta.constants';
+import { esItemNoCatalogado, listaConPrecioNeto, TipoNotaCredito } from '../../components/contenido/ventas/models/venta.constants';
 
 // Extraído de listado-ventas.component.ts (ago-2026) para que TODA pantalla que imprima
 // una venta con factura.service.ts calcule los precios de la misma forma.
@@ -149,4 +149,18 @@ const CalcularPrecioItem = (
   // Total bruto del item
   const totalFinalNeto = totalNeto - importeDescuento;
   item.totalMostrar = totalFinalNeto;
+};
+
+// true si la venta es de un cliente con lista FIJA (4.0/4.5/5.0 - ver listaConPrecioNeto): la
+// lista es el precio, así que ninguna pantalla ni comprobante muestra "Desc."/"Descuento"
+// (oct-2026, pedido del cliente). Si la venta igual trae un descuento real (cabecera o por
+// ítem - documentos hechos con el esquema anterior: precio bruto + descuento pactado), NO se
+// oculta: esconder plata que sí está en el total rompería la cuenta del comprobante. Lee
+// importeDescuento/descuentoAplicado, así que sirve igual antes o después de
+// PrepararPreciosVenta/ProcesarItemsConDescuento.
+export const OcultarDescuentoListaNeta = (venta: Venta): boolean => {
+  if (!listaConPrecioNeto(venta.idListaPrecio)) return false;
+  if ((Number(venta.descuento) || 0) > 0) return false;
+  const items: any[] = [...(venta.productos ?? []), ...(venta.servicios ?? [])];
+  return !items.some(i => (Number(i.importeDescuento) || 0) > 0 || (Number(i.descuentoAplicado) || 0) > 0);
 };

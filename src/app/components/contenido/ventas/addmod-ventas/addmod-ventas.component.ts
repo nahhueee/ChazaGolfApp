@@ -58,6 +58,7 @@ import {
   LISTA_PRECIO,
   LISTA_PRECIO_CONFIG,
   IdListaPrecio,
+  descuentoListaPrecioNeto,
   listaPrecioEditablePorItem,
   listaPrecioBloqueaDescuentoGeneral,
   DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT,
@@ -500,6 +501,34 @@ export class AddModVentasComponent {
       if (idLista == null) return false;
       const config = LISTA_PRECIO_CONFIG[idLista as IdListaPrecio];
       return !!config && !config.editable;
+    }
+
+    // true si hay que ocultar la columna "Desc. %" de la grilla: lista fija (el % es parte
+    // del precio, ver PrecioItemSegunComprobante) Y ningún ítem trae un descuento propio. Si
+    // algún ítem lo trae (documento relacionado/pedido viejo que viajó con el descuento
+    // pactado en el esquema anterior) la columna sigue visible para no esconder plata.
+    // Factura A discrimina el IVA (el resto de los comprobantes con IVA lo muestra incluido) - mismo
+    // criterio que el comprobante impreso (ver ivaDiscriminado en factura.service.ts).
+    get ivaDiscriminado(): boolean {
+      return this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_A;
+    }
+
+    get ocultarColumnaDescuento(): boolean {
+      return this.listaFijaBloqueaEdicionItem && !this.hayDescuentoPorItem;
+    }
+
+    // true si el tope de descuento de catálogo del ítem es MENOR al % de la lista fija del
+    // cliente: el precio se calculó con el tope, no con el % de la lista (oct-2026).
+    TopeListaLimitaItem(item: { topeDescuento?: number }): boolean {
+      const descLista = descuentoListaPrecioNeto(this.clienteSeleccionado?.idListaPrecio);
+      return descLista > 0 && this.TopeDescuentoDe(item) < descLista;
+    }
+
+    // Texto del mini indicador (tooltip) que acompaña al nombre del ítem en la grilla.
+    TextoTopeDescuento(item: { topeDescuento?: number }): string {
+      const tope = this.TopeDescuentoDe(item);
+      const descLista = descuentoListaPrecioNeto(this.clienteSeleccionado?.idListaPrecio);
+      return `Este ítem tiene un tope máximo de descuento del ${tope}%: el precio se calculó con ese tope en lugar del ${descLista}% de la lista del cliente.`;
     }
 
     // true si la lista de precio del cliente prohíbe el descuento general de cabecera de
@@ -960,11 +989,25 @@ export class AddModVentasComponent {
   // cargados cuando cambia comprobante o cliente). Se aplica ANTES del descuento de lista
   // (AplicarDescuentoDeLista, que sigue igual para todos, sin reaccionar a esto).
   // Consumidor Final y el resto de comprobantes/procesos: precio de catálogo tal cual.
-  private PrecioItemSegunComprobante(precioCatalogo: number): number {
+  //
+  // Oct-2026 (pedido del cliente): para listas FIJAS (4.0/4.5/5.0, ver listaConPrecioNeto)
+  // el % de la lista ya no es un descuento visible sino parte del precio - se aplica acá,
+  // sobre el precio ya con IVA si corresponde: unitario = catálogo × (1,21 si A/B) × (1 - %).
+  // El % efectivo respeta el tope de descuento del ítem (item.topeDescuento, mismo criterio
+  // que antes con descuentoManual: manda el más restrictivo - ver TopeListaLimitaItem para el
+  // aviso al operador). Redondeado a 2 decimales para que Cantidad × Precio cierre al centavo.
+  // `item` solo hace falta para el tope (productos de catálogo y servicios lo traen; un ítem
+  // libre de Presupuesto no tiene tope y cae al `?? 100` de TopeDescuentoDe).
+  private PrecioItemSegunComprobante(precioCatalogo: number, item: { topeDescuento?: number } = {}): number {
     const necesitaIva =
       this.EsComprobanteConIvaExplicito() &&
       esMayoristaConListaPropia(this.clienteSeleccionado?.idCategoria, this.clienteSeleccionado?.idListaPrecio);
-    return necesitaIva ? precioCatalogo * 1.21 : precioCatalogo;
+    const conIva = necesitaIva ? precioCatalogo * 1.21 : precioCatalogo;
+
+    const descLista = descuentoListaPrecioNeto(this.clienteSeleccionado?.idListaPrecio);
+    if (descLista <= 0) return conIva;
+    const pct = Math.min(descLista, this.TopeDescuentoDe(item));
+    return Math.round(conIva * (1 - pct / 100) * 100) / 100;
   }
 
   // Reaplica PrecioItemSegunComprobante a cada ítem YA CARGADO en el carrito, a partir de
@@ -979,9 +1022,13 @@ export class AddModVentasComponent {
   // tampoco se tocan - mismo criterio que descuentoManual, lo que el usuario editó a mano
   // no se pisa con un recálculo automático.
   private RecalcularPreciosSegunComprobante(): void {
-    const recalcular = (item: { precio?: number; cantidad?: number; unitario?: number; total?: number; precioMostrar?: number; precioEditadoManualmente?: boolean }) => {
+    const recalcular = (item: { precio?: number; cantidad?: number; unitario?: number; total?: number; precioMostrar?: number; precioEditadoManualmente?: boolean; topeDescuento?: number; descuentoManual?: number }) => {
       if (item.precio == null || item.precioEditadoManualmente) return;
-      const nuevoUnitario = this.PrecioItemSegunComprobante(item.precio);
+      // Lista fija + ítem que ya trae un descuento propio (documento viejo que viajó con el
+      // esquema anterior: precio bruto + descuento pactado) - no se re-hornea el % en el
+      // precio o se descontaría dos veces.
+      if (this.listaFijaBloqueaEdicionItem && (item.descuentoManual ?? 0) > 0) return;
+      const nuevoUnitario = this.PrecioItemSegunComprobante(item.precio, item);
       item.unitario = nuevoUnitario;
       item.precioMostrar = nuevoUnitario;
       item.total = nuevoUnitario * (item.cantidad ?? 0);
@@ -1013,7 +1060,11 @@ export class AddModVentasComponent {
     if (config.editable) {
       if (item.descuentoManual == null) item.descuentoManual = config.descuento;
     } else {
-      item.descuentoManual = Math.min(config.descuento, this.TopeDescuentoDe(item));
+      // Lista fija (oct-2026): el % es parte del PRECIO (ver PrecioItemSegunComprobante), ya
+      // no se precarga como descuento. Solo se limpia un descuentoManual que haya quedado de
+      // una lista editable anterior (cambio de cliente con el carrito cargado), salvo que
+      // venga pactado de un documento relacionado - ahí es plata ya acordada, no se toca.
+      if (!this.itemsDescuentoBloqueadoPorRelacion) item.descuentoManual = undefined;
     }
   }
 
@@ -1919,7 +1970,7 @@ export class AddModVentasComponent {
         // propia/Lista 3.0, Y con Factura A/B seleccionada, SÍ hace falta sumarle el 21%
         // de IVA acá (ver PrecioItemSegunComprobante) - a diferencia del descuento, el
         // ajuste de IVA no es lo mismo para todas las listas/comprobantes.
-        const precio = this.PrecioItemSegunComprobante(talleSel.precio);
+        const precio = this.PrecioItemSegunComprobante(talleSel.precio, this.productoSeleccionado);
 
         // Ver si ya existe ese producto con ese precio en el detalle
         let existente = this.productosFactura.find(
@@ -2296,13 +2347,15 @@ export class AddModVentasComponent {
     // MarcarPreciosEditados). unitario: lo que se muestra/usa según comprobante+lista -
     // ver PrecioItemSegunComprobante/RecalcularPreciosSegunComprobante.
     nuevoServicio.precio = this.globalesService.EstandarizarDecimal(this.formServicios.get('precio')?.value ?? '');
-    nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0);
+    // topeDescuento ANTES del precio: PrecioItemSegunComprobante lo usa para topear el % de
+    // una lista fija (oct-2026).
+    nuevoServicio.topeDescuento = seleccionado.topeDescuento;
+    nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0, nuevoServicio);
     if(nuevoServicio.unitario === 0){
       nuevoServicio.precio = seleccionado.sugerido;
-      nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0);
+      nuevoServicio.unitario = this.PrecioItemSegunComprobante(nuevoServicio.precio ?? 0, nuevoServicio);
     }
     nuevoServicio.total = nuevoServicio.cantidad! * nuevoServicio.unitario!;
-    nuevoServicio.topeDescuento = seleccionado.topeDescuento;
 
     // Reasignar referencia: p-table no detecta la fila nueva si se muta el
     // array in-place (mismo problema que en productos, ver AgregarProducto).

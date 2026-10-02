@@ -31,6 +31,11 @@ export class FilesService {
     return this.apiService.getFile('files/ventas-excel', filtros);
   }
 
+  // Export de Pre-Facturación (Presupuesto/Pedido/Nota de Empaque): documentos + detalle.
+  DescargarPreFacturacionExcel(filtros:FiltroVenta){
+    return this.apiService.getFile('files/prefacturacion-excel', filtros);
+  }
+
   DescargarLibroIvaVentasExcel(filtros: { idEmpresa: number, fechas: [Date, Date] }){
     return this.apiService.getFile('files/libro-iva-ventas-excel', filtros);
   }

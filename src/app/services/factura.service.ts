@@ -12,6 +12,7 @@ import { ObjComprobante } from '../models/ObjComprobant';
 import { MiscService } from './misc.service';
 import { TipoComprobante } from '../models/ObjFacturar';
 import { TIPO_COMPROBANTE, esMayoristaConListaPropia } from '../components/contenido/ventas/models/venta.constants';
+import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
 
 @Injectable({
   providedIn: 'root'
@@ -324,7 +325,10 @@ export class FacturaService {
         TIPO_COMPROBANTE.FACTURA_B,
         TIPO_COMPROBANTE.SIN_COMPROBANTE,
       ].includes(venta.idTipoComprobante as any);
-      const ocultarDescuento = ocultaDescuentoPorTipo && esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.idListaPrecio);
+      // Lista fija sin descuento real (oct-2026): se oculta en CUALQUIER tipo de comprobante (incluida
+      // Factura C) - la lista es el precio, no hay descuento que mostrar. Ver OcultarDescuentoListaNeta.
+      const ocultarDescuento = OcultarDescuentoListaNeta(venta)
+        || (ocultaDescuentoPorTipo && esMayoristaConListaPropia(venta.cliente?.idCategoria, venta.idListaPrecio));
       comprobante.ocultarDescuento = ocultarDescuento;
 
       // Factura A discrimina IVA: los unitarios, el Subtotal y el Descuento del comprobante

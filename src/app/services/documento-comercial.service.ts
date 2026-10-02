@@ -1,3 +1,4 @@
+import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
 import { Injectable } from '@angular/core';
 
 import { ParametrosService } from './parametros.service';
@@ -123,6 +124,9 @@ export class DocumentoComercialService {
 
       const descuentoGeneral = Number(venta.descuento) || 0;
       const productos = ProcesarItemsConDescuento(venta.productos, descuentoGeneral);
+      // Lista fija sin descuento real (oct-2026): ni columna "Desc" ni línea "Descuento" - ver OcultarDescuentoListaNeta.
+      const ocultarDescuento = OcultarDescuentoListaNeta(venta);
+      comprobante.ocultarDescuento = ocultarDescuento;
       const servicios = ProcesarItemsConDescuento(venta.servicios, descuentoGeneral);
 
       // Sin ítems (caso límite heredado del mismo criterio que comprobante.service.ts/
@@ -136,7 +140,7 @@ export class DocumentoComercialService {
       const productosOrdenados = [...(venta.productos ?? [])]
         .sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
 
-      const tablaProductos = ArmarFilasProductosConTalles(productosOrdenados, lineasTalle);
+      const tablaProductos = ArmarFilasProductosConTalles(productosOrdenados, lineasTalle, ocultarDescuento);
       comprobante.filasProducto = tablaProductos.filasProducto;
       comprobante.filasProductoGrupos = tablaProductos.filasProductoGrupos;
       comprobante.filasProductoContinuacion = tablaProductos.filasProductoContinuacion;
@@ -148,7 +152,7 @@ export class DocumentoComercialService {
           { text: 'Servicio', style: 'tableHeader', alignment: 'left' },
           { text: 'Cant', style: 'tableHeader', alignment: 'center' },
           { text: 'Precio', style: 'tableHeader', alignment: 'right' },
-          { text: 'Desc', style: 'tableHeader', alignment: 'right' },
+          ...(ocultarDescuento ? [] : [{ text: 'Desc', style: 'tableHeader', alignment: 'right' }]),
           { text: 'Total', style: 'tableHeader', alignment: 'right' },
         ]
       ];
@@ -159,7 +163,7 @@ export class DocumentoComercialService {
           CortarNombreProducto(item.nomServicio),
           FormatearCantidad(item.cantidad),
           { text: FormatearPrecio(item.unitario), alignment: 'right' },
-          { text: item.descuentoAplicado + "%", alignment: 'right' },
+          ...(ocultarDescuento ? [] : [{ text: item.descuentoAplicado + "%", alignment: 'right' }]),
           { text: FormatearPrecioTotalNeto(item.unitario, item.cantidad, item.descuentoAplicado), alignment: 'right' },
         ]);
       });
@@ -295,7 +299,7 @@ export class DocumentoComercialService {
           ] : [
           {
             table: {
-              widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+              widths: ['auto', '*', ...Array(comprobante.ocultarDescuento ? 14 : 15).fill('auto')],
               body: comprobante.filasProducto
             },
             layout: {
@@ -326,7 +330,7 @@ export class DocumentoComercialService {
             { text: `Detalle Servicios`, style: 'recargaDescuento', alignment: 'left', bold: true },
             {
               table: {
-                widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
+                widths: ['auto', '*', ...Array(comprobante.ocultarDescuento ? 3 : 4).fill('auto')],
                 body: comprobante.filasServicio
               },
               layout: {
@@ -367,8 +371,10 @@ export class DocumentoComercialService {
                   },
                   {
                     stack: [
-                      { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
-                      { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ...(comprobante.ocultarDescuento ? [] : [
+                        { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
+                        { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ]),
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'total', alignment: 'right' },
                     ]
                   }

@@ -56,7 +56,7 @@
                         <th colspan="10" class="text-center">Talles</th>
                         <th>Cant.</th>
                         <th>Precio</th>
-                        <th>Desc. Aplicado</th>
+                        @if(!ocultarDescuento){ <th>Desc. Aplicado</th> }
                         <th>Total</th>
                     </tr>
                 </ng-template>
@@ -73,7 +73,7 @@
                         <td></td>
                         <td></td>
                         <td></td>
-                        <td></td>
+                        @if(!ocultarDescuento){ <td></td> }
                     </tr>
                 </ng-template>
                 <ng-template #body let-producto let-rowIndex="rowIndex">
@@ -106,7 +106,7 @@
                         <td>{{ producto.t10 || '' }}</td>
                         <td style="width: 150px;">{{ producto.cantidad }}</td>
                         <td style="width: 150px;">${{ producto.precioMostrar | decimalFormat}}</td>
-                        <td style="width: 150px;">{{ producto.descuentoAplicado ?? 0 }}%</td>
+                        @if(!ocultarDescuento){ <td style="width: 150px;">{{ producto.descuentoAplicado ?? 0 }}%</td> }
                         <td style="width: 150px;">${{ producto.totalMostrar | decimalFormat }}</td>
                     </tr>
 
@@ -130,7 +130,7 @@
                         <th>Nombre</th>
                         <th>Cant.</th>
                         <th>Precio</th>
-                        <th>Desc. Aplicado</th>
+                        @if(!ocultarDescuento){ <th>Desc. Aplicado</th> }
                         <th>Total</th>
                     </tr>
                 </ng-template>
@@ -140,7 +140,7 @@
                         <td>{{ servicio.nomServicio }}</td>
                         <td style="width: 150px;">{{ servicio.cantidad }}</td>
                         <td style="width: 150px;">${{ servicio.unitario | decimalFormat}}</td>
-                        <td style="width: 150px;">{{ servicio.descuentoAplicado ?? 0 }}%</td>
+                        @if(!ocultarDescuento){ <td style="width: 150px;">{{ servicio.descuentoAplicado ?? 0 }}%</td> }
                         <td style="width: 150px;">${{ servicio.totalMostrar | decimalFormat }}</td>
                     </tr>
                 </ng-template>
@@ -183,7 +183,7 @@
                                 <span>Tipo Comprobante</span>
                             </div>
                         </div>
-                        <div class="enLinea">
+                        @if(!ocultarDescuento){ <div class="enLinea">
                             <div class="recuadro">
                                 <p>{{venta.tipoDescuento}}</p>
                                 <p-divider />
@@ -194,7 +194,7 @@
                                 <p-divider />
                                 <span>Descuento</span>
                             </div>
-                        </div>
+                        </div> }
                     }
                 </div>
                 
@@ -220,10 +220,12 @@
                         <span>Subtotal:</span>
                         <span class="monto">${{subTotal | decimalFormat}}</span>
                     </div>
+                    @if(!ocultarDescuento){
                     <div class="fila">
                         <span>Descuento:</span>
                         <span class="monto">${{totalDescuento | decimalFormat}}</span>
                     </div>
+                    }
 
                     @if(mostrarIva){
                     <div class="fila">
@@ -231,7 +233,7 @@
                         <span class="monto">${{totalNeto | decimalFormat}}</span>
                     </div>
                     <div class="fila">
-                        <span>IVA 21% (Incluido):</span>
+                        <span>IVA 21% ({{ ivaDiscriminado ? 'Discriminado' : 'Incluido' }}):</span>
                         <span class="monto">${{totalIva | decimalFormat}}</span>
                     </div>
                     }

@@ -169,7 +169,12 @@ export class ListadoVentasComponent {
 
   Exportar(){
     const fechas = this.filtros.get('fechas')?.value;
-    if(!fechas || fechas.length !== 2 || !fechas[0] || !fechas[1]){
+    const fechasCompletas = !!fechas && fechas.length === 2 && !!fechas[0] && !!fechas[1];
+    const esPre = this.tipo === 'pre';
+
+    // Facturación: el rango de fechas sigue siendo obligatorio. Pre-Facturación: opcional (sin
+    // rango se exporta todo lo cargado, que es lo que necesitan para ver pedidos pendientes).
+    if(!esPre && !fechasCompletas){
       this.Notificaciones.Warn("Debe seleccionar un rango de fechas completo (desde y hasta).");
       return;
     }
@@ -178,11 +183,17 @@ export class ListadoVentasComponent {
       tipo: this.tipo,
       idProceso: this.filtros.value.proceso?.id ?? 0,
       nroProceso: this.filtros.value.nroProceso,
-      fechas: this.filtros.value.fechas,
+      fechas: fechasCompletas ? fechas : null,
+      // Mismo filtro que el listado: sin esto el export no coincidía con lo que se ve en pantalla.
+      fechasEntrega: this.filtros.value.fechasEntrega,
       cliente: this.filtros.value.cliente?.id ?? 0
     });
 
-    this.filesService.DescargarVentasExcel(this.filtroActual).subscribe(blob => {
+    const descarga$ = esPre
+      ? this.filesService.DescargarPreFacturacionExcel(this.filtroActual)
+      : this.filesService.DescargarVentasExcel(this.filtroActual);
+
+    descarga$.subscribe(blob => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
 
@@ -192,7 +203,7 @@ export class ListadoVentasComponent {
       const mm = String(fecha.getMonth() + 1).padStart(2, '0'); // Meses empiezan en 0
       const yy = String(fecha.getFullYear()).slice(-2); // últimos 2 dígitos del año
 
-      const nombreArchivo = `Ventas_${dd}-${mm}-${yy}.xlsx`;
+      const nombreArchivo = `${esPre ? 'PreFacturacion' : 'Ventas'}_${dd}-${mm}-${yy}.xlsx`;
 
       a.href = url;
       a.download = nombreArchivo; 
