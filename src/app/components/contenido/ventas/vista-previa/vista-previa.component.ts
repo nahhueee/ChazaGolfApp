@@ -60,7 +60,7 @@ export class VistaPreviaComponent implements OnInit {
   }
 
   // Monto en neto para Factura/NC/ND A (igual que el impreso), sin cambios para el resto.
-  Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
+  Visible(monto?: number | null): number { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   totalIva:number = 0;

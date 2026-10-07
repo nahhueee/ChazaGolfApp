@@ -512,7 +512,7 @@ export class AddModVentasComponent {
     // criterio que el comprobante impreso (ver ivaDiscriminado en factura.service.ts).
     // Monto en neto para Factura A (igual que el impreso y la vista previa) - solo presentación, ver
     // MontoSegunComprobante.
-    Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
+    Visible(monto?: number | null): number { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
 
     get ivaDiscriminado(): boolean {
       return this.tipo === 'factura' && this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_A;

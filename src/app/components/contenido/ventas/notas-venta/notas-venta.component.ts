@@ -132,7 +132,7 @@ export class NotasVentaComponent {
     return this.emiteFiscal && this.venta.idTipoComprobante == TipoComprobante.FACTURA_A;
   }
 
-  Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.enNeto); }
+  Visible(monto?: number | null): number { return MontoSegunComprobante(monto, this.enNeto); }
 
   // Subtotal como lo imprime la NC A: neto antes de descuento (neto + descuento/1,21), para que
   // Subtotal - Descuento + IVA cierre contra el Total Nota. En el resto, this.subTotal tal cual.

@@ -170,7 +170,7 @@ export const OcultarDescuentoListaNeta = (venta: Venta): boolean => {
 // presentación (oct-2026, pedido del cliente: "se ve igual en todos lados") - el cálculo
 // (descuento, topes, pagos, total a ARCA) sigue en bruto. Siempre convertir juntos unitario,
 // total por línea, subtotal y descuento: convertir solo uno es el error de getPrecioMostrado().
-export const MontoSegunComprobante = (monto: number | undefined | null, enNeto: boolean): number | undefined => {
-  if (monto == null) return undefined;
-  return enNeto ? Number(monto) / 1.21 : Number(monto);
+export const MontoSegunComprobante = (monto: number | undefined | null, enNeto: boolean): number => {
+  const valor = Number(monto) || 0;
+  return enNeto ? valor / 1.21 : valor;
 };
