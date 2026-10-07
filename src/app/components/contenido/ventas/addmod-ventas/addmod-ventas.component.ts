@@ -1360,10 +1360,30 @@ export class AddModVentasComponent {
   // tiene ningún lector en el código (deuda técnica señalada, no resuelta: se deja para no
   // tocar de más la funcionalidad de "editar precio a mano" de Pedido, que es independiente
   // de este cambio y no fue pedida).
+  //
+  // CORRECCIÓN oct-2026: el comentario de arriba quedó desactualizado - el flag SÍ tiene
+  // lector: RecalcularPreciosSegunComprobante saltea los ítems marcados. Y desde que las
+  // listas fijas (4.0/4.5/5.0) hornean el % en el precio (ver PrecioItemSegunComprobante),
+  // comparar `unitario` contra el catálogo crudo marcaba como "editado a mano" TODO ítem de
+  // un Pedido de esos clientes: al facturarlo A/B no se le sumaba el 21% (caso real: Pedido
+  // 408, Star Golf, Lista 5 - neto 2.499.173 en vez de 3.024.000). Ahora solo se marca si
+  // `unitario` no coincide con ningún precio que el propio sistema pudo haber calculado a
+  // partir del catálogo: con/sin IVA (según el comprobante con que se guardó el documento)
+  // x con/sin el % de la lista fija (esquema nuevo vs. documentos viejos con el % como
+  // descuento aparte). La lista sale del documento cargado (venta.idListaPrecio, persistida)
+  // con fallback al cliente seleccionado.
   private MarcarPreciosEditados(productos: ProductosFactura[]) {
+    const idLista = this.venta?.idListaPrecio ?? this.clienteSeleccionado?.idListaPrecio;
+    const descLista = descuentoListaPrecioNeto(idLista);
     (productos ?? []).forEach(p => {
       if (p.precio == null) return;
-      if (Math.abs((p.unitario ?? 0) - p.precio) > 0.01) {
+      const pctLista = descLista > 0 ? Math.min(descLista, this.TopeDescuentoDe(p)) : 0;
+      const derivables = [p.precio, p.precio * 1.21].flatMap(base => [
+        base,
+        Math.round(base * (1 - pctLista / 100) * 100) / 100
+      ]);
+      const unitario = p.unitario ?? 0;
+      if (!derivables.some(d => Math.abs(unitario - d) <= 0.01)) {
         p.precioEditadoManualmente = true;
       }
     });

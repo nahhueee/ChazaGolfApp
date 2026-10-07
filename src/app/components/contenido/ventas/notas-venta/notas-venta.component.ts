@@ -164,6 +164,15 @@ export class NotasVentaComponent {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
+      // Fix oct-2026 - este componente vive siempre montado en listado-ventas (solo
+      // se oculta), asi que nuevaVenta/objFacturar sobrevivian entre una NC y la
+      // siguiente. Guardar() setea nuevaVenta.factura en la NC aprobada y
+      // armarObjetoVenta() no la limpia: la NC siguiente viajaba a /ventas/emitir
+      // con la factura de la anterior (Duplicate entry en uq_vf_comprobante). Cada
+      // apertura arranca con objetos nuevos.
+      this.nuevaVenta = new Venta();
+      this.objFacturar = new ObjFacturar();
+
       // Clona ANTES de tocar nada: el form arranca ya mostrando el remanente
       // real (no lo facturado), así el usuario no tiene que acordarse de bajar
       // a mano cada talla ya acreditada - ver comentario en ClonarProductos.
