@@ -1,4 +1,5 @@
 
+import { MontoSegunComprobante } from '../../../../services/helpers/precios-venta.helper';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { AccordionModule } from 'primeng/accordion';
@@ -509,8 +510,12 @@ export class AddModVentasComponent {
     // pactado en el esquema anterior) la columna sigue visible para no esconder plata.
     // Factura A discrimina el IVA (el resto de los comprobantes con IVA lo muestra incluido) - mismo
     // criterio que el comprobante impreso (ver ivaDiscriminado en factura.service.ts).
+    // Monto en neto para Factura A (igual que el impreso y la vista previa) - solo presentación, ver
+    // MontoSegunComprobante.
+    Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
+
     get ivaDiscriminado(): boolean {
-      return this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_A;
+      return this.tipo === 'factura' && this.TipoComprobanteControl === TIPO_COMPROBANTE.FACTURA_A;
     }
 
     get ocultarColumnaDescuento(): boolean {

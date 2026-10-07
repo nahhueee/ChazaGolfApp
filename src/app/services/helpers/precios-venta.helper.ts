@@ -164,3 +164,13 @@ export const OcultarDescuentoListaNeta = (venta: Venta): boolean => {
   const items: any[] = [...(venta.productos ?? []), ...(venta.servicios ?? [])];
   return !items.some(i => (Number(i.importeDescuento) || 0) > 0 || (Number(i.descuentoAplicado) || 0) > 0);
 };
+
+// Monto tal cual lo muestra el comprobante IMPRESO: en Factura/NC/ND A (enNeto) va dividido por
+// 1,21 (mismo criterio que QuitarIva en factura.service.ts), en el resto sin cambios. SOLO
+// presentación (oct-2026, pedido del cliente: "se ve igual en todos lados") - el cálculo
+// (descuento, topes, pagos, total a ARCA) sigue en bruto. Siempre convertir juntos unitario,
+// total por línea, subtotal y descuento: convertir solo uno es el error de getPrecioMostrado().
+export const MontoSegunComprobante = (monto: number | undefined | null, enNeto: boolean): number | undefined => {
+  if (monto == null) return undefined;
+  return enNeto ? Number(monto) / 1.21 : Number(monto);
+};

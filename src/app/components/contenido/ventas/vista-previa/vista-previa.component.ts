@@ -13,7 +13,7 @@ import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { MiscService } from '../../../../services/misc.service';
 import { LineasTalle } from '../../../../models/Producto';
 import { ID_PROCESO } from '../models/venta.constants';
-import { OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
+import { MontoSegunComprobante, OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
   selector: 'app-vista-previa',
@@ -58,6 +58,9 @@ export class VistaPreviaComponent implements OnInit {
   get ivaDiscriminado(): boolean {
     return [TipoComprobante.FACTURA_A, TipoComprobante.NC_A, TipoComprobante.ND_A].includes(this.venta.idTipoComprobante!);
   }
+
+  // Monto en neto para Factura/NC/ND A (igual que el impreso), sin cambios para el resto.
+  Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.ivaDiscriminado); }
   totalGeneral:number = 0;
   totalAPagar:number = 0;
   totalIva:number = 0;

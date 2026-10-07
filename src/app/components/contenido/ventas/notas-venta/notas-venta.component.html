@@ -114,7 +114,7 @@
                     <th *ngFor="let talla of talles" class="text-center">{{ talla }}</th>
                     <th>Cant.</th>
                     <th>Precio</th>
-                    <th>Descuento</th>
+                    @if(!ocultarDescuento){ <th>Descuento</th> }
                     <th>Total</th>
                     </tr>
             </ng-template>
@@ -182,9 +182,9 @@
                     }
 
                     <td>{{ producto.cantidad }}</td>
-                    <td>{{ producto.precioMostrar | decimalFormat }}</td>
-                    <td>{{ producto.descuentoAplicado ?? 0 | decimalFormat }}%</td>
-                    <td>{{ producto.totalMostrar | decimalFormat }}</td>
+                    <td>{{ Visible(producto.precioMostrar) | decimalFormat }}</td>
+                    @if(!ocultarDescuento){ <td>{{ producto.descuentoAplicado ?? 0 | decimalFormat }}%</td> }
+                    <td>{{ Visible(producto.totalMostrar) | decimalFormat }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -206,7 +206,7 @@
                     <th>Nombre</th>
                     <th>Cant.</th>
                     <th>Precio</th>
-                    <th>Descuento</th>
+                    @if(!ocultarDescuento){ <th>Descuento</th> }
                     <th>Total</th>
                 </tr>
             </ng-template>
@@ -238,9 +238,9 @@
                         </ng-template>
                         </p-cellEditor>
                     </td>
-                    <td>{{ servicio.precioMostrar | decimalFormat }}</td>
-                    <td>{{ servicio.descuentoAplicado ?? 0 | decimalFormat }}%</td>
-                    <td>{{ servicio.totalMostrar | decimalFormat }}</td>
+                    <td>{{ Visible(servicio.precioMostrar) | decimalFormat }}</td>
+                    @if(!ocultarDescuento){ <td>{{ servicio.descuentoAplicado ?? 0 | decimalFormat }}%</td> }
+                    <td>{{ Visible(servicio.totalMostrar) | decimalFormat }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -249,12 +249,14 @@
         <div class="resumen">
             <div class="fila">
                 <span>Subtotal:</span>
-                <span class="monto">${{subTotal | decimalFormat}}</span>
+                <span class="monto">${{subTotalVisible | decimalFormat}}</span>
             </div>
+            @if(!ocultarDescuento){
             <div class="fila">
                 <span>Descuento:</span>
-                <span class="monto">${{totalDescuento | decimalFormat}}</span>
+                <span class="monto">${{Visible(totalDescuento) | decimalFormat}}</span>
             </div>
+            }
 
             @if(mostrarIva){
             <div class="fila">

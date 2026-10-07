@@ -21,6 +21,7 @@ import { ObjFacturar, TipoComprobante } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
+import { MontoSegunComprobante, OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
 import { esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
@@ -122,6 +123,25 @@ export class NotasVentaComponent {
   get emiteFiscal(): boolean {
     return this.puedeElegirFiscal && this.tipoNotaElegida === 'FISCAL';
   }
+
+  // true si la nota que se va a emitir es NC A (Factura A origen + nota fiscal): el impreso la
+  // muestra en neto (ver imprimirEnNeto en factura.service.ts), así que acá también - misma
+  // regla que addmod-ventas y vista-previa (oct-2026). Una NC X (interna) sobre Factura A se
+  // imprime en bruto y no entra. Solo presentación: CalcularTotalGeneral sigue en bruto.
+  get enNeto(): boolean {
+    return this.emiteFiscal && this.venta.idTipoComprobante == TipoComprobante.FACTURA_A;
+  }
+
+  Visible(monto?: number | null): number | undefined { return MontoSegunComprobante(monto, this.enNeto); }
+
+  // Subtotal como lo imprime la NC A: neto antes de descuento (neto + descuento/1,21), para que
+  // Subtotal - Descuento + IVA cierre contra el Total Nota. En el resto, this.subTotal tal cual.
+  get subTotalVisible(): number {
+    return this.enNeto ? this.subTotal + this.totalDescuento / 1.21 : this.subTotal;
+  }
+
+  // Lista fija (4.0/4.5/5.0) sin descuento real: la lista es el precio, no se muestra Descuento.
+  get ocultarDescuento(): boolean { return OcultarDescuentoListaNeta(this.venta); }
 
   // Saldo ($) de la factura todavía disponible para una nueva NC fiscal -
   // descuenta lo ya acreditado por NC fiscales previas (venta.cantidadesAcreditadas,

@@ -468,7 +468,7 @@
                             </ng-container>
 
                             <ng-template #soloLecturaPrecio>
-                                {{ producto.unitario | decimalFormat }}
+                                {{ Visible(producto.unitario) | decimalFormat }}
                             </ng-template>
                         </td>
 
@@ -508,7 +508,7 @@
                             </ng-template>
                         </td> }
 
-                        <td>{{ producto.totalMostrar | decimalFormat }}</td>
+                        <td>{{ Visible(producto.totalMostrar) | decimalFormat }}</td>
                         @if(!itemsSoloLectura){
                             <td class="acciones-tabla">
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash"  (onClick)="EliminarItem($event, 'productos', rowIndex)" />
@@ -617,7 +617,7 @@
                         }
                     </td>
                     <td>{{ servicio.cantidad }}</td>
-                    <td>{{ servicio.unitario | decimalFormat}}</td>
+                    <td>{{ Visible(servicio.unitario) | decimalFormat}}</td>
 
                     <!-- Desc. % por ítem: ver comentario equivalente en la tabla de Productos. -->
                     @if(!ocultarColumnaDescuento){ <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? servicio.descuentoManual : null"
@@ -652,7 +652,7 @@
                         </ng-template>
                     </td> }
 
-                    <td>{{ servicio.totalMostrar | decimalFormat }}</td>
+                    <td>{{ Visible(servicio.totalMostrar) | decimalFormat }}</td>
                     @if(!itemsSoloLectura){
                         <td class="acciones-tabla">
                             <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-trash" (onClick)="EliminarItem($event, 'servicios', rowIndex)" />
@@ -857,14 +857,16 @@
                      Estandarizado (ago-2026) para que "Subtotal" signifique lo mismo acá,
                      en Vista Previa y en el comprobante impreso (antes cada pantalla mostraba
                      un número distinto bajo el mismo nombre y generaba confusión). -->
+                @if(!(ivaDiscriminado && ocultarColumnaDescuento)){
                 <div class="fila">
                     <span>Subtotal:</span>
-                    <span class="monto">${{totales.items| decimalFormat}}</span>
+                    <span class="monto">${{Visible(totales.items) | decimalFormat}}</span>
                 </div>
+                }
 
                 <div class="fila">
                     <span>Descuento:</span>
-                    <span class="monto">${{totales.descuento| decimalFormat}}</span>
+                    <span class="monto">${{Visible(totales.descuento) | decimalFormat}}</span>
                 </div>
 
                 @if(tipo == 'factura'){
