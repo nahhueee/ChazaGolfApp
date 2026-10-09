@@ -10,6 +10,18 @@
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
     </app-encabezado-seccion>
 
+    @if(tipo == 'pre' && pendientes.total > 0){
+        <div class="aviso-pendientes" [class.atrasadas]="pendientes.atrasadas > 0">
+            <i class="pi pi-exclamation-circle"></i>
+            <span>
+                Hay <b>{{ pendientes.total }}</b> {{ pendientes.total == 1 ? 'nota de empaque pendiente' : 'notas de empaque pendientes' }} de control
+                @if(pendientes.atrasadas > 0){ (<b>{{ pendientes.atrasadas }}</b> de días anteriores)}.
+                Revisalas y aprobalas antes de terminar el día.
+            </span>
+            <p-button label="Ver pendientes" size="small" severity="secondary" icon="pi pi-filter" (onClick)="VerPendientes()"/>
+        </div>
+    }
+
     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
             <!-- Proceso -->
@@ -63,6 +75,15 @@
         </div>
     </form>
 
+    <!-- Filtro "pendientes de control": no se elige a mano, lo activa "Ver pendientes" (cartel,
+         menú) y lo saca "Limpiar". Solo se informa acá para que se vea que el listado está filtrado. -->
+    @if(tipo == 'pre' && filtros.value.soloPendientes){
+        <div class="filtro-activo">
+            <p-tag icon="pi pi-filter" severity="warn" value="Mostrando solo notas de empaque pendientes de control"/>
+            <small>Usá "Limpiar" para ver todo.</small>
+        </div>
+    }
+
     <div class="tabla">
         <p-table 
         [value]="ventas"
@@ -111,7 +132,7 @@
                         }
                     }
                     <td>
-                        <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" />
+                        <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" [pTooltip]="TooltipAuditoria(venta)" tooltipPosition="bottom" />
                         @if(venta.regularizacionArca){
                             <p-tag styleClass="ml-1" severity="info" value="Regularización ARCA"
                             pTooltip="Esta venta se regularizó manualmente: el comprobante ya tenía CAE en ARCA pero no había quedado registrado en el sistema."
@@ -120,7 +141,7 @@
                     </td>
                     <td>
                         <div class="acciones">
-                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO'"/>
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO' || !PuedeEditar(venta)"/>
 
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
 

@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { from, Observable } from 'rxjs';
 import { Body, getClient, ResponseType } from '@tauri-apps/api/http';
@@ -7,6 +7,7 @@ import { NotificacionesService } from './notificaciones.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
+import { SOLICITUD_SILENCIOSA } from './http-contexts';
 
 @Injectable({
   providedIn: 'root'
@@ -51,6 +52,18 @@ export class ApiService {
     return this.esApp
       ? from(this.getFromTauri<T>(endpoint))
       : this.http.get<T>(this.apiUrl + endpoint, { headers: this.getAuthHeaders() });
+  }
+
+  // GET de fondo (ver SOLICITUD_SILENCIOSA): sin spinner de pantalla completa ni toasts de
+  // error. En la app de escritorio (Tauri) el cliente http propio ya maneja su spinner, así
+  // que ahí se comporta como un get() común.
+  getSilencioso<T>(endpoint: string): Observable<T | null> {
+    return this.esApp
+      ? from(this.getFromTauri<T>(endpoint))
+      : this.http.get<T>(this.apiUrl + endpoint, {
+          headers: this.getAuthHeaders(),
+          context: new HttpContext().set(SOLICITUD_SILENCIOSA, true)
+        });
   }
 
   post<T>(endpoint: string, body: any): Observable<T | null> {

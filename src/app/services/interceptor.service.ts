@@ -3,6 +3,7 @@ import { HttpEvent, HttpInterceptor, HttpHandler, HttpRequest, HttpErrorResponse
 import { Observable, throwError } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { SOLICITUD_SILENCIOSA } from './http-contexts';
 
 @Injectable()
 export class InterceptorService implements HttpInterceptor {
@@ -10,6 +11,11 @@ export class InterceptorService implements HttpInterceptor {
   constructor(private spinner: NgxSpinnerService) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // Consultas de fondo (ver SOLICITUD_SILENCIOSA): sin spinner de pantalla completa.
+    if (req.context.get(SOLICITUD_SILENCIOSA)) {
+      return next.handle(req);
+    }
+
     this.spinner.show();
 
     return next.handle(req).pipe(

@@ -8,6 +8,9 @@ export class FiltroVenta{
   tipo = "";
   idProceso = 0;
   nroProceso = 0;
+  // Estado exacto de la venta (ej. 'Pendiente'). Vacío = todos. Lo valida el backend contra
+  // los estados conocidos (ver FiltroEstadoSql).
+  estado = "";
   fechas = "";
   // Filtro por rango de fecha de entrega prometida. Solo aplica a
   // Presupuesto/Pedido/Nota de Empaque (tipo === 'pre').
@@ -27,6 +30,7 @@ export class FiltroVenta{
       this.tipo = data.tipo;
       this.idProceso = data.idProceso;
       this.nroProceso = data.nroProceso;
+      this.estado = data.estado ?? "";
       this.fechas = data.fechas;
       this.fechasEntrega = data.fechasEntrega;
       this.cliente = data.cliente;

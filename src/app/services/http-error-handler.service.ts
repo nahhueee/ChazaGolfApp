@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { NotificacionesService } from './notificaciones.service';
+import { SOLICITUD_SILENCIOSA } from './http-contexts';
 
 @Injectable({
   providedIn: 'root'
@@ -23,6 +24,12 @@ export class HttpErrorHandlerService  implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((err)=>{
         if(err instanceof HttpErrorResponse){
+
+          // Consulta de fondo (ver SOLICITUD_SILENCIOSA): no se avisa con toast, salvo 401
+          // (sesión vencida), que se maneja igual que siempre.
+          if (request.context.get(SOLICITUD_SILENCIOSA) && err.status !== 401) {
+            return throwError(err);
+          }
 
           //Dependiendo el código de error mostramos un mensaje
           switch (err.status) {

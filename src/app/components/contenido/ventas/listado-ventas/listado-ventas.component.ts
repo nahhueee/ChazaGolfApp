@@ -1,4 +1,6 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnDestroy, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { NotasEmpaquePendientesService, ResumenNotasEmpaque } from '../../../../services/notas-empaque-pendientes.service';
 import { Venta } from '../../../../models/Factura';
 import { FiltroGral } from '../../../../models/filtros/FiltroGral';
 import { VentasService } from '../../../../services/ventas.service';
@@ -33,7 +35,7 @@ import { NotaCreditoXComponent } from "../nota-credito-x/nota-credito-x.componen
 import { NotaDebitoXComponent } from "../nota-debito-x/nota-debito-x.component";
 import { FilesService } from '../../../../services/files.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
-import { puedeDarseDeBaja, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito } from '../models/venta.constants';
+import { ESTADO_VENTA, ID_PROCESO, puedeDarseDeBaja, puedeEditarseVenta, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito } from '../models/venta.constants';
 import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
@@ -65,7 +67,7 @@ import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta
   styleUrl: './listado-ventas.component.scss',
   providers: [ConfirmationService],
 })
-export class ListadoVentasComponent {
+export class ListadoVentasComponent implements OnDestroy {
   ventas: Venta[] = [];
   totalRecords: number = 0;
   loading: boolean = false;
@@ -92,6 +94,24 @@ export class ListadoVentasComponent {
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
   procesos:ProcesoVenta[] = [];
+
+  // Estado que filtra el toggle "Solo pendientes de control" (la NE sin controlar). Antes había
+  // un selector con todos los estados, pero mezclaba los de Presupuesto/Pedido/Nota de Empaque
+  // (Aprobado/Aprobada, Asociado/Asociada...) y no se entendía; el backend sigue aceptando
+  // cualquier estado en FiltroVenta.estado.
+  private readonly ESTADO_PENDIENTE_CONTROL = ESTADO_VENTA.PENDIENTE;
+
+  // El acceso rápido (badge/Ver pendientes) llega por query params. Una vez aplicados se sacan
+  // de la URL; esa limpieza hace emitir de nuevo a queryParams y esta bandera evita que esa
+  // emisión se tome como "cambio de pantalla" (limpiaría el filtro recién aplicado). Sin sacar
+  // los parámetros, volver a tocar "Ver pendientes" después de Limpiar navegaba a la MISMA URL y
+  // Angular lo ignoraba (el filtro no se aplicaba).
+  private ignorarProximaEmisionDeParametros = false;
+
+  // Notas de Empaque pendientes de control (oct-2026), para el cartel de arriba. Ver
+  // NotasEmpaquePendientesService.
+  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0 };
+  private subs = new Subscription();
   @ViewChild('op') op!: Popover;
   @ViewChild('notas') notas!: Popover;
   @ViewChild('tipoNC') tipoNC!: Popover;
@@ -108,11 +128,13 @@ export class ListadoVentasComponent {
     private documentoComercialService:DocumentoComercialService,
     private confirmationService: ConfirmationService,
     private Notificaciones: NotificacionesService,
-    private filesService:FilesService
+    private filesService:FilesService,
+    private pendientesService:NotasEmpaquePendientesService
   ){
     this.filtros = new FormGroup({
       proceso: new FormControl(),
       nroProceso: new FormControl(),
+      soloPendientes: new FormControl(false),
       fechas: new FormControl(),
       fechasEntrega: new FormControl(),
       cliente: new FormControl()
@@ -120,18 +142,64 @@ export class ListadoVentasComponent {
   }
 
   ngOnInit() {
-    this.rutaActiva.queryParams.subscribe(params => {
+    this.subs.add(this.pendientesService.resumen$.subscribe(r => this.pendientes = r));
+
+    this.subs.add(this.rutaActiva.queryParams.subscribe(params => {
+      if (this.ignorarProximaEmisionDeParametros) {
+        this.ignorarProximaEmisionDeParametros = false;
+        return;
+      }
       this.tipo = params['tipo'] ?? 'factura';
-      this.LimpiarFiltros();
-      this.ObtenerProcesosVenta();
+
+      // Acceso rápido por URL (oct-2026), ej. el badge del menú: /ventas?tipo=pre&idProceso=7&estado=Pendiente
+      // deja filtradas las Notas de Empaque pendientes de control. Solo aplica a Pre-Facturación.
+      const idProcesoRapido = this.tipo === 'pre' ? Number(params['idProceso'] ?? 0) : 0;
+      const estadoRapido = this.tipo === 'pre' ? (params['estado'] ?? null) : null;
+
+      if (idProcesoRapido || estadoRapido) {
+        // El filtro de proceso necesita la lista de procesos ya cargada (el select trabaja con
+        // el objeto), así que la búsqueda se hace UNA sola vez cuando llegan, en vez de
+        // buscar sin filtros primero.
+        this.filtros.reset();
+        this.filtros.patchValue({ soloPendientes: estadoRapido === this.ESTADO_PENDIENTE_CONTROL });
+        this.ObtenerProcesosVenta(() => {
+          const proceso = this.procesos.find(p => p.id === idProcesoRapido);
+          if (proceso) this.filtros.patchValue({ proceso });
+          this.Buscar();
+        });
+
+        // Se consumen los parámetros: se sacan de la URL (ver ignorarProximaEmisionDeParametros).
+        this.ignorarProximaEmisionDeParametros = true;
+        this.router.navigate([], {
+          relativeTo: this.rutaActiva,
+          queryParams: { idProceso: null, estado: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        }).then(() => this.ignorarProximaEmisionDeParametros = false);
+      } else {
+        this.LimpiarFiltros();
+        this.ObtenerProcesosVenta();
+      }
       this.ObtenerClientes();
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
+
+  // Lleva a las Notas de Empaque sin controlar (mismo filtro que el badge del menú).
+  VerPendientes(){
+    this.router.navigate(['/ventas'], {
+      queryParams: { tipo: 'pre', idProceso: ID_PROCESO.NOTA_EMPAQUE, estado: 'Pendiente' }
     });
   }
 
-  ObtenerProcesosVenta(){
+  ObtenerProcesosVenta(alCargar?: () => void){
     this.miscService.ObtenerProcesosVenta(this.tipo)
       .subscribe(response => {
         this.procesos = response;
+        alCargar?.();
       });
   }
 
@@ -154,6 +222,7 @@ export class ListadoVentasComponent {
         tipo: this.tipo,
         idProceso: this.filtros.value.proceso?.id ?? 0,
         nroProceso: this.filtros.value.nroProceso,
+        estado: this.filtros.value.soloPendientes ? this.ESTADO_PENDIENTE_CONTROL : '',
         fechas: this.filtros.value.fechas,
         fechasEntrega: this.filtros.value.fechasEntrega,
         cliente: this.filtros.value.cliente?.id ?? 0
@@ -183,6 +252,7 @@ export class ListadoVentasComponent {
       tipo: this.tipo,
       idProceso: this.filtros.value.proceso?.id ?? 0,
       nroProceso: this.filtros.value.nroProceso,
+      estado: this.filtros.value.soloPendientes ? this.ESTADO_PENDIENTE_CONTROL : '',
       fechas: fechasCompletas ? fechas : null,
       // Mismo filtro que el listado: sin esto el export no coincidía con lo que se ve en pantalla.
       fechasEntrega: this.filtros.value.fechasEntrega,
@@ -321,6 +391,7 @@ export class ListadoVentasComponent {
           .subscribe(response => {
             if(response=='OK'){
               this.Notificaciones.Success("Nota de empaque aprobada correctamente.");
+              this.pendientesService.Actualizar();
               this.Buscar();
             }
           });
@@ -337,6 +408,27 @@ export class ListadoVentasComponent {
     return puedeDarseDeBaja(venta.idProceso, venta.estado);
   }
 
+  // Una Nota de Empaque Asociada/Facturada ya no se edita (ver puedeEditarseVenta). La
+  // validación real la hace el backend en ModificarBody.
+  PuedeEditar(venta: Venta): boolean {
+    return puedeEditarseVenta(venta.idProceso, venta.estado);
+  }
+
+  // Auditoría de la Nota de Empaque (oct-2026): quién aprobó y quién la modificó por última
+  // vez. Solo aplica a NE; para el resto devuelve '' (p-tooltip no muestra nada con vacío).
+  // La aprobación se muestra solo si la NE sigue Aprobada: al modificarla el backend la
+  // limpia, pero una NE ya Asociada/Facturada conserva quién la aprobó.
+  TooltipAuditoria(venta: Venta): string {
+    if (venta.idProceso !== ID_PROCESO.NOTA_EMPAQUE) return '';
+    const formato = (f?: Date) => f ? new Date(f).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    const lineas: string[] = [];
+    if (venta.usuarioAprobacion)
+      lineas.push(`Aprobada por ${venta.usuarioAprobacion} el ${formato(venta.fechaAprobacion)}`);
+    if (venta.usuarioModificacion)
+      lineas.push(`Última modificación: ${venta.usuarioModificacion} el ${formato(venta.fechaModificacion)}`);
+    return lineas.join('\n');
+  }
+
   AbrirDarBaja(venta: Venta) {
     this.ventaBaja = venta.id!;
     this.motivoBaja = '';
@@ -351,6 +443,7 @@ export class ListadoVentasComponent {
         next: () => {
           this.Notificaciones.Success(`Venta #${this.ventaBaja} dada de baja correctamente.`);
           this.bajaVisible = false;
+          this.pendientesService.Actualizar();
           this.Buscar();
         },
         // Mismo patrón que ConfirmarDarBaja en ventas-cliente.components.ts: el

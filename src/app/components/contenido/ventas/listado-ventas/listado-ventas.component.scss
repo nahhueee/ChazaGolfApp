@@ -20,3 +20,39 @@
     padding: 10px;
 }
 
+
+
+/* Cartel de Notas de Empaque pendientes de control (Pre-Facturación). Naranja si son
+   todas de hoy, rojo si hay de días anteriores. */
+.aviso-pendientes{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--p-orange-500);
+    background: color-mix(in srgb, var(--p-orange-500) 14%, transparent);
+}
+
+.aviso-pendientes.atrasadas{
+    border-color: var(--p-red-500);
+    background: color-mix(in srgb, var(--p-red-500) 14%, transparent);
+}
+
+.aviso-pendientes span{
+    flex: 1;
+}
+
+
+/* Aviso de filtro activo debajo de los filtros (ver "Ver pendientes"). */
+.filtro-activo{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 12px;
+}
+
+.filtro-activo small{
+    color: var(--text-color-secondary);
+}

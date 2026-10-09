@@ -20,6 +20,11 @@ export class VentasService {
   ObtenerVenta(idVenta:number): Observable<any> {
     return this.apiService.get(`ventas/obtener-una/${idVenta}`);
   }
+  // Resumen de Notas de Empaque pendientes de control: { total, atrasadas }. Consulta de
+  // fondo (la usa el contador del menú): sin spinner ni toasts de error.
+  ObtenerNotasEmpaquePendientes(): Observable<any> {
+    return this.apiService.getSilencioso('ventas/notas-empaque-pendientes');
+  }
   ObtenerVentaCuenta(idVenta:number): Observable<any> {
     return this.apiService.get(`ventas/obtener-venta-cuenta/${idVenta}`);
   }

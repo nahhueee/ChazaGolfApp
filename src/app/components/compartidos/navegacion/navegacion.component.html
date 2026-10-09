@@ -11,7 +11,15 @@
         </ng-template>
         <ng-template #end>
             <div class="opciones">
-               
+                @if(MOSTRAR_PASTILLA_PENDIENTES && pendientes.total > 0){
+                    <p-button size="small" [rounded]="true"
+                        [outlined]="pendientes.atrasadas == 0"
+                        [severity]="pendientes.atrasadas > 0 ? 'danger' : 'warn'"
+                        icon="pi pi-exclamation-circle"
+                        [label]="pendientes.total + (pendientes.total == 1 ? ' NE pendiente' : ' NE pendientes')"
+                        (onClick)="IrAPendientes()"
+                        [pTooltip]="TooltipPendientes" tooltipPosition="bottom"/>
+                }
                 <p-button [rounded]="true" [text]="true" (onClick)="Navegar('inicio')" pTooltip="Inicio" tooltipPosition="bottom" [icon]="'pi pi-home'"/>
                 <p-button [rounded]="true" [text]="true" (onClick)="CambiarModo()" pTooltip="Cambiar Tema" tooltipPosition="bottom" [icon]="esDark ? 'pi pi-sun' : 'pi pi-moon'"/>
                 <p-button [rounded]="true" [text]="true" icon="pi pi-sign-out" pTooltip="Cerrar Sesión" tooltipPosition="bottom" (onClick)="CerrarSesion()"/>

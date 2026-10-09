@@ -75,6 +75,7 @@ import {
   TALLES_ESTANDAR,
   TIPO_ITEM,
   esMayoristaConListaPropia,
+  puedeEditarseVenta,
   DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
   PORCENTAJE_RECARGO_TRANSFERENCIA,
   CONDICION_IVA_RESPONSABLE_INSCRIPTO,
@@ -371,6 +372,16 @@ export class AddModVentasComponent {
         this.procesos = procesos;
 
         if (venta) {
+
+          // Una Nota de Empaque Asociada/Facturada no se puede reabrir para editar (ver
+          // puedeEditarseVenta): guardarla la devolvería a Pendiente y permitiría facturarla
+          // de nuevo. El lápiz del listado ya viene deshabilitado; esto cubre abrir la URL a
+          // mano. El backend igual la rechaza en ModificarBody.
+          if (this.tipo === 'pre' && !puedeEditarseVenta(venta.idProceso, venta.estado)) {
+            this.Notificaciones.Warn(`La nota de empaque Nro ${venta.nroProceso} está ${venta.estado} y ya no se puede modificar.`);
+            this.router.navigate(['/ventas'], { queryParams: { tipo: this.tipo } });
+            return;
+          }
 
           this.modificando = true;
           this.venta = venta;
@@ -1572,7 +1583,14 @@ export class AddModVentasComponent {
               this.RecalcularPreciosSegunComprobante();
               this.CalcularTotalGeneral();
 
-              this.Notificaciones.Success("Nota de empaque cargada correctamente.")
+              // La factura es una conversión FIEL de la nota de empaque aprobada (oct-2026):
+              // los ítems se controlaron en la nota, así que acá no se modifican. Si hay que
+              // cambiar algo, se corrige la nota (vuelve a Pendiente) y se vuelve a aprobar.
+              // El backend lo valida igual (ValidarFacturacionDeNotaEmpaque).
+              this.itemsBloqueadosPorRelacion = true;
+              this.clienteBloqueadoPorRelacion = true;
+
+              this.Notificaciones.Success("Nota de empaque cargada correctamente. Los ítems no se pueden modificar.")
             },
             reject: () => {},
           });
@@ -1695,14 +1713,19 @@ export class AddModVentasComponent {
         }
         if(venta.idProceso == ID_PROCESO.NOTA_EMPAQUE){
           this.formGenerales.get('nroNota')?.setValue(venta.nroProceso);
-          this.Notificaciones.Info("Se relacionará con la nota de empaque Nro: " + venta.nroProceso);
+          // Conversión fiel de la nota aprobada: ítems y cliente bloqueados (ver BuscarNotaEmpaque).
+          // Un cliente distinto al de la nota es justo el tipo de error de carga que el
+          // control previo tiene que atajar; se valida también en el backend.
+          this.itemsBloqueadosPorRelacion = true;
+          this.clienteBloqueadoPorRelacion = true;
+          this.Notificaciones.Info("Se relacionará con la nota de empaque Nro: " + venta.nroProceso + ". Los ítems no se pueden modificar.");
         }
         if(venta.idProceso == ID_PROCESO.PRESUPUESTO){
           // La factura es una conversión FIEL del presupuesto: se bloquean los ítems
           // (productos y servicios). Si hay que cambiar algo, se corrige el presupuesto
-          // antes de relacionarlo. Solo Presupuesto: Pedido/Nota de Empaque siguen
-          // admitiendo ajuste al facturar (el precio de un Pedido se negocia, ver
-          // permiteEditarPrecio) y ese comportamiento no se toca.
+          // antes de relacionarlo. Pedido sigue admitiendo ajuste al facturar (el
+          // precio de un Pedido se negocia, ver permiteEditarPrecio) y eso no se toca; la Nota
+          // de Empaque pasó a bloquearse igual que el Presupuesto en oct-2026 (ver arriba).
           this.itemsBloqueadosPorRelacion = true;
           this.clienteBloqueadoPorRelacion = true;
           this.Notificaciones.Info("Se facturará el presupuesto Nro: " + venta.nroProceso + ". Los ítems no se pueden modificar.");

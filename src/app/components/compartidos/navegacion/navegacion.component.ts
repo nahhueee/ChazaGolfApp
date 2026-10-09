@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { MenuItem } from 'primeng/api';
@@ -9,6 +9,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { UsuariosService } from '../../../services/usuarios.service';
 import { environment } from '../../../environments/environment';
 import { APP_VERSION } from '../../../version';
+import { Subscription, timer } from 'rxjs';
+import { NotasEmpaquePendientesService, ResumenNotasEmpaque } from '../../../services/notas-empaque-pendientes.service';
+import { ID_PROCESO } from '../../contenido/ventas/models/venta.constants';
 
 @Component({
   selector: 'app-navegacion',
@@ -22,7 +25,7 @@ import { APP_VERSION } from '../../../version';
   templateUrl: './navegacion.component.html',
   styleUrl: './navegacion.component.scss',
 })
-export class NavegacionComponent {
+export class NavegacionComponent implements OnDestroy {
   items: MenuItem[] = [];
   esDark: boolean = false;
   activo: string = 'inicio';
@@ -36,10 +39,21 @@ export class NavegacionComponent {
   esProduccion: boolean = environment.envName === 'production';
   version: string = APP_VERSION;
 
+  // Notas de Empaque pendientes de control (oct-2026): badge en "Ventas" y acceso rápido al
+  // listado filtrado. Ver NotasEmpaquePendientesService.
+  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0 };
+  private subs = new Subscription();
+  private readonly REFRESCO_PENDIENTES_MS = 60_000;
+
+  // Pastilla "N NE pendientes" de la barra superior: oculta de momento (pedido de Nahu,
+  // oct-2026), el badge del menú Ventas alcanza. Para volver a mostrarla alcanza con true.
+  readonly MOSTRAR_PASTILLA_PENDIENTES = false;
+
   constructor(
     private router:Router,
     private temaService:TemaService,
     private usuariosService:UsuariosService,
+    private pendientesService:NotasEmpaquePendientesService,
   ){}
 
   ngOnInit() {
@@ -54,11 +68,21 @@ export class NavegacionComponent {
     // inconsistente con el JWT (expira a las 12hs, validado en el backend). El único disparador
     // de logout forzado ahora es el 401 real de un token vencido/inválido (ver
     // http-error-handler.service.ts / api.service.ts).
-    this.router.events.subscribe(event => {
+    this.subs.add(this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         this.ActualizarActivo(event.urlAfterRedirects);
+        // Al navegar también se refresca el contador (ej. después de guardar una NE nueva).
+        this.pendientesService.Actualizar();
       }
-    });
+    }));
+
+    // Contador de NE pendientes: se re-arma el menú cada vez que cambia, y se refresca solo
+    // cada minuto por si otro usuario carga o aprueba notas.
+    this.subs.add(this.pendientesService.resumen$.subscribe(resumen => {
+      this.pendientes = resumen;
+      this.items = this.ConstruirItems();
+    }));
+    this.subs.add(timer(0, this.REFRESCO_PENDIENTES_MS).subscribe(() => this.pendientesService.Actualizar()));
 
     this.esDark = localStorage.getItem('theme') === 'dark';
     this.nombreUsuario = this.usuariosService.GetNombreSesion();
@@ -70,6 +94,11 @@ export class NavegacionComponent {
   // para poder marcar con styleClass el dominio top-level activo, ya que p-menubar no
   // resalta automáticamente un padre cuando la ruta activa es de un hijo suyo.
   ConstruirItems(): MenuItem[] {
+    // Badge de NE pendientes de control: rojo si hay de días anteriores (el cliente se
+    // comprometió a revisarlas todas antes de cerrar el día), amarillo si son solo de hoy.
+    const badgePendientes = this.pendientes.total > 0 ? String(this.pendientes.total) : undefined;
+    const claseBadgePendientes = this.pendientes.atrasadas > 0 ? 'p-badge-danger' : 'p-badge-warn';
+
     return [
       {
         label: 'Fondos',
@@ -81,6 +110,8 @@ export class NavegacionComponent {
         label: 'Ventas',
         icon: 'pi pi-money-bill',
         styleClass: this.activo === 'ventas' ? 'activo' : undefined,
+        badge: badgePendientes,
+        badgeStyleClass: claseBadgePendientes,
         items: [
           {
             label: 'Facturación',
@@ -93,7 +124,15 @@ export class NavegacionComponent {
             label: 'Pre-Facturación',
             items: [
               { label: 'Nuevo', icon: 'pi pi-plus', routerLink: ['/ventas/administrar', 0], queryParams: { tipo: 'pre' } },
-              { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'pre' } }
+              { label: 'Listado', icon: 'pi pi-list', routerLink: ['/ventas'], queryParams: { tipo: 'pre' } },
+              {
+                label: 'Pendientes de control',
+                icon: 'pi pi-exclamation-circle',
+                routerLink: ['/ventas'],
+                queryParams: this.QueryPendientes,
+                badge: badgePendientes,
+                badgeStyleClass: claseBadgePendientes
+              }
             ]
           },
         ]
@@ -162,6 +201,25 @@ export class NavegacionComponent {
       },
 
     ];
+  }
+
+  // Filtros del acceso rápido a las NE sin controlar (ver ListadoVentasComponent.ngOnInit).
+  get QueryPendientes() {
+    return { tipo: 'pre', idProceso: ID_PROCESO.NOTA_EMPAQUE, estado: 'Pendiente' };
+  }
+
+  get TooltipPendientes(): string {
+    return this.pendientes.atrasadas > 0
+      ? `Notas de empaque sin controlar - ${this.pendientes.atrasadas} de días anteriores`
+      : 'Notas de empaque sin controlar (todas de hoy)';
+  }
+
+  IrAPendientes() {
+    this.router.navigate(['/ventas'], { queryParams: this.QueryPendientes });
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
   }
 
   ActualizarActivo(url: string) {

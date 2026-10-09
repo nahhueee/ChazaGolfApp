@@ -17,6 +17,12 @@ import { TallesProducto } from "./Producto";
     // Fecha de entrega prometida al cliente. Opcional, solo se carga/muestra para
     // Presupuesto/Pedido/Nota de Empaque (tipo === 'pre').
     fechaEntrega?:Date;
+    // Auditoría de la Nota de Empaque (oct-2026, solo NE): quién/cuándo aprobó y quién/cuándo
+    // modificó por última vez. Solo lectura, los completa el backend.
+    usuarioAprobacion?:string;
+    fechaAprobacion?:Date;
+    usuarioModificacion?:string;
+    fechaModificacion?:Date;
     cliente?:Cliente;
     // idCliente?:number;
     // cliente?:string;

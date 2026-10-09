@@ -553,6 +553,18 @@ export function puedeDarseDeBaja(idProceso?: number, estado?: string): boolean {
 }
 
 /**
+ * Una Nota de Empaque solo se puede modificar en Pendiente/Aprobada (oct-2026, es el paso de
+ * control previo a facturar). Asociada/Facturada ya fue usada por una factura: reabrirla y
+ * guardarla la devolvería a Pendiente y permitiría facturarla de nuevo. Espejo de
+ * puedeEditarseNotaEmpaque (backend, ventaEstados.ts) - acá es solo para la UI, la
+ * validación real la hace el backend en ModificarBody. El resto de los procesos no cambia.
+ */
+export function puedeEditarseVenta(idProceso?: number, estado?: string): boolean {
+  if (idProceso !== ID_PROCESO.NOTA_EMPAQUE) return true;
+  return estado === ESTADO_VENTA.PENDIENTE || estado === ESTADO_VENTA.APROBADA;
+}
+
+/**
  * Tipos de método de pago (string, tal como viene del backend).
  * Usado para detectar comportamientos especiales (ej: abrir diálogo cheque).
  */
