@@ -61,15 +61,97 @@ p-accordion-header{
       flex: 2;
       width: 100%;
     }
-    .centro{
-      flex: 2;
+    // Columna derecha: búsqueda de cliente arriba; abajo, ficha del cliente + relacionados.
+    .der{
+      flex: 3;
       width: 100%;
+      min-width: 0;
     }
 
-    .cliente-card, .noSeleccionado{
-      flex: 1.5;
-      width: 100%;
+    .cliente-info{
+      display: flex;
+      gap: 20px;
+      // Sin margin-top: el p-floatlabel del cliente ya aporta 18px de margen inferior
+      // (styles.scss), igual que la fila de proceso de la izquierda, así la ficha queda
+      // a la misma altura que el campo Fecha.
+      align-items: stretch;
+
+      .cliente-card, .noSeleccionado{
+        flex: 1;
+        min-width: 0;
+      }
     }
+}
+
+// Proceso (botones) y debajo la fecha, a todo el ancho como el resto de los campos
+// (styles.scss da a p-floatlabel width 100% y margin-bottom 18px).
+.fila-proceso{
+  display: block;
+
+  .campo-fecha{
+    margin-top: 0;
+  }
+
+  // Selector de proceso: bloque destacado; el proceso elegido se ve como botón relleno.
+  .selector-proceso{
+    display: flex !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    // Mismo alto que el buscador de cliente de la derecha (~65px) para que las dos
+    // columnas arranquen y sigan alineadas.
+    height: 52px !important;
+    min-height: 0 !important;
+    overflow: hidden;
+    align-items: stretch;
+    gap: 0;
+    padding: 5px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-ground);
+  }
+  .selector-proceso ::ng-deep .p-togglebutton{
+    flex: 1;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0 !important;
+    padding: 0 1.1rem !important;
+    align-items: center;
+    border: none !important;
+    border-radius: 8px !important;
+    background: var(--surface-ground) !important;
+    color: var(--text-color-secondary);
+    font-family: 'Poppins';
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: none !important;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .selector-proceso ::ng-deep .p-togglebutton:not(.p-togglebutton-checked):not(.p-disabled):hover{
+    background: var(--surface-ground) !important;
+    color: var(--text-color);
+  }
+  .selector-proceso ::ng-deep .p-togglebutton .p-togglebutton-content{
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    line-height: 1.2;
+  }
+  .selector-proceso ::ng-deep .p-togglebutton-checked{
+    background: var(--p-primary-color) !important;
+    color: var(--p-primary-contrast-color, #fff) !important;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  }
+  .selector-proceso ::ng-deep .p-togglebutton-checked span{
+    color: var(--p-primary-contrast-color, #fff) !important;
+  }
+  // Edición (deshabilitado): el elegido sigue marcado, el resto atenuado.
+  .selector-proceso ::ng-deep .p-togglebutton.p-disabled:not(.p-togglebutton-checked){
+    opacity: 0.45;
+  }
 }
 .pre{
   justify-content: right;

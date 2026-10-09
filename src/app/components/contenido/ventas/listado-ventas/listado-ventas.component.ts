@@ -370,6 +370,12 @@ export class ListadoVentasComponent implements OnDestroy {
     this.documentoComercialService.VerDocumento(this.ventaSeleccionada)
   }
 
+  // Fase 4: abre la pantalla normal de facturación con la NE aprobada precargada
+  // (empresa, comprobante y pagos se eligen allá).
+  Facturar(venta:Venta){
+    this.router.navigate(['/ventas/administrar/0'], { queryParams: { tipo: 'factura', notaEmpaque: venta.id } });
+  }
+
   Aprobar(venta:Venta){
     this.confirmationService.confirm({
         key: 'cerrarDialog',

@@ -160,6 +160,9 @@
                                 @if(venta.idProceso == 7 && venta.estado == "Pendiente"){
                                     <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="Aprobar(venta)" pTooltip="Aprobar" tooltipPosition="bottom"/>
                                 }
+                                @if(venta.idProceso == 7 && venta.estado == "Aprobada"){
+                                    <p-button severity="success" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-receipt" (onClick)="Facturar(venta)" pTooltip="Facturar" tooltipPosition="bottom"/>
+                                }
                                 @if(PuedeDarseDeBaja(venta)){
                                     <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AbrirDarBaja(venta)" pTooltip="Dar de baja" tooltipPosition="bottom"/>
                                 }

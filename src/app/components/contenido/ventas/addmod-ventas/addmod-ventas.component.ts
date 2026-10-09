@@ -44,6 +44,7 @@ import { combineLatest, firstValueFrom, forkJoin, of, Subject, switchMap, take, 
 import { CuentasCorrientesService } from '../../../../services/cuentas-corriente.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { CheckboxModule } from 'primeng/checkbox';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TextareaModule } from 'primeng/textarea';
 
 import {
@@ -112,6 +113,7 @@ interface SubtotalAcumulado {
     CheckboxModule,
     DialogChequeComponent,
     TextareaModule,
+    SelectButtonModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './addmod-ventas.component.html',
@@ -348,6 +350,8 @@ export class AddModVentasComponent {
 
         const id = Number(params.get('id'));
         const tipo = query['tipo'] ?? 'factura';
+        // Facturar desde el listado de Notas de Empaque (fase 4): llega el id de la NE.
+        const idNotaEmpaque = id === 0 && tipo !== 'pre' ? Number(query['notaEmpaque']) || 0 : 0;
 
         this.tipo = tipo;
 
@@ -358,12 +362,15 @@ export class AddModVentasComponent {
           procesos: this.miscService.ObtenerProcesosVenta(tipo),
           venta: id > 0
             ? this.ventasService.ObtenerVenta(id)
+            : of(null),
+          notaEmpaque: idNotaEmpaque > 0
+            ? this.ventasService.ObtenerVenta(idNotaEmpaque)
             : of(null)
         });
       })
     )
     .subscribe({
-      next: ({ maestros, procesos, venta }) => {
+      next: ({ maestros, procesos, venta, notaEmpaque }) => {
 
         // Datos maestros
         this.poblarDatosMaestros(maestros);
@@ -409,8 +416,10 @@ export class AddModVentasComponent {
           if (this.procesos.length > 1) {
             this.formGenerales
               .get('proceso')
-              ?.setValue(this.procesos[1]);
+              ?.setValue(this.ProcesoPorDefecto());
           }
+
+          if (notaEmpaque) this.PrecargarNotaEmpaque(notaEmpaque);
         }
       },
       error: err => {
@@ -576,7 +585,16 @@ export class AddModVentasComponent {
     // y la ND no tiene flujo de creación implementado. this.procesos (sin filtrar) se mantiene
     // intacto para no romper el .find() por id que resuelve el valor del combo al editar una venta.
     get procesosSeleccionables(): ProcesoVenta[] {
-      return this.procesos.filter(p => p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO);
+      const lista = this.procesos.filter(p => p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO);
+      // Pre-facturación: Nota de Empaque | Pedido | Presupuesto (de más a menos cercano a facturar).
+      return this.tipo === 'pre' ? [...lista].sort((a, b) => (b.id ?? 0) - (a.id ?? 0)) : lista;
+    }
+
+    // Nota de Empaque es el proceso por defecto de pre-facturación (oct-2026); en facturación
+    // se mantiene la posición histórica.
+    private ProcesoPorDefecto(): ProcesoVenta | undefined {
+      if (this.tipo === 'pre') return this.procesos.find(p => p.id === ID_PROCESO.NOTA_EMPAQUE) ?? this.procesos[1];
+      return this.procesos[1];
     }
 
     // Totales para el footer de las tablas de Productos/Servicios.
@@ -1265,7 +1283,7 @@ export class AddModVentasComponent {
       });
   }
 
-  SeleccionarCliente(comprobante?:number){
+  SeleccionarCliente(comprobante?:number, alTerminar?: () => void){
     const seleccionado = this.formGenerales.get('cliente')?.value;
     this.clientesService.ObtenerCliente(seleccionado.id)
         .pipe(takeUntil(this.destroy$)) 
@@ -1293,6 +1311,7 @@ export class AddModVentasComponent {
           }
 
           this.SincronizarBloqueoDescuentoGeneral();
+          alTerminar?.();
         });
   }
 
@@ -1413,7 +1432,7 @@ export class AddModVentasComponent {
   // (uno con descuento, después otro sin) sin recargar la página.
   //
   // itemsOrigen: SOLO se pasa cuando los ítems del origen viajan tal cual al documento
-  // nuevo (ConfirmarFacturacionRelacionado, BuscarNotaEmpaque). En el caso de Presupuesto→
+  // nuevo (ConfirmarFacturacionRelacionado). En el caso de Presupuesto→
   // Pedido/Nota de Empaque "armado a mano" (RelacionarActualizarProceso) los ítems NO se
   // heredan - se cargan de cero en el documento nuevo - así que no hay descuento por ítem
   // que reconstruir ni bloquear ahí: se llama sin este parámetro y el comportamiento queda
@@ -1545,57 +1564,20 @@ export class AddModVentasComponent {
     });
   }
 
-  BuscarNotaEmpaque(){
-    const nroNota = this.formGenerales.get('nroNota')?.value;
-    if(nroNota == "" || nroNota == 0) return;
-
-    this.ventasService.VerificarNroNota(nroNota)
-      .pipe(takeUntil(this.destroy$)) 
-      .subscribe(response => {
-        if(response == null){
-          this.Notificaciones.Warn("No se encontraron notas de empaque con este número.")
-        }else{
-          this.confirmationService.confirm({
-            key: 'cerrarDialog',
-            message: 'Se encontró una nota de empaque.<br> ¿Estas seguro de pasar a facturar el proceso nro ' + nroNota + "?",
-            header: 'Confirmación',
-            closable: true,
-            closeOnEscape: true,
-            icon: 'pi pi-exclamation-triangle',
-            rejectButtonProps: {
-                label: 'Cancelar',
-                severity: 'secondary',
-                outlined: true,
-            },
-            acceptButtonProps: {
-                label: 'Aceptar',
-            },
-            accept: () => {
-              this.venta = response;
-              this.nroRelacionado = response.nroProceso!;
-              this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
-
-              this.CargarProductosDesdeVenta();
-              this.MarcarPreciosEditados(this.productosFactura);
-              this.OrdenarProductosPorLineaTalle();
-              if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
-              this.AplicarDescuentoRelacionado(response, [...this.productosFactura, ...this.serviciosFactura]);
-              this.RecalcularPreciosSegunComprobante();
-              this.CalcularTotalGeneral();
-
-              // La factura es una conversión FIEL de la nota de empaque aprobada (oct-2026):
-              // los ítems se controlaron en la nota, así que acá no se modifican. Si hay que
-              // cambiar algo, se corrige la nota (vuelve a Pendiente) y se vuelve a aprobar.
-              // El backend lo valida igual (ValidarFacturacionDeNotaEmpaque).
-              this.itemsBloqueadosPorRelacion = true;
-              this.clienteBloqueadoPorRelacion = true;
-
-              this.Notificaciones.Success("Nota de empaque cargada correctamente. Los ítems no se pueden modificar.")
-            },
-            reject: () => {},
-          });
-        }
-      });
+  // Fase 4: precarga una NE Aprobada elegida en el listado, sin pedir confirmación (el clic
+  // en "Facturar" ya es la confirmación). Reutiliza el mismo camino que elegirla a mano.
+  // Empresa, comprobante y pagos se completan en esta pantalla como siempre.
+  PrecargarNotaEmpaque(nota:Venta){
+    if(nota.idProceso !== ID_PROCESO.NOTA_EMPAQUE || nota.estado !== ESTADO_VENTA.APROBADA){
+      this.Notificaciones.Warn(`La nota de empaque Nro ${nota.nroProceso} no está aprobada, no se puede facturar.`);
+      return;
+    }
+    this.nroRelacionado = nota.nroProceso!;
+    this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
+    // Primero el cliente (lista de precios, condición IVA, comprobante), igual que cuando
+    // se elige a mano; recién después se cargan los ítems de la nota.
+    this.formGenerales.get('cliente')?.setValue(nota.cliente);
+    this.SeleccionarCliente(undefined, () => this.ConfirmarFacturacionRelacionado(nota, true));
   }
 
   RelacionarActualizarProceso(venta:Venta){
@@ -1668,7 +1650,9 @@ export class AddModVentasComponent {
     }
   }
 
-  ConfirmarFacturacionRelacionado(venta:Venta){
+  ConfirmarFacturacionRelacionado(venta:Venta, sinConfirmar = false){
+    const aceptar = () => this.CargarVentaRelacionada(venta);
+    if(sinConfirmar){ aceptar(); return; }
     this.confirmationService.confirm({
       key: 'cerrarDialog',
       message: '¿Estas seguro de pasar a facturar el proceso nro ' + venta.nroProceso + "?",
@@ -1684,7 +1668,13 @@ export class AddModVentasComponent {
       acceptButtonProps: {
           label: 'Aceptar',
       },
-      accept: () => {
+      accept: aceptar,
+      reject: () => {},
+    });
+  }
+
+
+  private CargarVentaRelacionada(venta:Venta){
         this.venta = venta;
         this.CargarProductosDesdeVenta();
         this.MarcarPreciosEditados(this.productosFactura);
@@ -1713,7 +1703,7 @@ export class AddModVentasComponent {
         }
         if(venta.idProceso == ID_PROCESO.NOTA_EMPAQUE){
           this.formGenerales.get('nroNota')?.setValue(venta.nroProceso);
-          // Conversión fiel de la nota aprobada: ítems y cliente bloqueados (ver BuscarNotaEmpaque).
+          // Conversión fiel de la nota aprobada: ítems y cliente bloqueados (oct-2026).
           // Un cliente distinto al de la nota es justo el tipo de error de carga que el
           // control previo tiene que atajar; se valida también en el backend.
           this.itemsBloqueadosPorRelacion = true;
@@ -1730,12 +1720,7 @@ export class AddModVentasComponent {
           this.clienteBloqueadoPorRelacion = true;
           this.Notificaciones.Info("Se facturará el presupuesto Nro: " + venta.nroProceso + ". Los ítems no se pueden modificar.");
         }
-
-      },
-      reject: () => {},
-    });
   }
-
 
   Actualizar(valor:boolean){
     if(valor)

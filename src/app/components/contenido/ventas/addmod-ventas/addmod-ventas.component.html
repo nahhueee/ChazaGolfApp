@@ -19,24 +19,16 @@
         <form [formGroup]="formGenerales" autocomplete="off">
             <div class="enLinea">
                 <div class="izq">
-                    <div class="horizontal">
-                        <!-- Proceso -->
-                        <p-floatlabel variant="in">
-                            <!-- modificando (no soloLecturaPorEdicion): el tipo de un documento
-                                 existente no debe poder cambiarse en NINGUNA edición, no solo en
-                                 'factura'. soloLecturaPorEdicion = modificando && tipo === 'factura'
-                                 dejaba este combo habilitado al editar Presupuesto/Pedido/Nota de
-                                 Empaque (tipo 'pre'): cambiar el tipo ahí pisa venta.idProceso al
-                                 guardar pero el nroProceso queda con el número del tipo original
-                                 (Modificar()/UpdateVenta() no lo recalcula, solo Agregar() lo hace),
-                                 y choca contra UNIQUE(idProceso, nroProceso) si ese número ya existe
-                                 en el tipo nuevo. Bug real en producción, ago-2026. -->
-                            <p-select [options]="procesosSeleccionables" formControlName="proceso" optionLabel="descripcion"
+                    <div class="fila-proceso">
+                        <!-- Proceso: el tipo de un documento existente no debe poder cambiarse en NINGUNA
+                             edición (modificando): cambiar el tipo pisaría venta.idProceso al guardar pero
+                             el nroProceso quedaría con el número del tipo original y chocaría contra
+                             UNIQUE(idProceso, nroProceso). Bug real en producción, ago-2026. -->
+                        <p-selectbutton class="selector-proceso" [options]="procesosSeleccionables" formControlName="proceso" optionLabel="descripcion"
+                            [allowEmpty]="false"
                             [disabled]="modificando || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo()" />
-                            <label>Proceso</label>
-                        </p-floatlabel>
                         <!-- Fecha -->
-                        <p-floatlabel variant="in">
+                        <p-floatlabel variant="in" class="campo-fecha">
                             <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
                             <label>Fecha</label>
                         </p-floatlabel>
@@ -65,7 +57,7 @@
                         </p-floatlabel>
                     }
                 </div>
-                <div class="centro">
+                <div class="der">
                     <p-inputgroup>
                         <!-- Cliente -->
                         <p-floatlabel variant="in">
@@ -94,12 +86,7 @@
                         }
                     </p-inputgroup>
 
-                    <!-- Nota Empaque -->
-                    <p-floatlabel variant="in">
-                        <input pInputText formControlName="nroNota"  type="text"/>
-                        <label>N° Nota Empaque</label>
-                    </p-floatlabel>
-                </div>
+                    <div class="cliente-info">
 
                 @if(clienteSeleccionado && clienteSeleccionado != undefined){
                     <div class="cliente-card">
@@ -162,6 +149,8 @@
                         }
                     </div>
                 }
+                    </div>
+                </div>
             </div>
         </form>
     </div>
