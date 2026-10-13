@@ -10,15 +10,26 @@
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
     </app-encabezado-seccion>
 
-    @if(tipo == 'pre' && pendientes.total > 0){
-        <div class="aviso-pendientes" [class.atrasadas]="pendientes.atrasadas > 0">
-            <i class="pi pi-exclamation-circle"></i>
+    @if(tipo == 'pre' && (pendientes.total > 0 || pendientes.porFacturar > 0)){
+        <div class="aviso-pendientes" [class.atrasadas]="pendientes.atrasadas > 0" [class.por-facturar]="pendientes.total == 0">
+            <i [class]="pendientes.total > 0 ? 'pi pi-exclamation-circle' : 'pi pi-info-circle'"></i>
             <span>
-                Hay <b>{{ pendientes.total }}</b> {{ pendientes.total == 1 ? 'nota de empaque pendiente' : 'notas de empaque pendientes' }} de control
-                @if(pendientes.atrasadas > 0){ (<b>{{ pendientes.atrasadas }}</b> de días anteriores)}.
-                Revisalas y aprobalas antes de terminar el día.
+                @if(pendientes.total > 0){
+                    <b>{{ pendientes.total }}</b> {{ pendientes.total == 1 ? 'pendiente' : 'pendientes' }} de control
+                    @if(pendientes.atrasadas > 0){ (<b>{{ pendientes.atrasadas }}</b> de días anteriores)}
+                }
+                @if(pendientes.total > 0 && pendientes.porFacturar > 0){ · }
+                @if(pendientes.porFacturar > 0){
+                    <b>{{ pendientes.porFacturar }}</b> por facturar
+                }
+                @if(pendientes.total > 0){ - Revisalas y aprobalas antes de terminar el día.}
             </span>
-            <p-button label="Ver pendientes" size="small" severity="secondary" icon="pi pi-filter" (onClick)="VerPendientes()"/>
+            @if(pendientes.total > 0){
+                <p-button label="Ver pendientes" size="small" severity="secondary" icon="pi pi-filter" (onClick)="VerPendientes()"/>
+            }
+            @if(pendientes.porFacturar > 0){
+                <p-button label="Ver por facturar" size="small" severity="secondary" icon="pi pi-receipt" (onClick)="VerPorFacturar()"/>
+            }
         </div>
     }
 
@@ -77,9 +88,13 @@
 
     <!-- Filtro "pendientes de control": no se elige a mano, lo activa "Ver pendientes" (cartel,
          menú) y lo saca "Limpiar". Solo se informa acá para que se vea que el listado está filtrado. -->
-    @if(tipo == 'pre' && filtros.value.soloPendientes){
+    @if(tipo == 'pre' && filtros.value.estadoRapido){
         <div class="filtro-activo">
-            <p-tag icon="pi pi-filter" severity="warn" value="Mostrando solo notas de empaque pendientes de control"/>
+            @if(filtros.value.estadoRapido == 'Aprobada'){
+                <p-tag icon="pi pi-filter" severity="info" value="Mostrando solo notas de empaque controladas, pendientes de facturar"/>
+            }@else{
+                <p-tag icon="pi pi-filter" severity="warn" value="Mostrando solo notas de empaque pendientes de control"/>
+            }
             <small>Usá "Limpiar" para ver todo.</small>
         </div>
     }

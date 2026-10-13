@@ -5,6 +5,7 @@ import { VentasService } from './ventas.service';
 export interface ResumenNotasEmpaque {
   total: number;      // Notas de Empaque en Pendiente (sin controlar), sin dar de baja
   atrasadas: number;  // de esas, las de días anteriores a hoy
+  porFacturar: number; // Notas de Empaque Aprobadas (ya controladas) todavía sin facturar
 }
 
 /**
@@ -19,14 +20,14 @@ export interface ResumenNotasEmpaque {
   providedIn: 'root'
 })
 export class NotasEmpaquePendientesService {
-  private resumenSubject = new BehaviorSubject<ResumenNotasEmpaque>({ total: 0, atrasadas: 0 });
+  private resumenSubject = new BehaviorSubject<ResumenNotasEmpaque>({ total: 0, atrasadas: 0, porFacturar: 0 });
   readonly resumen$: Observable<ResumenNotasEmpaque> = this.resumenSubject.asObservable();
 
   constructor(private ventasService: VentasService) {}
 
   Actualizar(): void {
     this.ventasService.ObtenerNotasEmpaquePendientes().subscribe({
-      next: r => this.resumenSubject.next({ total: r?.total ?? 0, atrasadas: r?.atrasadas ?? 0 }),
+      next: r => this.resumenSubject.next({ total: r?.total ?? 0, atrasadas: r?.atrasadas ?? 0, porFacturar: r?.porFacturar ?? 0 }),
       // Consulta de fondo: si falla se deja el último valor conocido, sin avisar.
       error: () => {}
     });

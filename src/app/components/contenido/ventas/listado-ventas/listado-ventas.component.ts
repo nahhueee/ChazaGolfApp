@@ -95,12 +95,6 @@ export class ListadoVentasComponent implements OnDestroy {
   clientesFiltrados:Cliente[]=[];
   procesos:ProcesoVenta[] = [];
 
-  // Estado que filtra el toggle "Solo pendientes de control" (la NE sin controlar). Antes había
-  // un selector con todos los estados, pero mezclaba los de Presupuesto/Pedido/Nota de Empaque
-  // (Aprobado/Aprobada, Asociado/Asociada...) y no se entendía; el backend sigue aceptando
-  // cualquier estado en FiltroVenta.estado.
-  private readonly ESTADO_PENDIENTE_CONTROL = ESTADO_VENTA.PENDIENTE;
-
   // El acceso rápido (badge/Ver pendientes) llega por query params. Una vez aplicados se sacan
   // de la URL; esa limpieza hace emitir de nuevo a queryParams y esta bandera evita que esa
   // emisión se tome como "cambio de pantalla" (limpiaría el filtro recién aplicado). Sin sacar
@@ -110,7 +104,7 @@ export class ListadoVentasComponent implements OnDestroy {
 
   // Notas de Empaque pendientes de control (oct-2026), para el cartel de arriba. Ver
   // NotasEmpaquePendientesService.
-  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0 };
+  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0, porFacturar: 0 };
   private subs = new Subscription();
   @ViewChild('op') op!: Popover;
   @ViewChild('notas') notas!: Popover;
@@ -134,7 +128,7 @@ export class ListadoVentasComponent implements OnDestroy {
     this.filtros = new FormGroup({
       proceso: new FormControl(),
       nroProceso: new FormControl(),
-      soloPendientes: new FormControl(false),
+      estadoRapido: new FormControl(''),
       fechas: new FormControl(),
       fechasEntrega: new FormControl(),
       cliente: new FormControl()
@@ -161,7 +155,7 @@ export class ListadoVentasComponent implements OnDestroy {
         // el objeto), así que la búsqueda se hace UNA sola vez cuando llegan, en vez de
         // buscar sin filtros primero.
         this.filtros.reset();
-        this.filtros.patchValue({ soloPendientes: estadoRapido === this.ESTADO_PENDIENTE_CONTROL });
+        this.filtros.patchValue({ estadoRapido: [ESTADO_VENTA.PENDIENTE, ESTADO_VENTA.APROBADA].includes(estadoRapido) ? estadoRapido : '' });
         this.ObtenerProcesosVenta(() => {
           const proceso = this.procesos.find(p => p.id === idProcesoRapido);
           if (proceso) this.filtros.patchValue({ proceso });
@@ -195,6 +189,13 @@ export class ListadoVentasComponent implements OnDestroy {
     });
   }
 
+  // Lleva a las Notas de Empaque ya controladas (Aprobadas) que faltan facturar.
+  VerPorFacturar(){
+    this.router.navigate(['/ventas'], {
+      queryParams: { tipo: 'pre', idProceso: ID_PROCESO.NOTA_EMPAQUE, estado: 'Aprobada' }
+    });
+  }
+
   ObtenerProcesosVenta(alCargar?: () => void){
     this.miscService.ObtenerProcesosVenta(this.tipo)
       .subscribe(response => {
@@ -222,7 +223,7 @@ export class ListadoVentasComponent implements OnDestroy {
         tipo: this.tipo,
         idProceso: this.filtros.value.proceso?.id ?? 0,
         nroProceso: this.filtros.value.nroProceso,
-        estado: this.filtros.value.soloPendientes ? this.ESTADO_PENDIENTE_CONTROL : '',
+        estado: this.filtros.value.estadoRapido || '',
         fechas: this.filtros.value.fechas,
         fechasEntrega: this.filtros.value.fechasEntrega,
         cliente: this.filtros.value.cliente?.id ?? 0
@@ -252,7 +253,7 @@ export class ListadoVentasComponent implements OnDestroy {
       tipo: this.tipo,
       idProceso: this.filtros.value.proceso?.id ?? 0,
       nroProceso: this.filtros.value.nroProceso,
-      estado: this.filtros.value.soloPendientes ? this.ESTADO_PENDIENTE_CONTROL : '',
+      estado: this.filtros.value.estadoRapido || '',
       fechas: fechasCompletas ? fechas : null,
       // Mismo filtro que el listado: sin esto el export no coincidía con lo que se ve en pantalla.
       fechasEntrega: this.filtros.value.fechasEntrega,

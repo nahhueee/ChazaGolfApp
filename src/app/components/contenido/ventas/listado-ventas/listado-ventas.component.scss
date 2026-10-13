@@ -40,6 +40,11 @@
     background: color-mix(in srgb, var(--p-red-500) 14%, transparent);
 }
 
+.aviso-pendientes.por-facturar{
+    border-color: var(--p-blue-500);
+    background: color-mix(in srgb, var(--p-blue-500) 14%, transparent);
+}
+
 .aviso-pendientes span{
     flex: 1;
 }

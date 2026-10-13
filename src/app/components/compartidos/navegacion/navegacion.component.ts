@@ -41,7 +41,7 @@ export class NavegacionComponent implements OnDestroy {
 
   // Notas de Empaque pendientes de control (oct-2026): badge en "Ventas" y acceso rápido al
   // listado filtrado. Ver NotasEmpaquePendientesService.
-  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0 };
+  pendientes: ResumenNotasEmpaque = { total: 0, atrasadas: 0, porFacturar: 0 };
   private subs = new Subscription();
   private readonly REFRESCO_PENDIENTES_MS = 60_000;
 
@@ -98,6 +98,11 @@ export class NavegacionComponent implements OnDestroy {
     // comprometió a revisarlas todas antes de cerrar el día), amarillo si son solo de hoy.
     const badgePendientes = this.pendientes.total > 0 ? String(this.pendientes.total) : undefined;
     const claseBadgePendientes = this.pendientes.atrasadas > 0 ? 'p-badge-danger' : 'p-badge-warn';
+    // Pendientes de facturar (NE aprobadas): azul, informativo. En el menú "Ventas" va un solo
+    // globito y manda el de control; el azul solo aparece si no hay nada por controlar.
+    const badgePorFacturar = this.pendientes.porFacturar > 0 ? String(this.pendientes.porFacturar) : undefined;
+    const badgeVentas = badgePendientes ?? badgePorFacturar;
+    const claseBadgeVentas = badgePendientes ? claseBadgePendientes : 'p-badge-info';
 
     return [
       {
@@ -110,8 +115,8 @@ export class NavegacionComponent implements OnDestroy {
         label: 'Ventas',
         icon: 'pi pi-money-bill',
         styleClass: this.activo === 'ventas' ? 'activo' : undefined,
-        badge: badgePendientes,
-        badgeStyleClass: claseBadgePendientes,
+        badge: badgeVentas,
+        badgeStyleClass: claseBadgeVentas,
         items: [
           {
             label: 'Facturación',
@@ -132,6 +137,14 @@ export class NavegacionComponent implements OnDestroy {
                 queryParams: this.QueryPendientes,
                 badge: badgePendientes,
                 badgeStyleClass: claseBadgePendientes
+              },
+              {
+                label: 'Pendientes de facturar',
+                icon: 'pi pi-receipt',
+                routerLink: ['/ventas'],
+                queryParams: this.QueryPorFacturar,
+                badge: badgePorFacturar,
+                badgeStyleClass: 'p-badge-info'
               }
             ]
           },
@@ -206,6 +219,11 @@ export class NavegacionComponent implements OnDestroy {
   // Filtros del acceso rápido a las NE sin controlar (ver ListadoVentasComponent.ngOnInit).
   get QueryPendientes() {
     return { tipo: 'pre', idProceso: ID_PROCESO.NOTA_EMPAQUE, estado: 'Pendiente' };
+  }
+
+  // Filtros del acceso rápido a las NE aprobadas (controladas) que faltan facturar.
+  get QueryPorFacturar() {
+    return { tipo: 'pre', idProceso: ID_PROCESO.NOTA_EMPAQUE, estado: 'Aprobada' };
   }
 
   get TooltipPendientes(): string {
