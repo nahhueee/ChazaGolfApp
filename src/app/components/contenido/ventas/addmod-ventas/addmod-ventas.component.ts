@@ -585,7 +585,12 @@ export class AddModVentasComponent {
     // y la ND no tiene flujo de creación implementado. this.procesos (sin filtrar) se mantiene
     // intacto para no romper el .find() por id que resuelve el valor del combo al editar una venta.
     get procesosSeleccionables(): ProcesoVenta[] {
-      const lista = this.procesos.filter(p => p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO);
+      // Entrega sin cargo (8) y Devolución de entrega (9): existen en procesos_venta desde la F1 pero todavía
+      // no tienen flujo de alta (F2/F3). La Devolución de entrega nunca se emite desde acá (va por el diálogo
+      // de la fila de la ESC); la ESC se habilita en esta lista recién en F2.
+      const lista = this.procesos.filter(p =>
+        p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO &&
+        p.id !== ID_PROCESO.ENTREGA_SIN_CARGO && p.id !== ID_PROCESO.DEVOLUCION_ENTREGA);
       // Pre-facturación: Nota de Empaque | Pedido | Presupuesto (de más a menos cercano a facturar).
       return this.tipo === 'pre' ? [...lista].sort((a, b) => (b.id ?? 0) - (a.id ?? 0)) : lista;
     }
@@ -594,7 +599,9 @@ export class AddModVentasComponent {
     // se mantiene la posición histórica.
     private ProcesoPorDefecto(): ProcesoVenta | undefined {
       if (this.tipo === 'pre') return this.procesos.find(p => p.id === ID_PROCESO.NOTA_EMPAQUE) ?? this.procesos[1];
-      return this.procesos[1];
+      // Por id y no por posición: la lista viene ordenada por descripción, y al sumarse procesos nuevos
+      // (Entrega sin cargo / Devolución de entrega) el índice 1 dejó de ser Factura.
+      return this.procesos.find(p => p.id === ID_PROCESO.FACTURA) ?? this.procesos[1];
     }
 
     // Totales para el footer de las tablas de Productos/Servicios.

@@ -91,9 +91,23 @@ export const ID_PROCESO = {
   PRESUPUESTO: 5,
   PEDIDO: 6,
   NOTA_EMPAQUE: 7,
+  ENTREGA_SIN_CARGO: 8,
+  DEVOLUCION_ENTREGA: 9,
 } as const;
 
 export type IdProceso = ValueOf<typeof ID_PROCESO>;
+
+/**
+ * Motivo de una Entrega sin cargo (columna `ventas.motivoEntrega`). Debe coincidir con
+ * MotivoEntregaSinCargo en el back (ventaEstados.ts).
+ */
+export const MOTIVO_ENTREGA_SIN_CARGO = {
+  EMBAJADOR: 'EMBAJADOR',
+  EVENTO: 'EVENTO',
+  OTRO: 'OTRO',
+} as const;
+
+export type MotivoEntregaSinCargo = ValueOf<typeof MOTIVO_ENTREGA_SIN_CARGO>;
 
 /**
  * Sigla de documento comercial (ver documento-comercial.service.ts) para Presupuesto/
