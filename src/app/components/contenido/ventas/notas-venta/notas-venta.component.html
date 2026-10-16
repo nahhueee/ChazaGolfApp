@@ -3,7 +3,7 @@
 <p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '90vw' }" [maximizable]="true" (onHide)="CerrarModal(false)">
     <ng-template pTemplate="header">
         <div class="header-custom">
-            <span>Emitir Nota de {{tipo}}</span>
+            <span>{{ esDevolucionEntrega ? 'Emitir Devolución de entrega' : 'Emitir Nota de ' + tipo }}</span>
         </div>
     </ng-template>
     
@@ -11,12 +11,18 @@
         <div class="data-cliente">
             <div class="enLinea">
                 <div class="recuadro">
-                <p>{{venta.tipoComprobante}}</p>
+                <p>{{ esDevolucionEntrega ? 'ENTREGA SIN CARGO' : venta.tipoComprobante }}</p>
                 <p-divider />
                 <span>Tipo de Comprobante</span>
                 </div>
 
-                @if(venta.proceso != "COTIZACION"){
+                @if(esDevolucionEntrega){
+                    <div class="recuadro">
+                    <p>{{venta.nroProceso}}</p>
+                    <p-divider />
+                    <span>Nro</span>
+                    </div>
+                } @else if(venta.proceso != "COTIZACION"){
                     <div class="recuadro">
                     <p>{{venta.factura?.ptoVenta}} - {{venta.factura?.ticket}}</p> 
                     <p-divider />
@@ -57,12 +63,12 @@
                 <div class="recuadro">
                     <p>{{venta.total! | decimalFormat}}</p>
                     <p-divider />
-                    <span>Total Venta</span>
+                    <span>{{ esDevolucionEntrega ? 'Total Entrega' : 'Total Venta' }}</span>
                 </div>
             </div>
         </div>
 
-        @if(hayNotasExistentes){
+        @if(hayNotasExistentes && !esDevolucionEntrega){
             <div class="alerta alerta-warn">
                 <span class="alerta-icon">⚠️</span>
                 <div class="alerta-texto">
@@ -93,7 +99,7 @@
         <div class="alerta alerta-warn">
             <span class="alerta-icon">⚠️</span>
             <div class="alerta-texto">
-                Selecciona los articulos en devolución para definir el total de la nota de crédito
+                Selecciona los articulos en devolución para definir el total de la {{ nombreNota }}
             </div>
         </div>
 
@@ -267,7 +273,7 @@
 
             <br>
             <div class="fila">
-                <span>Total Nota:</span>
+                <span>{{ esDevolucionEntrega ? 'Total Devolución:' : 'Total Nota:' }}</span>
                 <span class="monto">${{totalGeneral | decimalFormat}}</span>
             </div>
         </div>
@@ -280,4 +286,4 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<app-facturar-venta [objFacturar]="objFacturar" [venta]="nuevaVenta" [modificando]="false" [visible]="modalFacturarVisible" [titulo]="'Facturar Nota de Crédito'" (cerrar)="Guardar($event)"/>
+<app-facturar-venta [objFacturar]="objFacturar" [venta]="nuevaVenta" [modificando]="false" [visible]="modalFacturarVisible" [titulo]="esDevolucionEntrega ? 'Confirmar devolución de entrega' : 'Facturar Nota de Crédito'" (cerrar)="Guardar($event)"/>

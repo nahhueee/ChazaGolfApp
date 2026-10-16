@@ -153,6 +153,11 @@ export class FacturaService {
           : (venta.idTipoComprobante == 101 ? 'ND X' : 'NC X');
         // Entrega sin cargo / Devolución de entrega: letra Z (comprobante interno 99 igual).
         if (venta.idProceso == ID_PROCESO.ENTREGA_SIN_CARGO || venta.idProceso == ID_PROCESO.DEVOLUCION_ENTREGA) datosFactura.desComprobante = 'Z';
+        // Devolución de entrega: muestra "Asociado" con la entrega sin cargo que anula.
+        if (venta.idProceso == ID_PROCESO.DEVOLUCION_ENTREGA) {
+          esNota = true;
+          datosFactura.comprobanteRelacionado = `Entrega sin cargo Nro ${venta.nroRelacionado}`;
+        }
       }
       
       //Obtenemos datos grabados para la facturacion

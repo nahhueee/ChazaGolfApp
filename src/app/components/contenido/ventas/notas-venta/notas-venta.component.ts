@@ -22,7 +22,7 @@ import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.compone
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { MontoSegunComprobante, OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
-import { esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
+import { ID_PROCESO, esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -169,6 +169,16 @@ export class NotasVentaComponent {
 
   get yaTieneNotaInterna(): boolean {
     return this.saldoDisponibleInterna <= 0;
+  }
+
+  // Devolución de entrega (F3): el mismo diálogo, abierto sobre una Entrega sin cargo. Emite el proceso 9
+  // (comprobante 99 interno, sin ARCA, sin pagos) y el backend revalida el tope contra la ESC.
+  get esDevolucionEntrega(): boolean {
+    return this.venta.idProceso === ID_PROCESO.ENTREGA_SIN_CARGO;
+  }
+
+  get nombreNota(): string {
+    return this.esDevolucionEntrega ? 'devolución de entrega' : 'nota de crédito';
   }
 
   get hayNotasExistentes(): boolean {
@@ -459,7 +469,7 @@ export class NotasVentaComponent {
 
   Confirmar(){
     if(this.totalGeneral <= 0){
-      this.Notificaciones.Warn("No se permite realizar una nota de credito por $0");
+      this.Notificaciones.Warn(`No se permite realizar una ${this.nombreNota} por $0`);
       return;
     }
 
@@ -506,7 +516,7 @@ export class NotasVentaComponent {
       }
     }
 
-    this.ventasService.ObtenerProximoNroProceso(3)
+    this.ventasService.ObtenerProximoNroProceso(this.esDevolucionEntrega ? ID_PROCESO.DEVOLUCION_ENTREGA : ID_PROCESO.NOTA_CREDITO)
       .subscribe(response => {
         this.proximoNroProceso = response;
 
@@ -546,7 +556,7 @@ export class NotasVentaComponent {
         this.ventasService.Agregar(this.nuevaVenta)
         .subscribe(response => {
           if(response){
-            this.Notificaciones.Success("Se agregó correctamente la nota de credito.");
+            this.Notificaciones.Success(`Se agregó correctamente la ${this.nombreNota}.`);
             this.CerrarModal(true);
           }
         });
@@ -560,9 +570,9 @@ export class NotasVentaComponent {
   }
 
   private armarObjetoVenta(){
-    this.nuevaVenta.idProceso = 3; //Nota de credito
+    this.nuevaVenta.idProceso = this.esDevolucionEntrega ? ID_PROCESO.DEVOLUCION_ENTREGA : ID_PROCESO.NOTA_CREDITO;
     this.nuevaVenta.nroProceso = this.proximoNroProceso;
-    this.nuevaVenta.proceso = "Nota de Crédito";
+    this.nuevaVenta.proceso = this.esDevolucionEntrega ? "Devolución de entrega" : "Nota de Crédito";
     // Canal de venta interno elegido en el selector (default "Otros" - ver
     // ngOnChanges). No es el punto de venta fiscal de AFIP, ver comentario en `puntos`.
     this.nuevaVenta.idPunto = this.puntoSeleccionado?.id;
@@ -615,7 +625,9 @@ export class NotasVentaComponent {
     this.objFacturar.neto = Number(this.subTotal.toFixed(2));
     this.objFacturar.iva = Number(this.totalIva.toFixed(2));
     this.objFacturar.tipoComprobante = this.nuevaVenta.idTipoComprobante;
-    this.objFacturar.tipoFacturaDesc = "Nota de Crédito";
+    this.objFacturar.tipoFacturaDesc = this.esDevolucionEntrega ? "DEVOLUCIÓN DE ENTREGA" : "Nota de Crédito";
+    // Devolución de entrega: el modal no muestra pagos (mismo flag que la ESC).
+    this.objFacturar.entregaSinCargo = this.esDevolucionEntrega;
     this.objFacturar.docNro = this.venta.cliente!.documento;
     this.objFacturar.docTipo = this.venta.cliente!.idTipoDocumento;
     this.objFacturar.docTipoDesc = this.venta.cliente!.tipoDocumento;

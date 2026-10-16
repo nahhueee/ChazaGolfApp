@@ -9,7 +9,7 @@
         <div class="izq">
             <div class="horizontal">
                 <div class="recuadro">
-                    <p class="especial"><strong>{{ datosFacturar.entregaSinCargo ? 'ENTREGA SIN CARGO' : datosFacturar.tipoFacturaDesc?.replace('FACTURA ', '') }}</strong></p>
+                    <p class="especial"><strong>{{ datosFacturar.entregaSinCargo ? (datosFacturar.tipoFacturaDesc || 'ENTREGA SIN CARGO') : datosFacturar.tipoFacturaDesc?.replace('FACTURA ', '') }}</strong></p>
                     <p-divider />
                     <span>Tipo de Comprobante</span>
                 </div>

@@ -328,6 +328,15 @@ export class ListadoVentasComponent implements OnDestroy {
     this.PrepararPrecios(tipo);
     this.notasVisible = true;
   }
+  // Devolución de entrega (F3): reusa el diálogo de notas en modo "interna" (sin ARCA). El modo lo
+  // decide notas-venta por venta.idProceso (ESC); el remanente viene del bucket interno que arma el backend.
+  EmitirDevolucionEntrega(venta: Venta){
+    this.ventaSeleccionada = venta;
+    this.tipoNota = 'Crédito'; // el título lo resuelve notas-venta por idProceso (esDevolucionEntrega)
+    this.tipoNotaCreditoElegida = 'INTERNA';
+    this.PrepararPrecios('INTERNA');
+    this.notasVisible = true;
+  }
   Actualizar(actualiza){
     this.notasVisible = false;
     if(actualiza)
