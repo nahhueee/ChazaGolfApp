@@ -80,6 +80,7 @@ import {
   DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
   PORCENTAJE_RECARGO_TRANSFERENCIA,
   CONDICION_IVA_RESPONSABLE_INSCRIPTO,
+  MOTIVO_ENTREGA_SIN_CARGO,
 } from '../models/venta.constants';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
@@ -218,6 +219,12 @@ export class AddModVentasComponent {
   formFacturacion:FormGroup;
   formPagos:FormGroup;
   pagosFactura:PagosFactura[]=[];
+  // Motivos de una Entrega sin cargo (D3). Los valores viajan al backend tal cual.
+  readonly motivosEntrega = [
+    { valor: MOTIVO_ENTREGA_SIN_CARGO.EMBAJADOR, etiqueta: 'Embajador' },
+    { valor: MOTIVO_ENTREGA_SIN_CARGO.EVENTO,    etiqueta: 'Evento' },
+    { valor: MOTIVO_ENTREGA_SIN_CARGO.OTRO,      etiqueta: 'Otro' },
+  ];
   redondeo:FormControl = new FormControl('');
   empresas:Empresa[]=[];
   tiposDescuento:TipoDescuento[]=[];
@@ -443,6 +450,9 @@ export class AddModVentasComponent {
       // (Presupuesto/Pedido/Nota de Empaque), opcionales.
       fechaEntrega: new FormControl(null),
       observacion: new FormControl(''),
+      // Solo ESC (D3): se valida a mano en ValidarEntregaSinCargo(), no con Validators.required
+      // para no invalidar el formulario del resto de los procesos.
+      motivoEntrega: new FormControl(null),
       cliente: new FormControl([null], [Validators.required]),
     });
 
@@ -489,6 +499,13 @@ export class AddModVentasComponent {
     get TipoComprobanteControl(){return this.formFacturacion.get('tComprobante')?.value ?? '';}
     get EmpresaControl(){return this.formFacturacion.get('empresa')?.value ?? '';}
     get esPresupuesto(): boolean {return this.ProcesoControl?.id === ID_PROCESO.PRESUPUESTO;}
+
+    // Entrega sin cargo (ESC, oct-2026, ver HANDOFF-entrega-sin-cargo.md): se emite desde
+    // Facturación a partir de una Nota de Empaque aprobada. Descuenta stock y queda registrada
+    // valorizada, pero NO genera pagos, deuda ni movimientos de fondos: sin formulario de pago,
+    // sin alta automática de cuenta corriente, sin chequeo de pagos vs. total y sin descuento
+    // general, redondeo ni recargo por transferencia (se valoriza a precio de lista).
+    get esEntregaSinCargo(): boolean {return this.ProcesoControl?.id === ID_PROCESO.ENTREGA_SIN_CARGO;}
 
     // Pedido: permite acordar un precio distinto al de lista con el cliente (ej. combo
     // cerrado, negociación puntual), sin perder el precio de lista original (producto.precio),
@@ -585,12 +602,10 @@ export class AddModVentasComponent {
     // y la ND no tiene flujo de creación implementado. this.procesos (sin filtrar) se mantiene
     // intacto para no romper el .find() por id que resuelve el valor del combo al editar una venta.
     get procesosSeleccionables(): ProcesoVenta[] {
-      // Entrega sin cargo (8) y Devolución de entrega (9): existen en procesos_venta desde la F1 pero todavía
-      // no tienen flujo de alta (F2/F3). La Devolución de entrega nunca se emite desde acá (va por el diálogo
-      // de la fila de la ESC); la ESC se habilita en esta lista recién en F2.
+      // La Devolución de entrega (9) nunca se emite desde acá: va por el diálogo de la fila de la ESC (F3).
+      // La Entrega sin cargo (8) sí es seleccionable en Facturación (F2).
       const lista = this.procesos.filter(p =>
-        p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO &&
-        p.id !== ID_PROCESO.ENTREGA_SIN_CARGO && p.id !== ID_PROCESO.DEVOLUCION_ENTREGA);
+        p.id !== ID_PROCESO.NOTA_CREDITO && p.id !== ID_PROCESO.NOTA_DEBITO && p.id !== ID_PROCESO.DEVOLUCION_ENTREGA);
       // Pre-facturación: Nota de Empaque | Pedido | Presupuesto (de más a menos cercano a facturar).
       return this.tipo === 'pre' ? [...lista].sort((a, b) => (b.id ?? 0) - (a.id ?? 0)) : lista;
     }
@@ -1232,7 +1247,7 @@ export class AddModVentasComponent {
     const condicion = this.clienteSeleccionado?.idCondicionIva ?? CONDICION_IVA.SIN_CLIENTE;
 
     // esCotizacion:false → re-evalúa empresa+cliente sin heredar el proceso previo
-    this.PrepararFacturacionCliente(condicion, undefined, false);
+    this.PrepararFacturacionCliente(condicion, undefined, this.esEntregaSinCargo);
     this.ObtenerMetodosPago(idEmpresa);
     // Cálculo inmediato (estado actual mientras la HTTP resuelve);
     // PrepararFacturacionCliente recalcula de nuevo al terminar con el comprobante correcto
@@ -1325,7 +1340,7 @@ export class AddModVentasComponent {
   PrepararFacturacionCliente(
     condIvaCliente: number, 
     comprobanteExistente?: number,
-    esCotizacion: boolean = this.ProcesoControl?.id === ID_PROCESO.COTIZACION
+    esCotizacion: boolean = this.ProcesoControl?.id === ID_PROCESO.COTIZACION || this.esEntregaSinCargo
   ) 
   {
     let seleccionada = this.empresas.find(e => e.id == this.formFacturacion.get('empresa')?.value);
@@ -1552,12 +1567,15 @@ export class AddModVentasComponent {
   SetearTitulo(){
     if(this.venta.id == 0) this.formFacturacion.get('empresa')?.setValue(this.empresas[0].id);
     
-    const esCotizacion = this.ProcesoControl?.id === ID_PROCESO.COTIZACION;
+    const esCotizacion = this.ProcesoControl?.id === ID_PROCESO.COTIZACION || this.esEntregaSinCargo;
     this.PrepararFacturacionCliente(
       this.clienteSeleccionado?.idCondicionIva ?? CONDICION_IVA.SIN_CLIENTE,
       undefined,
       esCotizacion  
     );
+
+    if (this.esEntregaSinCargo) this.PrepararEntregaSinCargo();
+    else this.formGenerales.get('motivoEntrega')?.setValue(null);
 
     this.ventasService.ObtenerProximoNroProceso(this.ProcesoControl.id)
     .pipe(takeUntil(this.destroy$)) 
@@ -1691,6 +1709,7 @@ export class AddModVentasComponent {
         // Si el documento relacionado (Presupuesto/Pedido/Nota de Empaque) tenía un
         // descuento pactado, viaja y queda bloqueado acá - ver AplicarDescuentoRelacionado.
         this.AplicarDescuentoRelacionado(venta, [...this.productosFactura, ...this.serviciosFactura]);
+        if (this.esEntregaSinCargo) this.PrepararEntregaSinCargo();
         // Fix ago/sep-2026: sin esto, un Pedido/Nota relacionado de un cliente mayorista
         // con lista propia (o Lista 3.0) se facturaba con el precio del Pedido tal cual,
         // sin sumarle el 21% de IVA (ver PrecioItemSegunComprobante) - la factura salía
@@ -2323,13 +2342,39 @@ export class AddModVentasComponent {
   // EliminarItem), nunca desde el propio control de cabecera - ese lado ya funciona con el
   // *ngIf simple de la columna "Desc. %" (sin formControlName, sin este problema).
   private SincronizarBloqueoDescuentoGeneral(): void {
-    if (this.hayDescuentoPorItem || this.listaBloqueaDescuentoGeneral) {
+    if (this.hayDescuentoPorItem || this.listaBloqueaDescuentoGeneral || this.esEntregaSinCargo) {
       this.formFacturacion.get('descuento')?.disable();
       this.formFacturacion.get('tDescuento')?.disable();
     } else {
       this.formFacturacion.get('descuento')?.enable();
       this.formFacturacion.get('tDescuento')?.enable();
     }
+  }
+
+  // Entrega sin cargo: deja la venta lista para valorizarse a precio de lista y sin cobro. Se llama al
+  // elegir el proceso (SetearTitulo) y al cargar la Nota de Empaque relacionada, que trae su propio
+  // descuento general (AplicarDescuentoRelacionado). El backend vuelve a forzar estos valores.
+  private PrepararEntregaSinCargo(): void {
+    this.pagosFactura = [];
+    this.formFacturacion.get('descuento')?.setValue(0);
+    this.formFacturacion.get('ajuste')?.setValue(false);
+    this.redondeo.setValue('');
+    this.SincronizarBloqueoDescuentoGeneral();
+    this.CalcularTotalGeneral();
+  }
+
+  // Reglas de la ESC que se pueden chequear en pantalla antes de guardar/facturar (D3 y D8).
+  private ValidarEntregaSinCargo(): boolean {
+    if (this.tipoRelacionado !== TIPO_RELACIONADO.NOTA_EMPAQUE || !this.nroRelacionado) {
+      this.Notificaciones.Warn("Una entrega sin cargo se emite a partir de una nota de empaque aprobada. Seleccionala en Relacionados.");
+      return false;
+    }
+    if (!this.formGenerales.get('motivoEntrega')?.value) {
+      this.Notificaciones.Warn("Indicá el motivo de la entrega sin cargo.");
+      this.formGenerales.get('motivoEntrega')?.markAsTouched();
+      return false;
+    }
+    return true;
   }
 
   ObtenerTalleReal(tx: string, objeto: any): string | null {
@@ -2554,6 +2599,8 @@ export class AddModVentasComponent {
       return;
     }
 
+    if (this.esEntregaSinCargo && !this.ValidarEntregaSinCargo()) return;
+
     const descuentoPreInvalido = !validarFacturacion && !!this.formFacturacion.get('descuento')?.invalid;
 
     const formularioInvalido =
@@ -2573,7 +2620,7 @@ export class AddModVentasComponent {
     if(this.venta.factura)
       this.venta.estado = ESTADO_VENTA.FACTURADA;
 
-    if(this.ProcesoControl.id == ID_PROCESO.COTIZACION)
+    if(this.ProcesoControl.id == ID_PROCESO.COTIZACION || this.esEntregaSinCargo)
       this.venta.estado = ESTADO_VENTA.FINALIZADA;
 
 
@@ -2586,7 +2633,7 @@ export class AddModVentasComponent {
       // cuenta corriente es una decisión manual del operador (agregar el método
       // "Cuenta Corriente" a mano) - no se le arma sola. El chequeo de
       // coincidencia de más abajo es lo que obliga a esa carga manual.
-      if (this.clienteEsCuentaCorriente) {
+      if (!this.esEntregaSinCargo && this.clienteEsCuentaCorriente) {
         const pendiente = this.getSaldoPendiente;
         // ObtenerMetodosPago() de este componente (a diferencia del de
         // entrega-dinero.component.ts) no excluye CUENTA_CORRIENTE del combo, así
@@ -2633,7 +2680,7 @@ export class AddModVentasComponent {
       // fiscal sin registro en el sistema, un problema mucho peor que el
       // desajuste que se busca evitar. Para el flujo de Facturar, el mismo
       // chequeo se hace antes en ConfirmarFacturacion(), antes de emitir.
-      if (!factura && !this.clienteEsCuentaCorriente && !this.pagosCoincidenConTotal) {
+      if (!factura && !this.esEntregaSinCargo && !this.clienteEsCuentaCorriente && !this.pagosCoincidenConTotal) {
         const diferencia = Number((this.totalMetodosPagoCargados - this.totales.aPagar).toFixed(2));
         this.Notificaciones.Warn(
           diferencia > 0
@@ -2736,6 +2783,8 @@ export class AddModVentasComponent {
         return;
       };
 
+    if (this.esEntregaSinCargo && !this.ValidarEntregaSinCargo()) return;
+
     // Regla de coincidencia: la suma de los métodos de pago cargados tiene que
     // ser exactamente igual al total, sin importar qué método(s) se hayan
     // elegido (incluida una línea de Cuenta Corriente cargada a mano por el
@@ -2747,7 +2796,7 @@ export class AddModVentasComponent {
     // dispara después de este método): a diferencia del mismo chequeo en
     // Guardar() post-emisión, acá todavía no se generó nada irreversible, así
     // que sí corresponde cortar el flujo.
-    if (!this.clienteEsCuentaCorriente) {
+    if (!this.esEntregaSinCargo && !this.clienteEsCuentaCorriente) {
       if (this.pagosFactura.length == 0) {
         this.Notificaciones.Warn("No se registraron métodos de pago.");
         return;
@@ -2798,6 +2847,12 @@ export class AddModVentasComponent {
     this.objFacturar.idEmpresa = this.formFacturacion.get('empresa')?.value;
     this.objFacturar.pagos = this.pagosFactura;
     this.objFacturar.saldoPendiente = this.getSaldoPendiente;
+    // Entrega sin cargo: el modal no muestra pagos ni avisa de saldo a cuenta corriente.
+    this.objFacturar.entregaSinCargo = this.esEntregaSinCargo;
+    if (this.esEntregaSinCargo) {
+      this.objFacturar.pagos = [];
+      this.objFacturar.saldoPendiente = 0;
+    }
 
     // F4.2 - HANDOFF blindaje facturacion y logs. Armamos `this.venta` ACA (antes se
     // armaba recien en Guardar(), despues de cerrar el modal) porque /ventas/emitir
@@ -2910,6 +2965,7 @@ export class AddModVentasComponent {
     // se persiste nada.
     this.venta.fechaEntrega = this.formGenerales.get('fechaEntrega')?.value ?? undefined;
     this.venta.observacion = this.formGenerales.get('observacion')?.value || undefined;
+    this.venta.motivoEntrega = this.esEntregaSinCargo ? (this.formGenerales.get('motivoEntrega')?.value ?? undefined) : undefined;
     this.venta.ajuste = this.formFacturacion.get('ajuste')?.value == true ? 1 : 0;
     
     this.venta.cliente = this.clienteSeleccionado;
@@ -2957,7 +3013,7 @@ export class AddModVentasComponent {
       this.venta.tipoComprobante = this.comprobantes.find(c => c.id == this.formFacturacion.get('tComprobante')?.value)?.descripcion;
 
       this.venta.estado = ESTADO_VENTA.PENDIENTE;
-      if(this.pagoCompleto == false){
+      if(this.pagoCompleto == false && !this.esEntregaSinCargo){
         this.venta.impaga = 1;
       }
     }
@@ -2978,7 +3034,7 @@ export class AddModVentasComponent {
       this.venta.productos.push(this.ArmarItemRecargoTransferencia());
     }
     this.venta.servicios = this.serviciosFactura;
-    this.venta.pagos = this.pagosFactura;
+    this.venta.pagos = this.esEntregaSinCargo ? [] : this.pagosFactura;
   }
 
   //Marca los campos del formulario como tocados para validar

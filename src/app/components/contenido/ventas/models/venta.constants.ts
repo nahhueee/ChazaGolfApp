@@ -110,6 +110,21 @@ export const MOTIVO_ENTREGA_SIN_CARGO = {
 export type MotivoEntregaSinCargo = ValueOf<typeof MOTIVO_ENTREGA_SIN_CARGO>;
 
 /**
+ * Título que sale en el comprobante IMPRESO para la Entrega sin cargo y su Devolución (decisión D9):
+ * en pantallas y base el concepto se llama "Entrega sin cargo", pero en papel conserva el nombre
+ * del cliente. Se mapea por idProceso acá y NO desde procesos_venta.descripcion, así la UI y el
+ * papel no se pisan.
+ */
+export const TITULO_COMPROBANTE_IMPRESO: Partial<Record<IdProceso, string>> = {
+  [ID_PROCESO.ENTREGA_SIN_CARGO]:  'COTIZACIÓN Z',
+  [ID_PROCESO.DEVOLUCION_ENTREGA]: 'ANULACIÓN Z',
+};
+
+export function tituloComprobanteImpreso(idProceso?: number, descripcion?: string): string | undefined {
+  return TITULO_COMPROBANTE_IMPRESO[idProceso as IdProceso] ?? descripcion;
+}
+
+/**
  * Sigla de documento comercial (ver documento-comercial.service.ts) para Presupuesto/
  * Pedido/Nota de Empaque - mismo criterio que las siglas de comprobante fiscal (A/B/C/
  * NC/ND), pero para estos 3 procesos que todavía no pasan por AFIP.

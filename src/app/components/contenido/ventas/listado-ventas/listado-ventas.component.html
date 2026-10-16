@@ -148,6 +148,10 @@
                     }
                     <td>
                         <p-tag [value]="venta.estado" [severity]="GetSeverity(venta.estado)" [pTooltip]="TooltipAuditoria(venta)" tooltipPosition="bottom" />
+                        @if(venta.idProceso == 8){
+                            <p-tag styleClass="ml-1" severity="secondary" [value]="'Sin cargo' + (venta.motivoEntrega ? ' · ' + venta.motivoEntrega : '')"
+                            pTooltip="Entrega sin cargo: descuenta stock, no genera deuda ni toca la cuenta corriente." tooltipPosition="bottom" />
+                        }
                         @if(venta.regularizacionArca){
                             <p-tag styleClass="ml-1" severity="info" value="Regularización ARCA"
                             pTooltip="Esta venta se regularizó manualmente: el comprobante ya tenía CAE en ARCA pero no había quedado registrado en el sistema."
@@ -156,12 +160,13 @@
                     </td>
                     <td>
                         <div class="acciones">
-                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO' || !PuedeEditar(venta)"/>
+                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO' || venta.idProceso == 8 || venta.idProceso == 9 || !PuedeEditar(venta)"/>
 
                             <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
 
                             @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada")
-                            && venta.proceso != "NOTA DE CREDITO" && venta.proceso != "NOTA DE DEBITO"){
+                            && venta.proceso != "NOTA DE CREDITO" && venta.proceso != "NOTA DE DEBITO"
+                            && venta.idProceso != 8 && venta.idProceso != 9){
                                 <p-button severity="primary" styleClass="p-button-sm"
                                 [rounded]="true" [outlined]="true" icon="pi pi-file-edit"
                                 (onClick)="ElegirTipoNotaCredito($event, venta)"

@@ -20,6 +20,7 @@ import {
   FormatearPrecioTotalNeto,
   CortarNombreProducto,
 } from './helpers/tabla-productos-talles.helper';
+import { tituloComprobanteImpreso } from '../components/contenido/ventas/models/venta.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -83,7 +84,7 @@ export class ComprobanteService {
       comprobante.nombreLocal = "CHAZA GOLF"
       comprobante.horaVenta = venta.hora;
       comprobante.cliente = venta.cliente?.id + " - " + venta.cliente?.nombre;
-      comprobante.proceso = venta.proceso;
+      comprobante.proceso = tituloComprobanteImpreso(venta.idProceso, venta.proceso);
       comprobante.nroRemito = venta.id!;
   
       const fecha = new Date(venta.fecha!);
@@ -96,7 +97,10 @@ export class ComprobanteService {
           day: '2-digit', month: '2-digit', year: '2-digit'
         });
       }
-      comprobante.observacion = venta.observacion;
+      // Entrega sin cargo: el motivo se imprime solo en el remito.
+      comprobante.observacion = venta.motivoEntrega
+        ? `Motivo: ${venta.motivoEntrega}` + (venta.observacion ? ` - ${venta.observacion}` : '')
+        : venta.observacion;
   
       // Descuento general + procesamiento de ítems (subtotal/descuento/total bruto,
       // respetando tope de descuento por ítem) - lógica compartida con

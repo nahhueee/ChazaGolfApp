@@ -13,6 +13,7 @@ import { MiscService } from './misc.service';
 import { TipoComprobante } from '../models/ObjFacturar';
 import { TIPO_COMPROBANTE, esMayoristaConListaPropia } from '../components/contenido/ventas/models/venta.constants';
 import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
+import { ID_PROCESO, tituloComprobanteImpreso } from '../components/contenido/ventas/models/venta.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -107,6 +108,9 @@ export class FacturaService {
       datosFactura.tipoDNI = venta.cliente?.idTipoDocumento;
       datosFactura.condReceptor = venta.cliente?.idCondicionIva;
       datosFactura.desFactura = venta.tipoComprobante!;
+      // Entrega sin cargo / Devolución de entrega: el título impreso conserva el nombre del cliente
+      // (COTIZACIÓN Z / ANULACIÓN Z), aunque el comprobante interno sea el 99.
+      datosFactura.desFactura = tituloComprobanteImpreso(venta.idProceso, venta.tipoComprobante!)!;
       datosFactura.tipoPago = venta.pagos.map(p => p.metodo).join(' | ');
 
       let esNota:boolean = false;
@@ -147,6 +151,8 @@ export class FacturaService {
         datosFactura.desComprobante = venta.idTipoComprobante == 99
           ? 'X'
           : (venta.idTipoComprobante == 101 ? 'ND X' : 'NC X');
+        // Entrega sin cargo / Devolución de entrega: letra Z (comprobante interno 99 igual).
+        if (venta.idProceso == ID_PROCESO.ENTREGA_SIN_CARGO || venta.idProceso == ID_PROCESO.DEVOLUCION_ENTREGA) datosFactura.desComprobante = 'Z';
       }
       
       //Obtenemos datos grabados para la facturacion
@@ -275,7 +281,7 @@ export class FacturaService {
       comprobante.nombreLocal = "CHAZA GOLF"
       comprobante.horaVenta = venta.hora;
       comprobante.cliente = venta.cliente?.id + " - " + venta.cliente?.nombre;
-      comprobante.proceso = venta.proceso;
+      comprobante.proceso = tituloComprobanteImpreso(venta.idProceso, venta.proceso);
   
       const fecha = new Date(venta.fecha!);
       comprobante.fechaVenta = fecha.toLocaleDateString('es-ES', {
@@ -512,7 +518,7 @@ export class FacturaService {
                     stack: [
                       { text: datosFactura.desFactura, style: 'titulo', alignment: 'center' },
 
-                      (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
+                      (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "Z" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
                         {
                           text: [
                             { text: 'Nro Comp: ', bold: true },
@@ -598,7 +604,7 @@ export class FacturaService {
                       {
                         text: [
                           { text: 'Condición de Venta: ', bold: true },
-                          { text: datosFactura.tipoPago }
+                          { text: datosFactura.desComprobante === 'Z' ? datosFactura.desFactura : datosFactura.tipoPago }
                         ],
                         style: 'simple', margin: [8, 5, 0, 4]
                       },                      {
@@ -754,7 +760,7 @@ export class FacturaService {
                       // Fix redondeo (ago-2026): antes usaba totalFinal, el mismo valor que
                       // "Total General" (totalFinal = totalAPagar - redondeo), así que con
                       // redondeo != 0 el impreso mostraba un Total A Pagar distinto al cobrado.
-                      { text: `Total A Pagar: $${comprobante.totalAPagar?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'total', alignment: 'right' }
+                      { text: `${datosFactura.desComprobante === 'Z' ? 'Valor de Entrega' : 'Total A Pagar'}: $${comprobante.totalAPagar?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'total', alignment: 'right' }
                     ]
                   }
                 ]
@@ -774,7 +780,7 @@ export class FacturaService {
           //ArmarComprobante) - sin esta exclusión, pdfMake arma la columna de imagen con
           //qr=undefined y tira "Unrecognized document structure" (bug real jul-2026, visto
           //al ver el comprobante de una ND X, que quedó afuera de este chequeo).
-          (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
+          (datosFactura.desComprobante != "X" && datosFactura.desComprobante != "Z" && datosFactura.desComprobante != "NC X" && datosFactura.desComprobante != "ND X") ? [
             {
               columns: [
 

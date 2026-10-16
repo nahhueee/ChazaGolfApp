@@ -58,6 +58,9 @@ import { TallesProducto } from "./Producto";
     // Texto libre a nivel de venta (ej. motivo de una Nota de Crédito sin
     // productos: "Adelanto de producción"/"Saldo orden de compra").
     observacion?:string;
+    // Motivo de una Entrega sin cargo (EMBAJADOR / EVENTO / OTRO, ver MOTIVO_ENTREGA_SIN_CARGO).
+    // Solo se completa cuando idProceso = ENTREGA_SIN_CARGO.
+    motivoEntrega?:string;
     estado?:string;
     impaga:number = 0;
     entregado:number = 0;

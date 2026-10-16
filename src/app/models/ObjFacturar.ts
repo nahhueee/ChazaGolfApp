@@ -17,6 +17,8 @@ export class ObjFacturar {
     idEmpresa?:number;
     pagos:PagosFactura[] = [];
     saldoPendiente:number = 0;
+    // true cuando el modal confirma una Entrega sin cargo: sin pagos ni saldo a cuenta corriente.
+    entregaSinCargo?: boolean;
 
     // SOLO para Notas
     comprobanteAsociado?: {

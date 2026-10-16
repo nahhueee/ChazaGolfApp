@@ -49,7 +49,14 @@
                         }
                     </div>
 
-                    @if(tipo === 'pre'){
+                    @if(esEntregaSinCargo){
+                        <!-- Motivo de la entrega sin cargo (obligatorio) -->
+                        <p-floatlabel variant="in" style="width: 100%;">
+                            <p-select [options]="motivosEntrega" formControlName="motivoEntrega" optionValue="valor" optionLabel="etiqueta" [style]="{width: '100%'}" />
+                            <label>Motivo de la entrega</label>
+                        </p-floatlabel>
+                    }
+                    @if(tipo === 'pre' || esEntregaSinCargo){
                         <!-- Observaciones -->
                         <p-floatlabel variant="in" style="width: 100%;">
                             <textarea pTextarea formControlName="observacion" rows="2" autoResize="true" style="width: 100%;"></textarea>
@@ -117,7 +124,8 @@
                                 @if(
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 5) ||
                                     (venta.idProceso == 6 && this.ProcesoControl.id == 7) ||
-                                    (venta.idProceso == 5 && this.ProcesoControl.id == 3)
+                                    (venta.idProceso == 5 && this.ProcesoControl.id == 3) ||
+                                    (esEntregaSinCargo && (venta.idProceso == 5 || venta.idProceso == 6))
                                     ){
                                     <div class="venta disabled">
                                         <p><strong>{{venta.proceso}}</strong> {{venta.nroProceso}}</p>
@@ -700,7 +708,7 @@
                     <div class="horizontal">
                         <!-- Tipo Descuento -->
                         <p-floatlabel variant="in">
-                            <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" />
+                            <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion || esEntregaSinCargo" />
                             <label>Tipo Descuento</label>
                         </p-floatlabel>
 
@@ -708,7 +716,7 @@
                             <!-- Descuento -->
                             <p-inputgroup>
                                 <p-floatlabel variant="in">
-                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral" (input)="CalcularTotalGeneral()"/>
+                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral || esEntregaSinCargo" (input)="CalcularTotalGeneral()"/>
                                     <label>Descuento</label>
                                 </p-floatlabel>
                                 <p-inputgroup-addon>%</p-inputgroup-addon>
@@ -751,7 +759,7 @@
                 }
             </form>
 
-            <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura'" (keyup.enter)='AgregarPago()'>
+            <form class="metodo-pago" [formGroup]="formPagos" *ngIf="tipo == 'factura' && !esEntregaSinCargo" (keyup.enter)='AgregarPago()'>
                 <div class="horizontal">
                     <!-- Metodo pago -->
                     <p-floatlabel variant="in">
@@ -886,7 +894,7 @@
                     </div>
                     <div class="fila">
                         <span>Redondeo:</span>
-                        <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" [disabled]="soloLecturaPorEdicion" (focus)="SelectContent($event)"/>
+                        <input type="text" pInputText [formControl]="redondeo" [imask]="decimal_mask" placeholder="Redondeo" [disabled]="soloLecturaPorEdicion || esEntregaSinCargo" (focus)="SelectContent($event)"/>
                     </div>
                 }
 
@@ -903,7 +911,7 @@
     <p-button label="Cerrar" severity="secondary" icon="pi pi-times" class="btnCerrar" (onClick)="Cerrar()"/>
 
     <p-button label="Vista Previa" variant="outlined" icon="pi pi-eye" (onClick)="vistaPreviaVisible = true; ArmarObjetoVenta()"/>
-    @if(ProcesoControl.descripcion !== "COTIZACION"){
+    @if(ProcesoControl.descripcion !== "COTIZACION" && !esEntregaSinCargo){
         <p-button label="Guardar" icon="pi pi-save" raised (onClick)="Guardar()" [disabled]="venta.factura || (venta.estado == 'Facturado' || venta.estado == 'Facturada')"/>
     }
     @if(tipo == 'factura'){
@@ -913,7 +921,7 @@
         ver AbrirModalFacturar/GuardarFacturar en el .ts), Guardar quedaba bloqueado pero Facturar
         seguía habilitado, permitiendo reintentar facturar una venta que ya puede tener un CAE real
         emitido en ARCA. -->
-        <p-button label="Facturar" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada' || venta.estado == 'Facturada' || venta.estado == 'Facturado')" />
+        <p-button [label]="esEntregaSinCargo ? 'Confirmar entrega' : 'Facturar'" icon="pi pi-dollar" raised (onClick)="ConfirmarFacturacion()" [disabled]="venta.factura || (venta.estado == 'Finalizada' || venta.estado == 'Facturada' || venta.estado == 'Facturado')" />
     }
 </div>
 
