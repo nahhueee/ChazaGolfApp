@@ -35,10 +35,18 @@
                     </div>
                     <div class="horizontal">
                         <!-- Puntos -->
-                        <p-floatlabel variant="in">
+                        <p-floatlabel variant="in" [style.flex]="esEntregaSinCargo ? 1 : null">
                             <p-select [options]="puntos" formControlName="punto" optionLabel="descripcion" [disabled]="ProcesoControl && ProcesoControl.id == 0" />
                             <label>Punto de Venta</label>
                         </p-floatlabel>
+
+                        @if(esEntregaSinCargo){
+                            <!-- Motivo de la entrega sin cargo (obligatorio), al lado del Punto de Venta -->
+                            <p-floatlabel variant="in" style="flex: 1;">
+                                <p-select [options]="motivosEntrega" formControlName="motivoEntrega" optionValue="valor" optionLabel="etiqueta" [style]="{width: '100%'}" />
+                                <label>Motivo de la entrega</label>
+                            </p-floatlabel>
+                        }
 
                         @if(tipo === 'pre'){
                             <!-- Fecha de Entrega -->
@@ -49,13 +57,6 @@
                         }
                     </div>
 
-                    @if(esEntregaSinCargo){
-                        <!-- Motivo de la entrega sin cargo (obligatorio) -->
-                        <p-floatlabel variant="in" style="width: 100%;">
-                            <p-select [options]="motivosEntrega" formControlName="motivoEntrega" optionValue="valor" optionLabel="etiqueta" [style]="{width: '100%'}" />
-                            <label>Motivo de la entrega</label>
-                        </p-floatlabel>
-                    }
                     @if(tipo === 'pre' || esEntregaSinCargo){
                         <!-- Observaciones -->
                         <p-floatlabel variant="in" style="width: 100%;">
