@@ -168,7 +168,7 @@ export class ApiService {
       this.spinner.hide();
       // Si el servidor respondió pero con error HTTP
       if (response.status >= 400) {
-        this.handleHttpError(response.status);
+        this.handleHttpError(response.status, response.data);
         return null;
       }
 
@@ -198,7 +198,14 @@ export class ApiService {
     }
   }
 
-  private handleHttpError(status: number) {
+  private handleHttpError(status: number, data?: any) {
+    // Mismo criterio que HttpErrorHandlerService: error de negocio del backend ({code, message, ref}).
+    if (status >= 400 && status < 500 && status !== 401
+        && typeof data?.code === 'string' && typeof data?.message === 'string') {
+      this.Notificaciones.Warn(data.message);
+      return;
+    }
+
     switch (status) {
       case 401:
         this.Notificaciones.Warn('Sesión inválida o expirada. Volvé a iniciar sesión.');
