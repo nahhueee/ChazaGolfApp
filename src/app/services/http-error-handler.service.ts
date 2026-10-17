@@ -31,6 +31,15 @@ export class HttpErrorHandlerService  implements HttpInterceptor {
             return throwError(err);
           }
 
+          // Errores de negocio del backend (AppError vía errorMiddleware: {code, message, ref}):
+          // se muestra el mensaje real en vez del genérico por status. Los endpoints legacy
+          // responden texto plano (sin code/message), así que siguen por el switch de abajo.
+          if (err.status >= 400 && err.status < 500 && err.status !== 401
+              && typeof err.error?.code === 'string' && typeof err.error?.message === 'string') {
+            this.Notificaciones.Warn(err.error.message);
+            return throwError(err);
+          }
+
           //Dependiendo el código de error mostramos un mensaje
           switch (err.status) {
             case 401: {
