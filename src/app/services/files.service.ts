@@ -36,6 +36,11 @@ export class FilesService {
     return this.apiService.getFile('files/prefacturacion-excel', filtros);
   }
 
+  // Export de Entregas sin cargo (+ sus devoluciones, neteadas). Filtros: fechas + cliente.
+  DescargarEntregasSinCargoExcel(filtros:FiltroVenta){
+    return this.apiService.getFile('files/entregas-sin-cargo-excel', filtros);
+  }
+
   DescargarLibroIvaVentasExcel(filtros: { idEmpresa: number, fechas: [Date, Date] }){
     return this.apiService.getFile('files/libro-iva-ventas-excel', filtros);
   }

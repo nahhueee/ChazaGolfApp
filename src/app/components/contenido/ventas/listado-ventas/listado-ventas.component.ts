@@ -264,23 +264,43 @@ export class ListadoVentasComponent implements OnDestroy {
       ? this.filesService.DescargarPreFacturacionExcel(this.filtroActual)
       : this.filesService.DescargarVentasExcel(this.filtroActual);
 
-    descarga$.subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+    descarga$.subscribe(blob => this.GuardarExcel(blob, esPre ? 'PreFacturacion' : 'Ventas'));
+  }
 
-      // Fecha en formato DD-MM-YY
-      const fecha = new Date();
-      const dd = String(fecha.getDate()).padStart(2, '0');
-      const mm = String(fecha.getMonth() + 1).padStart(2, '0'); // Meses empiezan en 0
-      const yy = String(fecha.getFullYear()).slice(-2); // últimos 2 dígitos del año
+  // Facturación: entregas sin cargo (ESC) y sus devoluciones, neteadas. Mismos filtros de la
+  // pantalla que Exportar (rango de fechas obligatorio + cliente); sin filtro por motivo.
+  ExportarEntregasSinCargo(){
+    const fechas = this.filtros.get('fechas')?.value;
+    const fechasCompletas = !!fechas && fechas.length === 2 && !!fechas[0] && !!fechas[1];
+    if(!fechasCompletas){
+      this.Notificaciones.Warn("Debe seleccionar un rango de fechas completo (desde y hasta).");
+      return;
+    }
 
-      const nombreArchivo = `${esPre ? 'PreFacturacion' : 'Ventas'}_${dd}-${mm}-${yy}.xlsx`;
-
-      a.href = url;
-      a.download = nombreArchivo; 
-      a.click();
-      window.URL.revokeObjectURL(url);
+    const filtro = new FiltroVenta({
+      tipo: this.tipo,
+      fechas: fechas,
+      cliente: this.filtros.value.cliente?.id ?? 0
     });
+
+    this.filesService.DescargarEntregasSinCargoExcel(filtro)
+      .subscribe(blob => this.GuardarExcel(blob, 'EntregasSinCargo'));
+  }
+
+  private GuardarExcel(blob: Blob, prefijo: string){
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    // Fecha en formato DD-MM-YY
+    const fecha = new Date();
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0'); // Meses empiezan en 0
+    const yy = String(fecha.getFullYear()).slice(-2); // últimos 2 dígitos del año
+
+    a.href = url;
+    a.download = `${prefijo}_${dd}-${mm}-${yy}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
 
   Editar(id:number){

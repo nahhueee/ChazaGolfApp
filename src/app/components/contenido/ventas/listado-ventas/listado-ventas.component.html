@@ -8,6 +8,9 @@
             <p-button label="Nota de Débito X" icon="pi pi-replay" severity="danger" (onClick)="AbrirNotaDebitoX()"/>
         }
         <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
+        @if(tipo == 'factura'){
+            <p-button variant="outlined" label="Exportar entregas sin cargo" severity="primary" icon="pi pi-file-excel" (onClick)="ExportarEntregasSinCargo()"/>
+        }
     </app-encabezado-seccion>
 
     @if(tipo == 'pre' && (pendientes.total > 0 || pendientes.porFacturar > 0)){
