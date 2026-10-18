@@ -14,6 +14,14 @@
         </div>
 
 
+        <p-tabs [(value)]="tabActiva">
+            <p-tablist>
+                <p-tab value="cuenta">Cuenta corriente</p-tab>
+                <p-tab value="entregas">Entregas sin cargo</p-tab>
+            </p-tablist>
+        </p-tabs>
+
+        @if(tabActiva === 'cuenta'){
         <form [formGroup]="filtros" class="filtros"> 
             <div class="izq">
                 <p-floatlabel variant="on">
@@ -37,8 +45,10 @@
             </div>
             
         </form> 
+        }
     </div>
 
+    @if(tabActiva === 'cuenta'){
     <div class="tabla">
         <p-table 
         [value]="ventas"
@@ -102,6 +112,74 @@
             </ng-template>
         </p-table>
     </div>
+    } @else {
+    <!-- Solapa informativa: las entregas sin cargo no tienen Debe/Haber ni mueven el saldo de la cuenta. -->
+    <div class="entregas">
+        <p class="aviso-entregas"><i class="pi pi-info-circle"></i> Mercadería entregada sin cargo. No afecta el saldo de la cuenta corriente.</p>
+
+        <form [formGroup]="filtrosEntregas" class="filtros-entregas">
+            <p-floatlabel variant="on">
+                <p-datepicker formControlName="fechas" selectionMode="range"/>
+                <label>Rango de Fecha</label>
+            </p-floatlabel>
+            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="BuscarEntregas()"/>
+            <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltrosEntregas()" />
+        </form>
+
+        <div class="resumen-entregas">
+            <div><span>Entregado</span><b>${{ totalesEntregas.entregado | decimalFormat }}</b></div>
+            <div><span>Devuelto</span><b>${{ totalesEntregas.devuelto | decimalFormat }}</b></div>
+            <div><span>Neto del período</span><b>${{ totalesEntregas.neto | decimalFormat }}</b></div>
+        </div>
+
+        <p-table
+            [value]="entregas"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="filasEntregas"
+            [first]="primeraEntregas"
+            [totalRecords]="totalEntregas"
+            (onLazyLoad)="BuscarEntregas($event)"
+            [loading]="loadingEntregas"
+            [rowsPerPageOptions]="[10,20,50]"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+            [tableStyle]="{ 'min-width': '50rem' }">
+            <ng-template #header>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Nro</th>
+                    <th>Motivo</th>
+                    <th>Total</th>
+                    <th>Devuelto</th>
+                    <th>Neto</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-entrega>
+                <tr>
+                    <td>{{ entrega.fecha | date:'dd-MM-yyyy HH:mm' }}</td>
+                    <td>{{ entrega.nroProceso }}</td>
+                    <td>{{ MotivoTexto(entrega.motivoEntrega) }}</td>
+                    <td>${{ entrega.total | decimalFormat }}</td>
+                    <td>${{ entrega.devuelto | decimalFormat }}</td>
+                    <td>${{ entrega.neto | decimalFormat }}</td>
+                    <td>
+                        <div class="acciones">
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante($event, entrega.id)" pTooltip="Imprimir Comprobante" tooltipPosition="bottom"/>
+                            @if(entrega.observacion){
+                                <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-info-circle" (onClick)="VerObservaciones(entrega.observacion)" pTooltip="Ver Observaciones" tooltipPosition="bottom"/>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr><td colspan="7">Este cliente no tiene entregas sin cargo en el período.</td></tr>
+            </ng-template>
+        </p-table>
+    </div>
+    }
 
 </div>
 

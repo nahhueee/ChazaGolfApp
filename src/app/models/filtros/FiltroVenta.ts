@@ -16,6 +16,8 @@ export class FiltroVenta{
   // Presupuesto/Pedido/Nota de Empaque (tipo === 'pre').
   fechasEntrega = "";
   cliente = 0;
+  // Solo Entregas sin cargo con mercadería sin devolver (ver FiltroConSaldoPorDevolverSql).
+  conSaldoPorDevolver = false;
   impagas = 0;
   desdeCuenta = false;
 
@@ -34,6 +36,7 @@ export class FiltroVenta{
       this.fechas = data.fechas;
       this.fechasEntrega = data.fechasEntrega;
       this.cliente = data.cliente;
+      this.conSaldoPorDevolver = !!data.conSaldoPorDevolver;
       this.impagas = data.impagas;
       this.desdeCuenta = data.desdeCuenta
     }

@@ -61,3 +61,16 @@
 .filtro-activo small{
     color: var(--text-color-secondary);
 }
+
+.col-proceso {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.check-saldo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}

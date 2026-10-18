@@ -281,6 +281,18 @@ import { TallesProducto } from "./Producto";
     idTipoComprobante:number = 0;
   }
   
+  // Fila de la solapa "Entregas sin cargo" de la cuenta corriente (informativa, no mueve el saldo).
+  export interface EntregaSinCargoCuenta{
+    id: number;
+    nroProceso: number;
+    fecha: Date;
+    motivoEntrega: string | null;
+    observacion: string | null;
+    total: number;
+    devuelto: number;
+    neto: number;
+  }
+
   export class VentasClienteCuenta{
   id: number = 0;
   nroProceso: number = 0;

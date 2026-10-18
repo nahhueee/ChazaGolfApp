@@ -4,7 +4,7 @@ import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
-import { PagosFactura, Venta, VentasClienteCuenta } from '../../../../models/Factura';
+import { EntregaSinCargoCuenta, PagosFactura, Venta, VentasClienteCuenta } from '../../../../models/Factura';
 import { FiltroVenta } from '../../../../models/filtros/FiltroVenta';
 import { ActivatedRoute } from '@angular/router';
 import { VentasService } from '../../../../services/ventas.service';
@@ -22,7 +22,7 @@ import { CuentasCorrientesService } from '../../../../services/cuentas-corriente
 import { FiltroVentasCliente } from '../../../../models/filtros/FiltroClientes';
 import { TagModule } from 'primeng/tag';
 import { CuentaCorrienteReporteService } from '../../../../services/cuenta-corriente.reporte.service';
-import { METODO_PAGO } from '../../ventas/models/venta.constants';
+import { METODO_PAGO, MOTIVO_ENTREGA_SIN_CARGO } from '../../ventas/models/venta.constants';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { ComprobanteService } from '../../../../services/comprobante.service';
 import { FacturaService } from '../../../../services/factura.service';
@@ -31,6 +31,7 @@ import { EstadisticaClientes } from "../../clientes/estadistica-clientes/estadis
 import { Dialog } from 'primeng/dialog';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { TextareaModule } from 'primeng/textarea';
+import { TabsModule } from 'primeng/tabs';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 
@@ -52,7 +53,8 @@ import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta
     PopoverModule,
     EstadisticaClientes,
     Dialog,
-    TextareaModule
+    TextareaModule,
+    TabsModule
 ],
   templateUrl: './ventas-cliente.components.html',
   styleUrl: './ventas-cliente.components.scss',
@@ -77,6 +79,16 @@ export class VentasClienteComponent {
 
   filtros:FormGroup;
   primeraCarga = true;
+
+  // Solapa "Entregas sin cargo" (informativa, no afecta el saldo de la cuenta).
+  tabActiva: string | number = 'cuenta';
+  filtrosEntregas: FormGroup = new FormGroup({ fechas: new FormControl() });
+  entregas: EntregaSinCargoCuenta[] = [];
+  totalEntregas = 0;
+  loadingEntregas = false;
+  filasEntregas = 10;
+  primeraEntregas = 0;
+  totalesEntregas = { entregado: 0, devuelto: 0, neto: 0 };
 
   @ViewChild('op') op!: Popover;
 
@@ -175,6 +187,48 @@ export class VentasClienteComponent {
       this.totalRecords = response.total;
       this.loading = false;
     });
+  }
+
+  // Sin event (botón Buscar) vuelve a la primera página; con event (paginador / carga inicial de
+  // la tabla) respeta la página pedida.
+  BuscarEntregas(event?: TableLazyLoadEvent) {
+    if (event) {
+      this.primeraEntregas = event.first ?? 0;
+      this.filasEntregas = event.rows ?? this.filasEntregas;
+    } else {
+      this.primeraEntregas = 0;
+    }
+
+    this.loadingEntregas = true;
+
+    this.cuentasService.ObtenerEntregasSinCargoCliente({
+      cliente: this.idCliente,
+      fechas: this.filtrosEntregas.value.fechas,
+      pagina: Math.floor(this.primeraEntregas / this.filasEntregas) + 1,
+      tamanioPagina: this.filasEntregas
+    }).subscribe({
+      next: response => {
+        this.entregas = response.registros;
+        this.totalEntregas = response.total;
+        this.totalesEntregas = response.totales;
+        this.loadingEntregas = false;
+      },
+      error: () => { this.loadingEntregas = false; }
+    });
+  }
+
+  LimpiarFiltrosEntregas(){
+    this.filtrosEntregas.reset();
+    this.BuscarEntregas();
+  }
+
+  MotivoTexto(motivo: string | null): string {
+    switch (motivo) {
+      case MOTIVO_ENTREGA_SIN_CARGO.EMBAJADOR: return 'Embajador';
+      case MOTIVO_ENTREGA_SIN_CARGO.EVENTO: return 'Evento';
+      case MOTIVO_ENTREGA_SIN_CARGO.OTRO: return 'Otro';
+      default: return '-';
+    }
   }
 
   LimpiarFiltros(){

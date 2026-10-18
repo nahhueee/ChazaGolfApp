@@ -131,12 +131,18 @@ export class ListadoVentasComponent implements OnDestroy {
       estadoRapido: new FormControl(''),
       fechas: new FormControl(),
       fechasEntrega: new FormControl(),
-      cliente: new FormControl()
+      cliente: new FormControl(),
+      conSaldoPorDevolver: new FormControl(false)
     })
   }
 
   ngOnInit() {
     this.subs.add(this.pendientesService.resumen$.subscribe(r => this.pendientes = r));
+    // El tilde "Con saldo por devolver" solo existe con el proceso Entrega sin cargo: al cambiar
+    // de proceso se destilda para no dejar un filtro oculto activo.
+    this.subs.add(this.filtros.controls['proceso'].valueChanges.subscribe(() => {
+      this.filtros.patchValue({ conSaldoPorDevolver: false }, { emitEvent: false });
+    }));
 
     this.subs.add(this.rutaActiva.queryParams.subscribe(params => {
       if (this.ignorarProximaEmisionDeParametros) {
@@ -226,7 +232,8 @@ export class ListadoVentasComponent implements OnDestroy {
         estado: this.filtros.value.estadoRapido || '',
         fechas: this.filtros.value.fechas,
         fechasEntrega: this.filtros.value.fechasEntrega,
-        cliente: this.filtros.value.cliente?.id ?? 0
+        cliente: this.filtros.value.cliente?.id ?? 0,
+        conSaldoPorDevolver: this.EsFiltroEntregaSinCargo && !!this.filtros.value.conSaldoPorDevolver
       });
     }
 
@@ -529,8 +536,13 @@ export class ListadoVentasComponent implements OnDestroy {
     });
   }
 
+  // true cuando el proceso elegido en los filtros es Entrega sin cargo (habilita "Con saldo por devolver").
+  get EsFiltroEntregaSinCargo(): boolean {
+    return this.tipo === 'factura' && this.filtros.value.proceso?.id === ID_PROCESO.ENTREGA_SIN_CARGO;
+  }
+
   LimpiarFiltros(){
-    this.filtros.reset();
+    this.filtros.reset({ conSaldoPorDevolver: false });
     this.Buscar();
   }
 

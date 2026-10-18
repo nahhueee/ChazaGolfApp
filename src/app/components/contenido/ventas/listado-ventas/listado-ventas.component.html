@@ -38,11 +38,21 @@
 
     <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
         <div class="izq">
-            <!-- Proceso -->
-            <p-floatlabel variant="on">
-                <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
-                <label>Proceso</label>
-            </p-floatlabel>
+            <!-- Proceso (con el tilde de saldo por devolver justo debajo, solo para Entrega sin cargo) -->
+            <div class="col-proceso">
+                <p-floatlabel variant="on">
+                    <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
+                    <label>Proceso</label>
+                </p-floatlabel>
+
+                @if(EsFiltroEntregaSinCargo){
+                    <!-- Entregas sin cargo con mercadería todavía sin devolver -->
+                    <div class="check-saldo">
+                        <p-checkbox formControlName="conSaldoPorDevolver" [binary]="true" inputId="conSaldoPorDevolver"/>
+                        <label for="conSaldoPorDevolver">Con saldo por devolver</label>
+                    </div>
+                }
+            </div>
 
             <!-- Nro Proceso -->
             <p-floatlabel variant="on">

@@ -23,6 +23,11 @@ export class CuentasCorrientesService {
     return this.apiService.post('cuentas/ventas-cliente-reporte', filtro)
   }
   
+  // Solapa "Entregas sin cargo" de la ficha del cliente (informativa, no afecta el saldo).
+  ObtenerEntregasSinCargoCliente(filtro:{cliente:number, fechas:any, pagina:number, tamanioPagina:number}): Observable<any> {
+    return this.apiService.post('cuentas/entregas-sin-cargo', filtro)
+  }
+
   ObtenerSaldoTotalCliente(idCliente:number): Observable<any> {
     return this.apiService.get('cuentas/saldo-cliente/' + idCliente)
   }
