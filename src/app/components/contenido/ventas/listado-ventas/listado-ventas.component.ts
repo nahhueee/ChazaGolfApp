@@ -25,7 +25,7 @@ import { DocumentoComercialService } from '../../../../services/documento-comerc
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { FacturaService } from '../../../../services/factura.service';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Dialog } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
@@ -243,6 +243,12 @@ export class ListadoVentasComponent implements OnDestroy {
       this.loading = false;
     });
   }
+
+  // Opciones del botón Exportar de Facturación (SplitButton).
+  opcionesExportar: MenuItem[] = [
+    { label: 'Exportar', icon: 'pi pi-file-excel', command: () => this.Exportar() },
+    { label: 'Exportar entregas sin cargo', icon: 'pi pi-file-excel', command: () => this.ExportarEntregasSinCargo() },
+  ];
 
   Exportar(){
     const fechas = this.filtros.get('fechas')?.value;
