@@ -2819,7 +2819,7 @@ export class AddModVentasComponent {
     // una condicion de carrera entre esta consulta y el guardado final); esto corta el
     // caso comun ANTES de facturar en vez de despues. Caso real que motivo esto:
     // Factura A PtoVenta 12 Nro 80 (sep-2026).
-    this.ventasService.ValidarStockVenta(this.productosFactura)
+    this.ventasService.ValidarStockVenta(this.productosFactura, this.nroRelacionado, this.tipoRelacionado)
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: () => this.AbrirModalFacturar(),

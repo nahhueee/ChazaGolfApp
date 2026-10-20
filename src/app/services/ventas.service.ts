@@ -65,8 +65,10 @@ export class VentasService {
   // Chequeo preventivo de stock contra la base (ver ValidarStockVenta en el backend) -
   // se llama desde ConfirmarFacturacion() ANTES de abrir el modal de Facturar, para
   // cortar el flujo antes de pedir el CAE a AFIP (accion irreversible).
-  ValidarStockVenta(productos:any[]): Observable<any>{
-    return this.apiService.post('ventas/validar-stock', {productos})
+  // nroRelacionado/tipoRelacionado: si la venta sale de un Pedido o Nota de Empaque, el backend no
+  // exige disponible por lo que ese documento ya tenía reservado (solo por el excedente).
+  ValidarStockVenta(productos:any[], nroRelacionado?:number, tipoRelacionado?:string): Observable<any>{
+    return this.apiService.post('ventas/validar-stock', {productos, nroRelacionado, tipoRelacionado})
   }
   ObtenerQR(idventa:number): Observable<any>{
     return this.apiService.get(`ventas/obtenerQR/${idventa}`)
