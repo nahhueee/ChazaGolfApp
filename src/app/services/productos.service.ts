@@ -32,8 +32,10 @@ export class ProductosService {
     return this.apiService.get(`productos/buscar-prod-presupuesto/${filtro}`)
   }
 
-  ObtenerStockDisponiblePorProducto(idProducto:string): Observable<any>{
-    return this.apiService.get(`productos/obtener-stock-disponible/${idProducto}`)
+  // excluirVenta: id de un documento cuya reserva no se descuenta (ej. la NE Aprobada que se está editando).
+  ObtenerStockDisponiblePorProducto(idProducto:string, excluirVenta?:number): Observable<any>{
+    const query = excluirVenta ? `?excluirVenta=${excluirVenta}` : '';
+    return this.apiService.get(`productos/obtener-stock-disponible/${idProducto}${query}`)
   }
   
   ValidarCodigo(codigo:string): Observable<any>{

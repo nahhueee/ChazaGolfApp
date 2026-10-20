@@ -246,10 +246,11 @@
                                             <p-badge [value]="ObtenerCantidad(talle, 'agregar')" badgeSize="small" severity="success" class="badge-flotante"/>
                                         }
                                         <p>{{ talle }}</p>
-                                        @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
-                                            <span>Disp: {{ ObtenerCantidad(talle, 'disponible') }}</span>
-                                        }
+                                        <span>Disp: {{ ObtenerCantidad(talle, 'disponible') }}</span>
                                         <span>Stock: {{ ObtenerCantidad(talle, 'stock') }}</span>
+                                        @if((ObtenerCantidad(talle, 'reservado') ?? 0) > 0){
+                                            <span>Res: {{ ObtenerCantidad(talle, 'reservado') }}</span>
+                                        }
                                         @if(ProcesoControl && ProcesoControl.descripcion === 'NOTA DE EMPAQUE'){
                                             <span>Prod: 0</span>
                                         }

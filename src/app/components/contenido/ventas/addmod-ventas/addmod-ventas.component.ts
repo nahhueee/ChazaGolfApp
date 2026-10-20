@@ -1847,7 +1847,7 @@ export class AddModVentasComponent {
     // PtoVenta 12 Nro 80 (sep-2026) - CAE ya emitido en ARCA cuando el guardado
     // rechazo por stock insuficiente.
     if(this.ProcesoControl.id !== ID_PROCESO.PEDIDO){
-      this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString())
+      this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString(), this.venta?.id || undefined)
       .pipe(takeUntil(this.destroy$)) 
       .subscribe(response => {
         this.productoSeleccionado.talles = response;
@@ -1865,8 +1865,35 @@ export class AddModVentasComponent {
       return encontrado && encontrado.cantAgregar! > 0 ? encontrado.cantAgregar : 0;
     else if(proceso=="disponible")
       return encontrado ? encontrado.disponible : 0;
+    else if(proceso=="reservado")
+      return encontrado ? (encontrado.reservado ?? 0) : 0;
 
     return 0;
+  }
+
+  // La venta sale de un Pedido o una Nota de Empaque: ese documento ya tiene reservado su stock, así que
+  // el tope en pantalla es el stock físico y el backend valida el excedente (ValidarDisponibleReservas).
+  get tieneOrigenQueReserva(): boolean {
+    return !!this.nroRelacionado
+      && (this.tipoRelacionado === TIPO_RELACIONADO.PEDIDO || this.tipoRelacionado === TIPO_RELACIONADO.NOTA_EMPAQUE);
+  }
+
+  // Máximo de unidades que se pueden cargar de un talle (reserva de stock, oct-2026): el stock físico
+  // menos lo reservado por Pedidos/NE Aprobadas (`disponible`). Si el talle no trae `disponible` (fila
+  // guardada, escaneo sin refresco) se usa el físico y la reserva la hace cumplir el backend al guardar.
+  // Los Pedidos no se topean (venta a futuro): los callers ya los excluyen.
+  TopeStockTalle(talle: any): number {
+    const fisico = talle?.cantidad ?? 0;
+    if (this.tieneOrigenQueReserva) return fisico;
+    return Math.min(fisico, talle?.disponible ?? fisico);
+  }
+
+  MensajeSinStock(talle: any): string {
+    const fisico = talle?.cantidad ?? 0;
+    const tope = this.TopeStockTalle(talle);
+    return tope < fisico
+      ? `La cantidad ingresada supera el stock disponible (${tope}) para el talle ${talle.talle}: hay ${fisico} en stock pero ${fisico - tope} están reservadas por notas de empaque o pedidos aprobados.`
+      : `La cantidad ingresada supera el stock disponible (${fisico}) para el talle ${talle.talle}.`;
   }
 
   DefinirCantidadAgregarTalle(talle:string){
@@ -1874,8 +1901,13 @@ export class AddModVentasComponent {
     
     let encontrado = this.productoSeleccionado.talles.find((t: any) => t.talle === talle);
     if (encontrado) {
-      if(encontrado && encontrado.cantidad == 0) return;
-      if(encontrado && encontrado.cantAgregar! >= encontrado.cantidad!) return; //Si la cantidad a agregar es mayor o igual a lo disponible no agregamos
+      const tope = this.TopeStockTalle(encontrado);
+      if(tope <= 0) {
+        // Hay stock físico pero está todo reservado: avisar por qué no suma
+        if((encontrado.cantidad ?? 0) > 0) this.Notificaciones.Warn(this.MensajeSinStock(encontrado));
+        return;
+      }
+      if(encontrado.cantAgregar! >= tope) return; //Si la cantidad a agregar es mayor o igual a lo disponible no agregamos
 
       encontrado.cantAgregar = (encontrado.cantAgregar || 0) + 1;
     }
@@ -1965,6 +1997,16 @@ export class AddModVentasComponent {
         if(response){
           idTalle = parseInt(codigo.slice(6, 9));
           this.productoSeleccionado = response;
+          // ValidarCodigo trae el stock físico pero no lo reservado: se refresca para que el tope
+          // del escaneo (abajo) respete lo reservado por NE/Pedidos aprobados. Pedido no se topea.
+          if(this.ProcesoControl.id !== ID_PROCESO.PEDIDO && this.productoSeleccionado.talles){
+            const frescos = await firstValueFrom(
+              this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString(), this.venta?.id || undefined));
+            this.productoSeleccionado.talles = this.productoSeleccionado.talles.map((t: any) => {
+              const f = (frescos ?? []).find((x: any) => x.talle === t.talle);
+              return f ? { ...t, cantidad: f.cantidad, disponible: f.disponible, reservado: f.reservado } : t;
+            });
+          }
         }else{
           this.Notificaciones.Warn("No se encontraron productos con este código");
           this.inputCodigo.nativeElement.select();
@@ -2008,10 +2050,8 @@ export class AddModVentasComponent {
                 .reduce((acc, p) => acc + ((p as any)[campoTx] ?? 0), 0)
             : 0;
 
-          if (this.ProcesoControl.id !== ID_PROCESO.PEDIDO && (yaCargado + 1) > (talleEscaneado.cantidad ?? 0)) {
-            this.Notificaciones.Warn(
-              `La cantidad ingresada supera el stock disponible (${talleEscaneado.cantidad}) para el talle ${talleEscaneado.talle}.`
-            );
+          if (this.ProcesoControl.id !== ID_PROCESO.PEDIDO && (yaCargado + 1) > this.TopeStockTalle(talleEscaneado)) {
+            this.Notificaciones.Warn(this.MensajeSinStock(talleEscaneado));
             return;
           }
 
@@ -2202,11 +2242,9 @@ export class AddModVentasComponent {
 
     if (
       this.ProcesoControl.id !== ID_PROCESO.PEDIDO &&
-      value > talleEncontrado.cantidad
+      value > this.TopeStockTalle(talleEncontrado)
     ) {
-      this.Notificaciones.Warn(
-        `La cantidad ingresada supera el stock disponible (${talleEncontrado.cantidad}) para el talle ${talleReal}.`
-      );
+      this.Notificaciones.Warn(this.MensajeSinStock(talleEncontrado));
       input.value = producto[field];
       return;
     }

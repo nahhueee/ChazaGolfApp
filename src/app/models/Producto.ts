@@ -190,6 +190,7 @@ export class TallesProducto {
     cantAgregar?:number = 0; //Propiedad para generar una venta
     disponible?:number = 0; //Propiedad para nota de empaque
     vendido?:number = 0; //Propiedad para nota de empaque
+    reservado?:number = 0; //Unidades reservadas por Pedidos/NE Aprobadas (informativo, ya descontadas de `disponible`)
 
     constructor(data?: any) {
         if (data) {
