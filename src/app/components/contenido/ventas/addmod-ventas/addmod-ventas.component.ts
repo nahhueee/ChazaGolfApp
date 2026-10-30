@@ -81,6 +81,7 @@ import {
   PORCENTAJE_RECARGO_TRANSFERENCIA,
   CONDICION_IVA_RESPONSABLE_INSCRIPTO,
   MOTIVO_ENTREGA_SIN_CARGO,
+  MOTIVOS_SIN_PRODUCTOS,
 } from '../models/venta.constants';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
@@ -185,6 +186,19 @@ export class AddModVentasComponent {
   // valor todavía no está sembrado.
   descuentoListaEditableMin: number = DESCUENTO_LISTA_EDITABLE_MIN_DEFAULT;
   descuentoListaEditableMax: number = DESCUENTO_LISTA_EDITABLE_MAX_DEFAULT;
+
+  // ADELANTO "SIN PRODUCTOS O SERVICIOS" (oct-2026, ver puedeAdelantoSinProductos): Factura
+  // fiscal por un importe libre con motivo (ej. "Adelanto de producción"), sin cargar
+  // productos ni servicios. Se persiste como UNA línea no catalogada (tipoItem=PRESUPUESTO,
+  // sin stock, ver armado en ActualizarAdelanto) para que total = suma de líneas y los
+  // reportes/NC fiscal funcionen sin tratamiento especial. El motivo viaja además en
+  // ventas.observacion (ver ArmarObjetoVenta).
+  adelantoSinProductos = false;
+  motivosAdelanto = MOTIVOS_SIN_PRODUCTOS;
+  formAdelanto: FormGroup = new FormGroup({
+    motivo: new FormControl(''),
+    total: new FormControl(''),
+  });
 
   //PANTALLA 2
   formProductos:FormGroup;
@@ -317,6 +331,12 @@ export class AddModVentasComponent {
 
   ngOnInit(): void {
     this.sesion = this.usuariosService.GetSesion().data;
+    // El adelanto sin productos se recalcula desde el valor YA actualizado del form: con
+    // (input) en el template, el handler corría antes de que la máscara (imask) escribiera el
+    // control y el total quedaba un dígito atrasado (2.500.000 se veía como 250.000).
+    this.formAdelanto.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => { if (this.adelantoSinProductos) this.ActualizarAdelanto(); });
     this.ObtenerTopeDescuentoListaEditable();
   }
 
@@ -506,6 +526,24 @@ export class AddModVentasComponent {
     // sin alta automática de cuenta corriente, sin chequeo de pagos vs. total y sin descuento
     // general, redondeo ni recargo por transferencia (se valoriza a precio de lista).
     get esEntregaSinCargo(): boolean {return this.ProcesoControl?.id === ID_PROCESO.ENTREGA_SIN_CARGO;}
+
+    // Se ofrece la opción "Sin productos o servicios" solo en una Factura fiscal (A/B/C)
+    // NUEVA, sin documento relacionado y mientras no haya ítems cargados (así el tildado
+    // nunca descarta datos tipeados). Cotización/Sin comprobante/Entrega sin cargo y la
+    // edición de una venta existente quedan afuera.
+    get puedeAdelantoSinProductos(): boolean {
+      const comprobante = this.TipoComprobanteControl;
+      const esFiscal = comprobante === TIPO_COMPROBANTE.FACTURA_A
+        || comprobante === TIPO_COMPROBANTE.FACTURA_B
+        || comprobante === TIPO_COMPROBANTE.FACTURA_C;
+      return this.tipo === 'factura'
+        && this.ProcesoControl?.id === ID_PROCESO.FACTURA
+        && esFiscal
+        && !this.modificando
+        && !this.nroRelacionado
+        && this.productosFactura.length === 0
+        && this.serviciosFactura.length === 0;
+    }
 
     // Pedido: permite acordar un precio distinto al de lista con el cliente (ej. combo
     // cerrado, negociación puntual), sin perder el precio de lista original (producto.precio),
@@ -785,6 +823,8 @@ export class AddModVentasComponent {
     this.productosFactura = [];
     this.serviciosFactura = [];
     this.pagosFactura = [];
+    this.adelantoSinProductos = false;
+    this.formAdelanto.reset();
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
     this.itemsBloqueadosPorRelacion = false;
@@ -1255,6 +1295,13 @@ export class AddModVentasComponent {
   }
 
   CambioTipoComprobante(){
+    // El adelanto sin productos solo existe en comprobantes fiscales: si se pasa a Sin
+    // comprobante (Cotización) se descarta, para no dejar un importe libre sin sentido.
+    if (this.adelantoSinProductos && this.TipoComprobanteControl == TIPO_COMPROBANTE.SIN_COMPROBANTE) {
+      this.adelantoSinProductos = false;
+      this.ToggleAdelanto();
+    }
+
     if (
       !this.modificando &&
       this.clienteSeleccionado?.idCondicionIva == CONDICION_IVA.RESPONSABLE_INSCRIPTO &&
@@ -1265,11 +1312,14 @@ export class AddModVentasComponent {
       });
     }
 
-    if(this.TipoComprobanteControl == TIPO_COMPROBANTE.SIN_COMPROBANTE){
-      this.formGenerales.get('proceso')?.setValue(this.procesos[0]);
-    }else{
-      this.formGenerales.get('proceso')?.setValue(this.procesos[1]);
-    }
+    // Por id y no por posición (oct-2026): this.procesos viene ordenado por descripción y al
+    // sumarse Entrega sin cargo / Devolución de entrega, el índice 1 dejó de ser Factura (ver
+    // ProcesoPorDefecto). Con el índice, volver de Cotización a un comprobante fiscal dejaba el
+    // proceso en "Devolución de entrega" - la venta se armaba con idProceso equivocado.
+    const idProcesoDestino = this.TipoComprobanteControl == TIPO_COMPROBANTE.SIN_COMPROBANTE
+      ? ID_PROCESO.COTIZACION
+      : ID_PROCESO.FACTURA;
+    this.formGenerales.get('proceso')?.setValue(this.procesos.find(p => p.id === idProcesoDestino));
 
     // El precio con IVA sumado (mayorista/Lista 3.0) tiene que reaccionar al comprobante
     // elegido - Factura A/B lo muestra, C/Cotización/Sin Comprobante vuelve al precio
@@ -2587,6 +2637,58 @@ export class AddModVentasComponent {
   //#endregion
 
   //#region GUARDAR Y FACTURAR
+  // Al tildar/destildar "Sin productos o servicios" se limpia lo cargado en el modo que se
+  // oculta, para no arrastrar datos de uno al otro. El descuento general se fuerza a 0: el
+  // adelanto es un importe pactado, el descuento no aplica (y la línea además va con
+  // topeDescuento = 0, ver ActualizarAdelanto).
+  ToggleAdelanto(): void {
+    this.productosFactura = [];
+    this.serviciosFactura = [];
+    this.formAdelanto.reset();
+    if (this.adelantoSinProductos) this.formFacturacion.get('descuento')?.setValue(0);
+    this.CalcularTotalGeneral();
+  }
+
+  AdelantoValido(): boolean {
+    const motivo = this.formAdelanto.get('motivo')?.value;
+    const total = this.globalesService.EstandarizarDecimal(this.formAdelanto.get('total')?.value ?? '');
+    return !!motivo && total > 0;
+  }
+
+  // Arma (o limpia) la única línea del adelanto a partir de motivo + total. tipoItem
+  // PRESUPUESTO => no mueve stock ni valida talles (ver InsertProductoVenta/ActualizarInventario
+  // en el backend); topeDescuento 0 y precioEditadoManualmente evitan que el descuento general,
+  // el descuento de lista o el recálculo por comprobante (RecalcularPreciosSegunComprobante)
+  // toquen el importe tipeado. Para A/B el importe es el TOTAL con IVA incluido (mismo criterio
+  // que cualquier línea: neto/IVA se derivan en recalcularTotales).
+  ActualizarAdelanto(): void {
+    if (!this.AdelantoValido()) {
+      this.productosFactura = [];
+    } else {
+      const motivo = this.formAdelanto.get('motivo')?.value as string;
+      const total = Number(this.globalesService.EstandarizarDecimal(this.formAdelanto.get('total')?.value ?? '').toFixed(2));
+      const linea = new ProductosFactura({
+        idProducto: null,
+        tipoItem: TIPO_ITEM.PRESUPUESTO,
+        descripcion: motivo,
+        nomProducto: motivo,
+        cantidad: 1,
+        precio: total,
+        precioMostrar: total,
+        unitario: total,
+        total: total,
+        totalMostrar: total,
+        descuentoAplicado: 0,
+        importeDescuento: 0,
+        topeDescuento: 0,
+        tallesSeleccionados: '',
+      });
+      linea.precioEditadoManualmente = true;
+      this.productosFactura = [linea];
+    }
+    this.CalcularTotalGeneral();
+  }
+
   Guardar(factura?:FacturaVenta, finalizando:boolean = false){
     // F4.2 - HANDOFF blindaje facturacion y logs. Un `factura` Aprobado CON idVenta
     // viene de /ventas/emitir: el backend YA persistio la venta (alta o modificacion,
@@ -2638,6 +2740,11 @@ export class AddModVentasComponent {
     }
 
     if (this.esEntregaSinCargo && !this.ValidarEntregaSinCargo()) return;
+
+    if (this.adelantoSinProductos && !this.AdelantoValido()) {
+      this.Notificaciones.Warn("Elegí el motivo e ingresá el total del comprobante sin productos.");
+      return;
+    }
 
     const descuentoPreInvalido = !validarFacturacion && !!this.formFacturacion.get('descuento')?.invalid;
 
@@ -2823,6 +2930,11 @@ export class AddModVentasComponent {
 
     if (this.esEntregaSinCargo && !this.ValidarEntregaSinCargo()) return;
 
+    if (this.adelantoSinProductos && !this.AdelantoValido()) {
+      this.Notificaciones.Warn("Elegí el motivo e ingresá el total del comprobante sin productos.");
+      return;
+    }
+
     // Regla de coincidencia: la suma de los métodos de pago cargados tiene que
     // ser exactamente igual al total, sin importar qué método(s) se hayan
     // elegido (incluida una línea de Cuenta Corriente cargada a mano por el
@@ -3003,6 +3115,9 @@ export class AddModVentasComponent {
     // se persiste nada.
     this.venta.fechaEntrega = this.formGenerales.get('fechaEntrega')?.value ?? undefined;
     this.venta.observacion = this.formGenerales.get('observacion')?.value || undefined;
+    // Adelanto sin productos: el motivo elegido es la observación de la venta (misma
+    // convención que la NC X sin productos, ver nota-credito-x.component.ts).
+    if (this.adelantoSinProductos) this.venta.observacion = this.formAdelanto.get('motivo')?.value || undefined;
     this.venta.motivoEntrega = this.esEntregaSinCargo ? (this.formGenerales.get('motivoEntrega')?.value ?? undefined) : undefined;
     this.venta.ajuste = this.formFacturacion.get('ajuste')?.value == true ? 1 : 0;
     

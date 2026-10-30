@@ -199,6 +199,15 @@ export function esItemNoCatalogado(tipoItem?: string | null): boolean {
 }
 
 /**
+ * Motivos fijos para un comprobante "sin productos o servicios": un importe libre con
+ * motivo, sin mercadería real. Lo usan la NC X (nota-credito-x.component.ts) y, desde
+ * oct-2026, la Factura fiscal de adelanto (addmod-ventas.component.ts). Pedido del
+ * cliente (jul-2026): no hay tabla maestra atrás, son opciones fijas. El motivo elegido
+ * se persiste en `ventas.observacion`.
+ */
+export const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra', 'Embajadores-premios'];
+
+/**
  * Fiscal (pide CAE a ARCA) vs Interna/NC X (no pasa por ARCA, no anula ni
  * modifica la venta original). Ver notas-venta.component.ts.
  */

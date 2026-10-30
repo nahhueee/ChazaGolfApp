@@ -164,6 +164,35 @@
         </form>
     </div>
 
+    <!-- Adelanto: Factura fiscal sin productos o servicios (importe libre + motivo) -->
+    @if(puedeAdelantoSinProductos || adelantoSinProductos){
+        <div class="sinProductos">
+            <p-checkbox
+                [(ngModel)]="adelantoSinProductos"
+                [ngModelOptions]="{standalone: true}"
+                (onChange)="ToggleAdelanto()"
+                [binary]="true"
+                inputId="adelantoSinProductosCheck"
+            />
+            <label for="adelantoSinProductosCheck">Sin productos o servicios</label>
+
+            @if(adelantoSinProductos){
+                <form [formGroup]="formAdelanto" class="formSinProductos" autocomplete="off">
+                    <p-floatlabel variant="in">
+                        <p-select [options]="motivosAdelanto" formControlName="motivo"/>
+                        <label>Motivo</label>
+                    </p-floatlabel>
+
+                    <p-floatlabel variant="in">
+                        <input pInputText type="text" formControlName="total" [imask]="decimal_mask"/>
+                        <label>Total</label>
+                    </p-floatlabel>
+                </form>
+            }
+        </div>
+    }
+
+    @if(!adelantoSinProductos){
     <!-- Productos -->
     <div class="seccion">
         <h3>Productos</h3>
@@ -546,6 +575,9 @@
             }
     </div>
 
+    }
+
+    @if(!adelantoSinProductos){
     <!-- Servicios -->
     <div class="seccion">
         <h3>Servicios</h3>
@@ -677,6 +709,8 @@
         </p-table>
     </div>
 
+    }
+
     <!-- Datos Facturacion -->
     <div class="seccion">
         @if(tipo == 'factura'){
@@ -710,7 +744,7 @@
                     <div class="horizontal">
                         <!-- Tipo Descuento -->
                         <p-floatlabel variant="in">
-                            <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion || esEntregaSinCargo" />
+                            <p-select [options]="tiposDescuento" formControlName="tDescuento" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion || esEntregaSinCargo || adelantoSinProductos" />
                             <label>Tipo Descuento</label>
                         </p-floatlabel>
 
@@ -718,7 +752,7 @@
                             <!-- Descuento -->
                             <p-inputgroup>
                                 <p-floatlabel variant="in">
-                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral || esEntregaSinCargo" (input)="CalcularTotalGeneral()"/>
+                                    <input pInputText formControlName="descuento" type="number" [disabled]="soloLecturaPorEdicion || hayDescuentoPorItem || listaBloqueaDescuentoGeneral || esEntregaSinCargo || adelantoSinProductos" (input)="CalcularTotalGeneral()"/>
                                     <label>Descuento</label>
                                 </p-floatlabel>
                                 <p-inputgroup-addon>%</p-inputgroup-addon>

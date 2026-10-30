@@ -24,12 +24,10 @@ import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { Servicio } from '../../../../models/Servicio';
 import { ServiciosService } from '../../../../services/servicios.service';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
-import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO } from '../models/venta.constants';
+import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO, MOTIVOS_SIN_PRODUCTOS } from '../models/venta.constants';
 
-// Motivos fijos para una NC "sin productos" (ver checkbox homónimo): un importe
-// que se acredita como saldo a favor sin devolución de mercadería real. Pedido
-// del cliente (jul-2026) - no hay tabla maestra atrás, son opciones fijas.
-const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra', 'Embajadores-premios'];
+// Motivos fijos para una NC "sin productos" (ver checkbox homónimo): ver
+// MOTIVOS_SIN_PRODUCTOS en venta.constants.ts (compartido con la Factura de adelanto).
 
 // Nota de Crédito "X": nota de crédito interna, no fiscal (no pasa por AFIP/ARCA),
 // cargada libremente (sin partir de una venta existente) desde el listado de
