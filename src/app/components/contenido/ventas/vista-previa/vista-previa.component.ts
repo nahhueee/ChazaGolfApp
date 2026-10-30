@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
-import { Venta } from '../../../../models/Factura';
+import { ProductosFactura, Venta } from '../../../../models/Factura';
 import { Dialog } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DecimalFormatPipe } from '../../../../pipes/decimal-format.pipe';
@@ -13,7 +13,7 @@ import { TipoComprobante } from '../../../../models/ObjFacturar';
 import { MiscService } from '../../../../services/misc.service';
 import { LineasTalle } from '../../../../models/Producto';
 import { ID_PROCESO } from '../models/venta.constants';
-import { MontoSegunComprobante, OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
+import { MontoSegunComprobante, OcultarDescuentoListaNeta, SepararAdelantoAplicado } from '../../../../services/helpers/precios-venta.helper';
 
 @Component({
   selector: 'app-vista-previa',
@@ -49,6 +49,12 @@ export class VistaPreviaComponent implements OnInit {
   // "Neto" en addmod-ventas/factura.service.ts).
   totalNeto:number = 0;
   totalDescuento:number = 0;
+
+  // Ítems que se muestran en la tabla: venta.productos sin la línea derivada de adelanto (Factura
+  // final de una NE, F3), que se muestra como fila del resumen. Se arma en ngOnChanges.
+  productosVista: ProductosFactura[] = [];
+  adelantoAplicado: number = 0;
+  etiquetaAdelanto: string = '';
 
   // Lista fija (4.0/4.5/5.0) sin descuento real: la lista es el precio, no se muestra "Desc." ni
   // "Descuento" en ningún lado (oct-2026) - ver OcultarDescuentoListaNeta.
@@ -96,6 +102,10 @@ export class VistaPreviaComponent implements OnInit {
       if (this.venta.productos) {
         this.venta.productos = [...this.venta.productos].sort((a, b) => (a.idLineaTalle ?? 0) - (b.idLineaTalle ?? 0));
       }
+      const separado = SepararAdelantoAplicado(this.venta);
+      this.productosVista = separado.productos;
+      this.adelantoAplicado = separado.adelanto;
+      this.etiquetaAdelanto = separado.etiqueta;
       this.CalcularTotalGeneral();
   }
   }
@@ -111,8 +121,8 @@ export class VistaPreviaComponent implements OnInit {
   // producto queda partido en 2+ líneas por tener precio distinto entre talles.
   EsContinuacionMismoProducto(rowIndex: number): boolean {
     if (rowIndex <= 0) return false;
-    const anterior = this.venta.productos?.[rowIndex - 1];
-    const actual = this.venta.productos?.[rowIndex];
+    const anterior = this.productosVista?.[rowIndex - 1];
+    const actual = this.productosVista?.[rowIndex];
     return !!anterior && !!actual
       && anterior.idProducto === actual.idProducto
       && anterior.idColor === actual.idColor;
@@ -121,15 +131,15 @@ export class VistaPreviaComponent implements OnInit {
   // Complemento: true si la fila siguiente es continuación de esta (para sacarle el
   // border-bottom y que no se vea la línea divisoria entre ambas).
   PrecedeContinuacion(rowIndex: number): boolean {
-    const actual = this.venta.productos?.[rowIndex];
-    const siguiente = this.venta.productos?.[rowIndex + 1];
+    const actual = this.productosVista?.[rowIndex];
+    const siguiente = this.productosVista?.[rowIndex + 1];
     return !!actual && !!siguiente
       && actual.idProducto === siguiente.idProducto
       && actual.idColor === siguiente.idColor;
   }
 
   get hayFilasContinuacion(): boolean {
-    return (this.venta.productos ?? []).some((_, i) => this.EsContinuacionMismoProducto(i));
+    return (this.productosVista ?? []).some((_, i) => this.EsContinuacionMismoProducto(i));
   }
 
   // Presupuesto/Pedido/Nota de Empaque no tienen Empresa/Tipo Comprobante/Tipo
@@ -155,7 +165,7 @@ export class VistaPreviaComponent implements OnInit {
       }, { total: 0, descuento: 0 }) || { total: 0, descuento: 0 };
     };
 
-    const productos = procesarItems(this.venta.productos);
+    const productos = procesarItems(this.productosVista);
     const servicios = procesarItems(this.venta.servicios);
 
     // El recargo por transferencia (si corresponde) ya es una línea más de
@@ -169,7 +179,8 @@ export class VistaPreviaComponent implements OnInit {
     const totalDescuento = productos.descuento + servicios.descuento;
 
     //Neto sin IVA (solo se usa como fallback si todavía no hay venta.factura)
-    const subtotalNeto = subtotalBruto - totalDescuento;
+    // El adelanto aplicado (Factura final de una NE) también resta: ya es parte del total, no del bruto.
+    const subtotalNeto = subtotalBruto - totalDescuento - this.adelantoAplicado;
 
     const esComprobanteConIva = [
          TipoComprobante.FACTURA_A,
@@ -193,7 +204,7 @@ export class VistaPreviaComponent implements OnInit {
       const netoAfip = this.venta.factura.neto ?? subtotalNeto;
       const ivaAfip = esComprobanteConIva ? (this.venta.factura.iva ?? 0) : 0;
       this.totalNeto = netoAfip;
-      this.subTotal = netoAfip + ivaAfip + totalDescuento;
+      this.subTotal = netoAfip + ivaAfip + totalDescuento + this.adelantoAplicado;
       this.totalDescuento = totalDescuento;
       this.totalIva = ivaAfip;
       this.mostrarIva = esComprobanteConIva;
@@ -234,7 +245,7 @@ export class VistaPreviaComponent implements OnInit {
     }
 
     // cantidades
-    this.cantProductos = this.venta.productos?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
+    this.cantProductos = this.productosVista?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
     this.cantservicios = this.venta.servicios?.reduce((acc, i) => acc + (i.cantidad || 0), 0) || 0;
 
     this.cantItems = this.cantProductos + this.cantservicios;

@@ -1,5 +1,5 @@
 
-import { MontoSegunComprobante } from '../../../../services/helpers/precios-venta.helper';
+import { EtiquetaAdelantoAplicado, MontoSegunComprobante } from '../../../../services/helpers/precios-venta.helper';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { AccordionModule } from 'primeng/accordion';
@@ -77,6 +77,7 @@ import {
   TIPO_ITEM,
   esMayoristaConListaPropia,
   puedeEditarseVenta,
+  DESCRIPCION_ITEM_ADELANTO,
   DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA,
   PORCENTAJE_RECARGO_TRANSFERENCIA,
   CONDICION_IVA_RESPONSABLE_INSCRIPTO,
@@ -95,6 +96,12 @@ interface ResumenAdelantos {
   totalNE: number;
   saldoTotal: number;
   saldoNeto: number;
+  saldoIva: number;
+  // Solo cuando el estimado le suma el 21% al total de la nota (mayorista con lista propia en A/B):
+  // total de la nota SIN IVA e IVA sumado, para mostrar la apertura. Si no, sumaIva es false.
+  sumaIva: boolean;
+  totalNESinIva: number;
+  ivaNE: number;
   discrimina: boolean;
   excedido: boolean;
 }
@@ -220,6 +227,24 @@ export class AddModVentasComponent {
   // Cliente al que pertenece la selección actual: si cambia, la selección se descarta.
   adelantosIdCliente?: number;
   resumenAdelantos: ResumenAdelantos | null = null;
+
+  // Adelantos ya facturados que se descuentan en la Factura final de una Nota de Empaque (F3). Salen
+  // de venta.adelantos de la NE que se está facturando; con ellos la factura es por el SALDO.
+  adelantosAplicados: AdelantoVenta[] = [];
+  get aplicaAdelantos(): boolean {
+    return this.tipo === 'factura'
+      && this.tipoRelacionado === TIPO_RELACIONADO.NOTA_EMPAQUE
+      && this.adelantosAplicados.length > 0;
+  }
+  // Σ total (con IVA) de los adelantos aplicados; 0 si no corresponde.
+  get totalAdelantosAplicados(): number {
+    return this.aplicaAdelantos
+      ? Math.round(this.adelantosAplicados.reduce((acc, a) => acc + (a.total ?? 0), 0) * 100) / 100
+      : 0;
+  }
+  get etiquetaAdelantosAplicados(): string {
+    return EtiquetaAdelantoAplicado({ adelantos: this.adelantosAplicados } as Venta);
+  }
 
   //PANTALLA 2
   formProductos:FormGroup;
@@ -857,6 +882,7 @@ export class AddModVentasComponent {
     this.adelantosSeleccionados = [];
     this.adelantosIdCliente = undefined;
     this.resumenAdelantos = null;
+    this.adelantosAplicados = [];
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
     this.itemsBloqueadosPorRelacion = false;
@@ -1050,6 +1076,7 @@ export class AddModVentasComponent {
       iva: 0,
       general: 0,
       ajusteTransferencia: 0,
+      adelantoAplicado: 0,
       aPagar: 0,
       cantItems: 0,
       mostrarIva: false,
@@ -1263,7 +1290,11 @@ export class AddModVentasComponent {
 
     const items = productos.total + servicios.total;
     const descuento = productos.descuento + servicios.descuento;
-    const base = items - descuento;
+    // Factura final de una NE con adelantos (F3): se factura el SALDO. El adelanto resta de la base
+    // (IVA incluido) como un descuento separado, así Neto/IVA/Total salen del saldo y coinciden con
+    // lo que se informa a ARCA. El recargo por transferencia (si hay) se calcula sobre el saldo.
+    const adelantoAplicado = this.totalAdelantosAplicados;
+    const base = items - descuento - adelantoAplicado;
 
     const ajusteTransferencia =
       this.formFacturacion.get('ajuste')?.value === true ? Number((base * PORCENTAJE_RECARGO_TRANSFERENCIA).toFixed(2)) : 0;
@@ -1303,7 +1334,7 @@ export class AddModVentasComponent {
       (this.productosFactura ?? []).reduce((a, i) => a + (i.cantidad || 0), 0) +
       (this.serviciosFactura  ?? []).reduce((a, i) => a + (i.cantidad || 0), 0);
 
-    return { items, descuento, subtotal, iva, general, ajusteTransferencia, aPagar, cantItems, mostrarIva };
+    return { items, descuento, subtotal, iva, general, ajusteTransferencia, adelantoAplicado, aPagar, cantItems, mostrarIva };
   }
 
   CalcularTotalGeneral() {
@@ -1386,6 +1417,10 @@ export class AddModVentasComponent {
       totalNE,
       saldoTotal,
       saldoNeto: redondear(netoNE - netoAdelantos),
+      saldoIva: redondear(saldoTotal - redondear(netoNE - netoAdelantos)),
+      sumaIva,
+      totalNESinIva: redondear(this.totales.aPagar),
+      ivaNE: redondear(totalNE - this.totales.aPagar),
       discrimina,
       excedido: saldoTotal < -0.01,
     };
@@ -1549,6 +1584,13 @@ export class AddModVentasComponent {
       } else {
         // Es cotización → siempre sin comprobante fiscal
         this.formFacturacion.get('tComprobante')?.setValue(TIPO_COMPROBANTE.SIN_COMPROBANTE);
+      }
+
+      // Factura final de una NE con adelantos (F3): el saldo se factura con el MISMO comprobante que
+      // el adelanto, pase lo que pase con las reglas de arriba.
+      if (this.aplicaAdelantos && !esCotizacion) {
+        const tipoAdelanto = this.adelantosAplicados[0]?.tipoFactura;
+        if (tipoAdelanto != null) this.formFacturacion.get('tComprobante')?.setValue(tipoAdelanto);
       }
 
       // Recalcular siempre al final: cubre cambio de empresa, de cliente
@@ -1723,6 +1765,10 @@ export class AddModVentasComponent {
     // Adelantos ya vinculados a esta NE (se reconcilian con los disponibles en CargarAdelantosDisponibles).
     this.adelantosSeleccionados = this.venta.adelantos ?? [];
     this.adelantosIdCliente = this.venta.cliente?.id;
+    // Factura final de una NE con adelantos ya guardada: los adelantos aplicados vienen en venta.adelantos.
+    this.adelantosAplicados = this.venta.idProceso === ID_PROCESO.FACTURA && this.tipoRelacionado === TIPO_RELACIONADO.NOTA_EMPAQUE
+      ? (this.venta.adelantos ?? [])
+      : [];
 
     this.ObtenerMetodosPago(this.venta.idEmpresa!);
     this.SeleccionarCliente(this.venta.idTipoComprobante);
@@ -1766,6 +1812,10 @@ export class AddModVentasComponent {
     }
     this.nroRelacionado = nota.nroProceso!;
     this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
+    // Con adelantos, el saldo se factura con la misma empresa que el adelanto: se fija antes de
+    // preparar el cliente para que los comprobantes se carguen de esa empresa.
+    const idEmpresaAdelanto = nota.adelantos?.[0]?.idEmpresa;
+    if (idEmpresaAdelanto != null) this.formFacturacion.get('empresa')?.setValue(idEmpresaAdelanto);
     // Primero el cliente (lista de precios, condición IVA, comprobante), igual que cuando
     // se elige a mano; recién después se cargan los ítems de la nota.
     this.formGenerales.get('cliente')?.setValue(nota.cliente);
@@ -1866,7 +1916,53 @@ export class AddModVentasComponent {
   }
 
 
+  // Factura final de una NE con adelantos: misma empresa y mismo comprobante que el adelanto (el
+  // backend también lo exige). Si la empresa cambia, CambioEmpresa vuelve a cargar los
+  // comprobantes y PrepararFacturacionCliente reaplica el del adelanto.
+  private ForzarEmpresaYComprobanteDeAdelantos(): void {
+    const adelanto = this.adelantosAplicados[0];
+    if (!adelanto) return;
+    const empresa = this.formFacturacion.get('empresa');
+    if (adelanto.idEmpresa != null && empresa?.value != adelanto.idEmpresa) {
+      empresa?.setValue(adelanto.idEmpresa);
+      this.CambioEmpresa();
+      return;
+    }
+    if (adelanto.tipoFactura != null) this.formFacturacion.get('tComprobante')?.setValue(adelanto.tipoFactura);
+  }
+
+  // Validación previa a guardar/facturar una Factura final con adelantos (F3).
+  private ValidarAdelantosAplicados(): boolean {
+    if (!this.aplicaAdelantos) return true;
+    const adelanto = this.adelantosAplicados[0];
+    if (this.ProcesoControl.id !== ID_PROCESO.FACTURA) {
+      this.Notificaciones.Warn("La nota de empaque tiene adelantos facturados: solo se puede facturar con Factura A/B/C.");
+      return false;
+    }
+    if (this.formFacturacion.get('empresa')?.value != adelanto.idEmpresa || this.formFacturacion.get('tComprobante')?.value != adelanto.tipoFactura) {
+      this.Notificaciones.Warn(`El saldo se factura con la misma empresa y el mismo comprobante que el adelanto (${adelanto.empresa ?? ''} - ${this.EtiquetaAdelanto(adelanto)}).`);
+      return false;
+    }
+    if (this.totales.aPagar < 0.01) {
+      this.Notificaciones.Warn("Los adelantos cubren el total de la nota de empaque: no queda saldo para facturar.");
+      return false;
+    }
+    return true;
+  }
+
   private CargarVentaRelacionada(venta:Venta){
+        // Una NE con adelantos solo se factura con Factura A/B/C por el saldo (Cotización y Entrega sin
+        // cargo no cobran el adelanto, el backend también lo bloquea).
+        const nePendienteDeAdelantos = venta.idProceso == ID_PROCESO.NOTA_EMPAQUE && (venta.adelantos?.length ?? 0) > 0;
+        if (nePendienteDeAdelantos && this.ProcesoControl.id !== ID_PROCESO.FACTURA) {
+          this.nroRelacionado = 0;
+          this.tipoRelacionado = "";
+          this.Notificaciones.Warn(`La nota de empaque Nro ${venta.nroProceso} tiene adelantos facturados: solo se puede facturar con Factura A/B/C. Cambiá el proceso a Factura o desvinculá los adelantos en la nota.`);
+          return;
+        }
+        this.adelantosAplicados = nePendienteDeAdelantos ? venta.adelantos! : [];
+        if (this.adelantosAplicados.length > 0) this.ForzarEmpresaYComprobanteDeAdelantos();
+
         this.venta = venta;
         this.CargarProductosDesdeVenta();
         this.MarcarPreciosEditados(this.productosFactura);
@@ -2863,6 +2959,8 @@ export class AddModVentasComponent {
       return;
     }
 
+    if (!this.ValidarAdelantosAplicados()) return;
+
     if (this.esNotaEmpaque && this.resumenAdelantos?.excedido) {
       this.Notificaciones.Warn("Los adelantos vinculados superan el total estimado de la nota de empaque. Revisá la selección.");
       return;
@@ -3057,6 +3155,8 @@ export class AddModVentasComponent {
       return;
     }
 
+    if (!this.ValidarAdelantosAplicados()) return;
+
     // Regla de coincidencia: la suma de los métodos de pago cargados tiene que
     // ser exactamente igual al total, sin importar qué método(s) se hayan
     // elegido (incluida una línea de Cuenta Corriente cargada a mano por el
@@ -3211,6 +3311,27 @@ export class AddModVentasComponent {
     });
   }
 
+  // Línea negativa del adelanto aplicado (Factura final de una NE, F3). tipoItem PRESUPUESTO (sin
+  // stock) y descripción fija: así se la reconoce al reabrir, imprimir y validar en el backend.
+  private ArmarItemAdelantoAplicado(): ProductosFactura {
+    const monto = -this.totalAdelantosAplicados;
+    return new ProductosFactura({
+      idProducto: null,
+      tipoItem: TIPO_ITEM.PRESUPUESTO,
+      descripcion: DESCRIPCION_ITEM_ADELANTO,
+      nomProducto: DESCRIPCION_ITEM_ADELANTO,
+      cantidad: 1,
+      precio: monto,
+      precioMostrar: monto,
+      unitario: monto,
+      total: monto,
+      totalMostrar: monto,
+      descuentoAplicado: 0,
+      importeDescuento: 0,
+      tallesSeleccionados: '',
+    });
+  }
+
   // Reemplaza a `this.productosFactura = this.venta.productos` en los 3 puntos
   // donde se recarga una venta ya guardada (editar, relacionar Nota de Empaque,
   // facturar un Presupuesto/Pedido relacionado). Filtra la línea de recargo:
@@ -3222,7 +3343,7 @@ export class AddModVentasComponent {
   // del handoff §5.a sin necesidad de buscar-y-actualizar una línea existente.
   private CargarProductosDesdeVenta(): void {
     this.productosFactura = (this.venta.productos ?? [])
-      .filter(p => p.descripcion !== DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA);
+      .filter(p => p.descripcion !== DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA && p.descripcion !== DESCRIPCION_ITEM_ADELANTO);
   }
 
   ArmarObjetoVenta(){
@@ -3307,6 +3428,11 @@ export class AddModVentasComponent {
     // vieja (idempotencia §5.a) y desaparece sola al destildar el check (§5.c).
     if (this.venta.ajuste === 1 && (this.totales.ajusteTransferencia ?? 0) > 0) {
       this.venta.productos.push(this.ArmarItemRecargoTransferencia());
+    }
+    // Factura final de una NE con adelantos (F3): línea NEGATIVA derivada (misma idea que el recargo,
+    // se reconstruye en cada armado). Mantiene total == suma de líneas; se muestra como fila del resumen.
+    if (this.aplicaAdelantos && this.totalAdelantosAplicados > 0) {
+      this.venta.productos.push(this.ArmarItemAdelantoAplicado());
     }
     this.venta.servicios = this.serviciosFactura;
     this.venta.pagos = this.esEntregaSinCargo ? [] : this.pagosFactura;

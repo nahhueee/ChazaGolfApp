@@ -47,7 +47,7 @@
 
         <div class="data-productos">
             <p>Productos</p>
-            <p-table [value]="venta.productos" size="small" showGridlines dataKey="codProducto" rowGroupMode="subheader" groupRowsBy="idLineaTalle">
+            <p-table [value]="productosVista" size="small" showGridlines dataKey="codProducto" rowGroupMode="subheader" groupRowsBy="idLineaTalle">
                 <ng-template #header>
                     <tr>
                         <th>Código</th>
@@ -216,7 +216,7 @@
                 }
 
                 <div class="resumen">
-                    @if(!(ivaDiscriminado && ocultarDescuento)){
+                    @if(!(ivaDiscriminado && ocultarDescuento) || adelantoAplicado > 0){
                     <div class="fila">
                         <span>Subtotal:</span>
                         <span class="monto">${{Visible(subTotal) | decimalFormat}}</span>
@@ -226,6 +226,13 @@
                     <div class="fila">
                         <span>Descuento:</span>
                         <span class="monto">${{Visible(totalDescuento) | decimalFormat}}</span>
+                    </div>
+                    }
+
+                    @if(adelantoAplicado > 0){
+                    <div class="fila">
+                        <span>{{ etiquetaAdelanto }}:</span>
+                        <span class="monto">-${{Visible(adelantoAplicado) | decimalFormat}}</span>
                     </div>
                     }
 

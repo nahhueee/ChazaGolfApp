@@ -10,6 +10,7 @@ export interface TotalesVenta {
   readonly iva:                 number;  // IVA calculado
   readonly general:             number;  // total con IVA
   readonly ajusteTransferencia: number;  // 10% si aplica ajuste
+  readonly adelantoAplicado:    number;  // adelantos de la NE descontados en la Factura final (con IVA)
   readonly aPagar:              number;  // general + ajuste + redondeo
   readonly cantItems:           number;  // cantidad de unidades (no líneas)
   readonly mostrarIva:          boolean; // controla visibilidad en template

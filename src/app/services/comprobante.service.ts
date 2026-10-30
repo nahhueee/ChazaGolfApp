@@ -1,4 +1,4 @@
-import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
+import { OcultarDescuentoListaNeta, SepararAdelantoAplicado } from './helpers/precios-venta.helper';
 import { Injectable } from '@angular/core';
 
 
@@ -70,9 +70,19 @@ export class ComprobanteService {
       });
     }
   
-    private async ArmarComprobante(venta: Venta) {
+    private async ArmarComprobante(ventaOriginal: Venta) {
+      // Factura final de una NE con adelantos (F3): la línea "Adelanto aplicado" no es un ítem,
+      // va como fila del resumen. Ver SepararAdelantoAplicado.
+      const separado = SepararAdelantoAplicado(ventaOriginal);
+      const venta: Venta = separado.adelanto > 0 ? { ...ventaOriginal, productos: separado.productos } : ventaOriginal;
       const lineasTalle = await firstValueFrom(this.miscService.ObtenerLineasTalle(true));
       const comprobante:ObjComprobante = this.GenerarDatosComunes(venta, lineasTalle);
+      if (separado.adelanto > 0) {
+        comprobante.adelanto = separado.adelanto;
+        comprobante.etiquetaAdelanto = separado.etiqueta;
+        comprobante.totalFinal = (comprobante.totalFinal ?? 0) - separado.adelanto;
+        comprobante.totalAPagar = comprobante.totalFinal + (comprobante.redondeo ?? 0);
+      }
       return this.ArmarInternoA4(comprobante);
     }
 
@@ -327,10 +337,14 @@ export class ComprobanteService {
                   },
                   {
                     stack: [
-                      ...(comprobante.ocultarDescuento ? [] : [
+                      ...((comprobante.ocultarDescuento && !comprobante.adelanto) ? [] : [
                         { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                         { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
                       ]),
+
+                      ...(comprobante.adelanto ? [
+                        { text: `${comprobante.etiquetaAdelanto}: -$${comprobante.adelanto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ] : []),
 
                       { text: `Total General: $${comprobante.totalFinal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },
                       { text: `Redondeo: $${comprobante.redondeo?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'recargaDescuento', alignment: 'right' },

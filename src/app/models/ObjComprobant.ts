@@ -54,6 +54,10 @@ export class ObjComprobante {
     ocultarSubtotal?:boolean;
     totalFinal?:number;
     totalAPagar?:number;
+    // Adelantos aplicados a la Factura final de una Nota de Empaque (oct-2026, F3): importe
+    // (positivo, ya en neto si el comprobante imprime en neto) y rótulo de la fila del resumen.
+    adelanto?:number;
+    etiquetaAdelanto?:string;
     // true cuando la venta no tiene productos ni servicios (ej. NC X "sin productos"
     // cargada por un total libre - ver nota-credito-x.component.ts). Se usa para
     // mostrar un label en vez de la tabla/contador vacíos en el comprobante impreso.

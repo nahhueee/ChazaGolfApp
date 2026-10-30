@@ -12,7 +12,7 @@ import { ObjComprobante } from '../models/ObjComprobant';
 import { MiscService } from './misc.service';
 import { TipoComprobante } from '../models/ObjFacturar';
 import { TIPO_COMPROBANTE, esMayoristaConListaPropia } from '../components/contenido/ventas/models/venta.constants';
-import { OcultarDescuentoListaNeta } from './helpers/precios-venta.helper';
+import { MontoSegunComprobante, OcultarDescuentoListaNeta, SepararAdelantoAplicado } from './helpers/precios-venta.helper';
 import { ID_PROCESO, tituloComprobanteImpreso } from '../components/contenido/ventas/models/venta.constants';
 
 @Injectable({
@@ -64,7 +64,13 @@ export class FacturaService {
       });
     }
   
-    private async ArmarComprobante(venta: Venta) {
+    private async ArmarComprobante(ventaOriginal: Venta) {
+      // Factura final de una NE con adelantos (oct-2026, F3): la línea negativa "Adelanto aplicado"
+      // no es un ítem - no va en la tabla ni en los conteos, se muestra como fila del resumen
+      // ("Adelanto s/ Fact. ..."). Todo lo de abajo trabaja con la venta sin esa línea.
+      const separado = SepararAdelantoAplicado(ventaOriginal);
+      const venta: Venta = separado.adelanto > 0 ? { ...ventaOriginal, productos: separado.productos } : ventaOriginal;
+
       const procesarItems = (items: any[]) => {
         return items?.reduce((acc, item) => {
 
@@ -215,6 +221,11 @@ export class FacturaService {
       // siguen viniendo de venta.factura.neto/iva más abajo, sin cambios.
       comprobante.ivaDiscriminado = comprobante.imprimirEnNeto;
 
+      // Importe del adelanto en la misma base que el resto del resumen (neto en Factura A).
+      const adelantoMostrar = MontoSegunComprobante(separado.adelanto, !!comprobante.imprimirEnNeto);
+      comprobante.adelanto = adelantoMostrar;
+      comprobante.etiquetaAdelanto = separado.etiqueta;
+
       // Usamos neto/iva/total ya confirmados por AFIP (venta.factura, venta.total) en vez de
       // recalcular desde los ítems con una regla fija (A siempre neto, B siempre con IVA
       // incluido) que no aplica a todos los clientes (ver esMayoristaConListaPropia en
@@ -233,13 +244,14 @@ export class FacturaService {
         // ocultarDescuento (Factura A/B + mayorista/Lista3, ver GenerarDatosComunes): no se
         // reconstruye el bruto ni se imprime "Descuento" - el Subtotal ya es neto de
         // descuento (Neto + IVA), igual que el precio unitario que se muestra por línea.
+        // Con adelanto aplicado el Subtotal lo incluye (Subtotal - Descuento - Adelanto == Neto + IVA).
         comprobante.subTotal = comprobante.imprimirEnNeto
           // A: bruto SIN IVA = neto + descuento neto (no se suma el IVA)
-          ? comprobante.neto + (totalDescuento / 1.21)
+          ? comprobante.neto + (totalDescuento / 1.21) + adelantoMostrar
           // B y resto: comportamiento actual, sin cambios
           : (comprobante.ocultarDescuento
-              ? comprobante.neto + comprobante.totalIva
-              : comprobante.neto + comprobante.totalIva + totalDescuento);
+              ? comprobante.neto + comprobante.totalIva + adelantoMostrar
+              : comprobante.neto + comprobante.totalIva + totalDescuento + adelantoMostrar);
         comprobante.totalAPagar = venta.total ?? subtotalSinComprobante; // venta.total ya incluye ajuste/redondeo
         comprobante.totalFinal = comprobante.totalAPagar - comprobante.redondeo;
       } else if (sinItems) {
@@ -737,7 +749,7 @@ export class FacturaService {
                       // Factura A + mayorista/Lista3 (comprobante.ocultarSubtotal): con el
                       // descuento oculto, el Subtotal quedaría idéntico al Neto (dos líneas
                       // con el mismo número) - se omite (decisión del cliente, ago-2026).
-                      comprobante.ocultarSubtotal ? [] : [
+                      (comprobante.ocultarSubtotal && !comprobante.adelanto) ? [] : [
                         { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                       ],
                       // Factura A/B + mayorista/Lista3 (comprobante.ocultarDescuento): no se
@@ -749,6 +761,10 @@ export class FacturaService {
                       comprobante.ocultarDescuento ? [] : [
                         { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
                       ],
+                      // Adelantos de la NE aplicados al saldo (F3): fila separada, como un descuento.
+                      comprobante.adelanto ? [
+                        { text: `${comprobante.etiquetaAdelanto}: -$${comprobante.adelanto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
+                      ] : [],
                       // Antes solo se mostraba para tipoComprobante === 1 (Factura A) - bug
                       // real (ago-2026): con el precio de catálogo ahora IVA incluido para
                       // cualquier lista, Factura B también discrimina Neto/IVA en pantalla

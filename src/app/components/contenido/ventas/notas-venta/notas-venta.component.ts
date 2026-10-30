@@ -22,7 +22,7 @@ import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.compone
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { MontoSegunComprobante, OcultarDescuentoListaNeta } from '../../../../services/helpers/precios-venta.helper';
-import { ID_PROCESO, esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
+import { DESCRIPCION_ITEM_ADELANTO, ID_PROCESO, esItemNoCatalogado, saldoDisponibleNotaFiscal, saldoDisponibleNotaInterna, TipoNotaCredito, TALLES_ESTANDAR } from '../models/venta.constants';
 
 @Component({
   selector: 'app-notas-venta',
@@ -206,7 +206,10 @@ export class NotasVentaComponent {
       // Clona ANTES de tocar nada: el form arranca ya mostrando el remanente
       // real (no lo facturado), así el usuario no tiene que acordarse de bajar
       // a mano cada talla ya acreditada - ver comentario en ClonarProductos.
-      this.productos = this.ClonarProductos(this.venta.productos);
+      // Factura final de una NE con adelantos (F3): la línea negativa "Adelanto aplicado" no es un ítem
+      // acreditable. El tope de la NC sigue siendo el saldo disponible de la factura (= su total, que
+      // ya es el saldo), así que lo acreditado nunca supera lo efectivamente facturado.
+      this.productos = this.ClonarProductos((this.venta.productos ?? []).filter(p => (p.descripcion ?? '') !== DESCRIPCION_ITEM_ADELANTO));
       this.servicios = this.ClonarServicios(this.venta.servicios);
       this.productosSeleccionados = [];
       this.serviciosSeleccionados = [];

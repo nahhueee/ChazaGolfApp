@@ -177,6 +177,15 @@ export type TipoItem = ValueOf<typeof TIPO_ITEM>;
 export const DESCRIPCION_ITEM_RECARGO_TRANSFERENCIA = 'Recargo transferencia 10%';
 
 /**
+ * Línea NEGATIVA que la Factura final de una Nota de Empaque lleva por los adelantos aplicados
+ * (oct-2026, F3). Se persiste como una línea más de `ventas_productos` (tipoItem PRESUPUESTO, sin
+ * stock) para que el total siga siendo la suma de sus líneas. Es un derivado: se arma al guardar
+ * (ver ArmarObjetoVenta), se saca de la grilla al reabrir y NO se imprime como ítem sino como fila
+ * "Adelanto s/ Fact. ..." del resumen. Espejo de DESCRIPCION_ITEM_ADELANTO en el backend.
+ */
+export const DESCRIPCION_ITEM_ADELANTO = 'Adelanto aplicado';
+
+/**
  * Porcentaje fijo del recargo por transferencia (10%, decisión del cliente -
  * ver handoff §3.d). Constante única: no se ABMea ni se parametriza por
  * empresa - si mañana cambia, se edita acá y en ningún otro lado.

@@ -1,6 +1,6 @@
 import { ProductosFactura, ServiciosFactura, Venta } from '../../models/Factura';
 import { TipoComprobante } from '../../models/ObjFacturar';
-import { esItemNoCatalogado, listaConPrecioNeto, TipoNotaCredito } from '../../components/contenido/ventas/models/venta.constants';
+import { DESCRIPCION_ITEM_ADELANTO, esItemNoCatalogado, listaConPrecioNeto, TIPO_COMPROBANTE, TipoNotaCredito } from '../../components/contenido/ventas/models/venta.constants';
 
 // Extraído de listado-ventas.component.ts (ago-2026) para que TODA pantalla que imprima
 // una venta con factura.service.ts calcule los precios de la misma forma.
@@ -173,4 +173,34 @@ export const OcultarDescuentoListaNeta = (venta: Venta): boolean => {
 export const MontoSegunComprobante = (monto: number | undefined | null, enNeto: boolean): number => {
   const valor = Number(monto) || 0;
   return enNeto ? valor / 1.21 : valor;
+};
+
+// "Adelanto s/ Fact. B 00001-00000012" (oct-2026, F3): rótulo de la fila de resumen de la Factura
+// final de una Nota de Empaque. Sale de venta.adelantos (el backend los trae en la Factura
+// relacionada a la NE); sin ese dato queda el rótulo genérico.
+export const EtiquetaAdelantoAplicado = (venta: Venta): string => {
+  const comprobantes = (venta.adelantos ?? []).map(a => {
+    const letra = a.tipoFactura === TIPO_COMPROBANTE.FACTURA_A ? 'A'
+                : a.tipoFactura === TIPO_COMPROBANTE.FACTURA_B ? 'B'
+                : a.tipoFactura === TIPO_COMPROBANTE.FACTURA_C ? 'C' : '';
+    const pto = String(a.ptoVenta ?? 0).padStart(5, '0');
+    const nro = String(a.ticket ?? 0).padStart(8, '0');
+    return `Fact. ${letra} ${pto}-${nro}`.replace('  ', ' ');
+  });
+  return comprobantes.length ? `Adelanto s/ ${comprobantes.join(' y ')}` : 'Adelanto aplicado';
+};
+
+// Separa la línea derivada de adelanto (negativa) de los ítems reales de una venta: los
+// comprobantes la muestran como fila del resumen, nunca como ítem. `adelanto` viene en POSITIVO
+// (importe total con IVA). No muta la venta.
+export const SepararAdelantoAplicado = (venta: Venta): { productos: ProductosFactura[]; adelanto: number; etiqueta: string } => {
+  const todos = venta.productos ?? [];
+  const esAdelanto = (p: ProductosFactura) => (p.descripcion ?? '') === DESCRIPCION_ITEM_ADELANTO;
+  const lineas = todos.filter(esAdelanto);
+  if (lineas.length === 0) return { productos: todos, adelanto: 0, etiqueta: '' };
+  return {
+    productos: todos.filter(p => !esAdelanto(p)),
+    adelanto: Math.abs(lineas.reduce((acc, p) => acc + (Number(p.total) || 0), 0)),
+    etiqueta: EtiquetaAdelantoAplicado(venta),
+  };
 };

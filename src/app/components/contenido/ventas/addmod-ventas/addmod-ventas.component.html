@@ -744,13 +744,17 @@
 
             @if(resumenAdelantos; as r){
                 <div class="resumen-adelantos">
-                    <div><span>Total de la nota (estimado)</span><strong>${{ r.totalNE | decimalFormat }}</strong></div>
+                    @if(r.sumaIva){
+                        <div><span>Total de la nota (sin IVA)</span><strong>${{ r.totalNESinIva | decimalFormat }}</strong></div>
+                        <div><span>IVA 21%</span><strong>${{ r.ivaNE | decimalFormat }}</strong></div>
+                    }
+                    <div><span>Total de la nota{{ r.sumaIva ? ' con IVA' : '' }} (estimado)</span><strong>${{ r.totalNE | decimalFormat }}</strong></div>
                     <div><span>Adelantos facturados ({{ r.cantidad }})</span><strong>- ${{ r.totalAdelantos | decimalFormat }}</strong></div>
                     <div class="saldo" [class.excedido]="r.excedido">
                         <span>Saldo a facturar (estimado)</span><strong>${{ r.saldoTotal | decimalFormat }}</strong>
                     </div>
                     @if(r.discrimina){
-                        <small>Neto del saldo: ${{ r.saldoNeto | decimalFormat }}</small>
+                        <small>Neto del saldo: ${{ r.saldoNeto | decimalFormat }} · IVA del saldo: ${{ r.saldoIva | decimalFormat }}</small>
                     }
                     <small>Estimación sobre el total de la nota; se confirma al facturar.</small>
                 </div>
@@ -783,13 +787,13 @@
                     <div class="horizontal">
                         <!-- Empresa -->
                         <p-floatlabel variant="in">
-                            <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" [disabled]="soloLecturaPorEdicion" (onChange)="CambioEmpresa()" />
+                            <p-select [options]="empresas" formControlName="empresa" optionValue="id" optionLabel="razonSocial" [disabled]="soloLecturaPorEdicion || aplicaAdelantos" (onChange)="CambioEmpresa()" />
                             <label>Empresa</label>
                         </p-floatlabel>
 
                         <!-- Tipo Comprobante -->
                         <p-floatlabel variant="in">
-                            <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion" (onChange)="CambioTipoComprobante()" />
+                            <p-select [options]="comprobantes" formControlName="tComprobante" optionValue="id" optionLabel="descripcion" [disabled]="soloLecturaPorEdicion || aplicaAdelantos" (onChange)="CambioTipoComprobante()" />
                             <label>Tipo Comprobante</label>
                         </p-floatlabel>
                     </div>
@@ -954,6 +958,15 @@
                     <span>Descuento:</span>
                     <span class="monto">${{Visible(totales.descuento) | decimalFormat}}</span>
                 </div>
+
+                @if(tipo == 'factura' && totales.adelantoAplicado > 0){
+                    <!-- Factura final de una NE con adelantos (F3): el adelanto ya facturado resta como un
+                         descuento separado; Neto/IVA/Total son los del SALDO. -->
+                    <div class="fila">
+                        <span>{{ etiquetaAdelantosAplicados }}:</span>
+                        <span class="monto">-${{Visible(totales.adelantoAplicado) | decimalFormat}}</span>
+                    </div>
+                }
 
                 @if(tipo == 'factura'){
                     <!-- Neto = base imponible (totales.subtotal: post-descuento, pre-IVA).
