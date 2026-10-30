@@ -35,6 +35,11 @@ export class VentasService {
     const body = {idCliente, nroEditando}
     return this.apiService.post(`ventas/obtener-cliente`, body);
   }
+  // Facturas de adelanto (sin productos) que se pueden vincular a una NE del cliente. `idNE` incluye
+  // también las ya vinculadas a esa NE, para mostrarlas tildadas al editar.
+  ObtenerAdelantosDisponibles(idCliente:number, idNE?:number): Observable<any> {
+    return this.apiService.get(`ventas/adelantos-disponibles/` + idCliente + (idNE ? `?idNE=` + idNE : ''));
+  }
   VerificarNroNota(nroNota:number): Observable<any> {
     return this.apiService.get(`ventas/verificar-nota/` + nroNota);
   }

@@ -26,7 +26,7 @@
                              UNIQUE(idProceso, nroProceso). Bug real en producción, ago-2026. -->
                         <p-selectbutton class="selector-proceso" [options]="procesosSeleccionables" formControlName="proceso" optionLabel="descripcion"
                             [allowEmpty]="false"
-                            [disabled]="modificando || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo()" />
+                            [disabled]="modificando || (productosFactura.length > 0 && ProcesoControl.descripcion == 'PRESUPUESTO')" (onChange)="SetearTitulo(); CargarAdelantosDisponibles()" />
                         <!-- Fecha -->
                         <p-floatlabel variant="in" class="campo-fecha">
                             <p-datepicker formControlName="fecha" showIcon iconDisplay="input" />
@@ -709,6 +709,59 @@
         </p-table>
     </div>
 
+    }
+
+    <!-- Adelantos facturados (solo Nota de Empaque): facturas "sin productos" del cliente que se vinculan a esta NE -->
+    @if(mostrarAdelantos){
+        <div class="seccion">
+            <h3>Adelantos facturados</h3>
+
+            <p-table [value]="adelantosDisponibles" [(selection)]="adelantosSeleccionados" dataKey="idFactura"
+                     (selectionChange)="RecalcularResumenAdelantos()" [tableStyle]="{'min-width': '40rem'}">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 3rem"></th>
+                        <th>Comprobante</th>
+                        <th>Fecha</th>
+                        <th>Motivo</th>
+                        <th>Empresa</th>
+                        <th>Neto</th>
+                        <th>Total</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-adelanto>
+                    <tr>
+                        <td><p-tableCheckbox [value]="adelanto" /></td>
+                        <td>{{ EtiquetaAdelanto(adelanto) }}</td>
+                        <td>{{ adelanto.fecha | date:'dd/MM/yyyy' }}</td>
+                        <td>{{ adelanto.motivo }}</td>
+                        <td>{{ adelanto.empresa }}</td>
+                        <td>${{ adelanto.neto | decimalFormat }}</td>
+                        <td>${{ adelanto.total | decimalFormat }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+
+            @if(resumenAdelantos; as r){
+                <div class="resumen-adelantos">
+                    <div><span>Total de la nota (estimado)</span><strong>${{ r.totalNE | decimalFormat }}</strong></div>
+                    <div><span>Adelantos facturados ({{ r.cantidad }})</span><strong>- ${{ r.totalAdelantos | decimalFormat }}</strong></div>
+                    <div class="saldo" [class.excedido]="r.excedido">
+                        <span>Saldo a facturar (estimado)</span><strong>${{ r.saldoTotal | decimalFormat }}</strong>
+                    </div>
+                    @if(r.discrimina){
+                        <small>Neto del saldo: ${{ r.saldoNeto | decimalFormat }}</small>
+                    }
+                    <small>Estimación sobre el total de la nota; se confirma al facturar.</small>
+                </div>
+                @if(r.excedido){
+                    <div class="alerta alerta-warn">
+                        <span class="alerta-icon">⚠️</span>
+                        <div class="alerta-texto">Los adelantos superan el total estimado de la nota de empaque.</div>
+                    </div>
+                }
+            }
+        </div>
     }
 
     <!-- Datos Facturacion -->

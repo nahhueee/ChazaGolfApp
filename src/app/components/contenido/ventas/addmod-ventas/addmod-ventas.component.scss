@@ -758,3 +758,29 @@ p-divider {
     margin-left: 10px;
   }
 }
+
+/* Adelantos facturados vinculados a la Nota de Empaque (oct-2026) */
+.resumen-adelantos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+
+  div {
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+    min-width: 320px;
+  }
+
+  .saldo {
+    border-top: 1px solid var(--p-content-border-color);
+    padding-top: 6px;
+    font-size: 1.05rem;
+
+    &.excedido strong {
+      color: var(--p-red-400);
+    }
+  }
+}

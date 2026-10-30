@@ -13,7 +13,7 @@ import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { PagosFactura, ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
+import { AdelantoVenta, PagosFactura, ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MenuItem } from 'primeng/api';
@@ -86,6 +86,18 @@ import {
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
 import { ParametrosService } from '../../../../services/parametros.service';
+
+// Resumen de los adelantos facturados vinculados a una Nota de Empaque (ver RecalcularResumenAdelantos).
+interface ResumenAdelantos {
+  cantidad: number;
+  totalAdelantos: number;
+  netoAdelantos: number;
+  totalNE: number;
+  saldoTotal: number;
+  saldoNeto: number;
+  discrimina: boolean;
+  excedido: boolean;
+}
 
 interface SubtotalAcumulado {
   total:    number;
@@ -199,6 +211,15 @@ export class AddModVentasComponent {
     motivo: new FormControl(''),
     total: new FormControl(''),
   });
+
+  // ADELANTOS FACTURADOS (solo Nota de Empaque, oct-2026): facturas "sin productos" ya emitidas al
+  // cliente que se vinculan a esta NE para que el sistema sepa cuánto está adelantado y cuál es el
+  // saldo (la facturación por saldo es la fase siguiente). Ver ventasAdelantos.ts en el backend.
+  adelantosDisponibles: AdelantoVenta[] = [];
+  adelantosSeleccionados: AdelantoVenta[] = [];
+  // Cliente al que pertenece la selección actual: si cambia, la selección se descarta.
+  adelantosIdCliente?: number;
+  resumenAdelantos: ResumenAdelantos | null = null;
 
   //PANTALLA 2
   formProductos:FormGroup;
@@ -527,6 +548,13 @@ export class AddModVentasComponent {
     // general, redondeo ni recargo por transferencia (se valoriza a precio de lista).
     get esEntregaSinCargo(): boolean {return this.ProcesoControl?.id === ID_PROCESO.ENTREGA_SIN_CARGO;}
 
+    get esNotaEmpaque(): boolean {return this.tipo === 'pre' && this.ProcesoControl?.id === ID_PROCESO.NOTA_EMPAQUE;}
+
+    // La sección de adelantos aparece solo en una NE con cliente y con adelantos para elegir.
+    get mostrarAdelantos(): boolean {
+      return this.esNotaEmpaque && !!this.clienteSeleccionado && this.adelantosDisponibles.length > 0;
+    }
+
     // Se ofrece la opción "Sin productos o servicios" solo en una Factura fiscal (A/B/C)
     // NUEVA, sin documento relacionado y mientras no haya ítems cargados (así el tildado
     // nunca descarta datos tipeados). Cotización/Sin comprobante/Entrega sin cargo y la
@@ -825,6 +853,10 @@ export class AddModVentasComponent {
     this.pagosFactura = [];
     this.adelantoSinProductos = false;
     this.formAdelanto.reset();
+    this.adelantosDisponibles = [];
+    this.adelantosSeleccionados = [];
+    this.adelantosIdCliente = undefined;
+    this.resumenAdelantos = null;
     this.clienteSeleccionado = undefined;
     this.clienteBloqueadoPorRelacion = false;
     this.itemsBloqueadosPorRelacion = false;
@@ -1277,6 +1309,86 @@ export class AddModVentasComponent {
   CalcularTotalGeneral() {
     this.aplicarDescuentoAItems();
     this.totales = this.recalcularTotales();
+    this.RecalcularResumenAdelantos();
+  }
+
+  // Carga los adelantos que se pueden vincular a esta NE (los libres del cliente + los ya vinculados a
+  // ella) y conserva la selección por idFactura. Se llama al elegir cliente y al cambiar de proceso.
+  // Si el cliente cambió con adelantos tildados, se descartan (son del cliente anterior).
+  CargarAdelantosDisponibles(): void {
+    if (!this.esNotaEmpaque || !this.clienteSeleccionado) {
+      this.adelantosDisponibles = [];
+      this.adelantosSeleccionados = [];
+      this.RecalcularResumenAdelantos();
+      return;
+    }
+
+    const idCliente = this.clienteSeleccionado.id;
+    if (this.adelantosIdCliente != null && this.adelantosIdCliente !== idCliente && this.adelantosSeleccionados.length > 0) {
+      this.Notificaciones.Warn('Se cambió el cliente: se quitaron los adelantos vinculados a la nota de empaque.');
+      this.adelantosSeleccionados = [];
+    }
+    this.adelantosIdCliente = idCliente;
+
+    const idsPrevios = new Set(this.adelantosSeleccionados.map(a => a.idFactura));
+    this.ventasService.ObtenerAdelantosDisponibles(idCliente, this.modificando ? this.venta.id : undefined)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: AdelantoVenta[]) => {
+          this.adelantosDisponibles = response ?? [];
+          this.adelantosSeleccionados = this.adelantosDisponibles.filter(a => idsPrevios.has(a.idFactura));
+          this.RecalcularResumenAdelantos();
+        },
+        error: () => {
+          this.adelantosDisponibles = [];
+          this.adelantosSeleccionados = [];
+          this.RecalcularResumenAdelantos();
+          this.Notificaciones.Warn('No se pudieron obtener los adelantos facturados del cliente.');
+        }
+      });
+  }
+
+  // "Factura A 0012-00000123" para mostrar en la tabla de adelantos.
+  EtiquetaAdelanto(a: AdelantoVenta): string {
+    const letra = a.tipoFactura === TIPO_COMPROBANTE.FACTURA_A ? 'A'
+                : a.tipoFactura === TIPO_COMPROBANTE.FACTURA_B ? 'B'
+                : a.tipoFactura === TIPO_COMPROBANTE.FACTURA_C ? 'C' : '';
+    const pto = String(a.ptoVenta ?? 0).padStart(4, '0');
+    const nro = String(a.ticket ?? 0).padStart(8, '0');
+    return `Factura ${letra} ${pto}-${nro}`.replace('  ', ' ');
+  }
+
+  // Saldo ESTIMADO de la NE: el total de la NE no incluye IVA (no tiene comprobante), pero al facturar
+  // se le suma el 21% si el cliente es mayorista con lista propia y el comprobante es A/B (ver
+  // PrecioItemSegunComprobante). El comprobante lo fija el adelanto (misma factura que el saldo).
+  // Es solo informativo: la facturación por saldo valida contra el total real de la factura (fase 3).
+  RecalcularResumenAdelantos(): void {
+    const seleccion = this.adelantosSeleccionados ?? [];
+    if (!this.esNotaEmpaque || seleccion.length === 0) {
+      this.resumenAdelantos = null;
+      return;
+    }
+    const redondear = (n: number) => Math.round(n * 100) / 100;
+    const tipo = seleccion[0].tipoFactura;
+    const discrimina = tipo === TIPO_COMPROBANTE.FACTURA_A || tipo === TIPO_COMPROBANTE.FACTURA_B;
+    const sumaIva = discrimina && esMayoristaConListaPropia(this.clienteSeleccionado?.idCategoria, this.clienteSeleccionado?.idListaPrecio);
+
+    const totalNE = redondear(sumaIva ? this.totales.aPagar * 1.21 : this.totales.aPagar);
+    const netoNE = discrimina ? redondear(totalNE / 1.21) : totalNE;
+    const totalAdelantos = redondear(seleccion.reduce((acc, a) => acc + (a.total ?? 0), 0));
+    const netoAdelantos = redondear(seleccion.reduce((acc, a) => acc + (a.neto ?? 0), 0));
+    const saldoTotal = redondear(totalNE - totalAdelantos);
+
+    this.resumenAdelantos = {
+      cantidad: seleccion.length,
+      totalAdelantos,
+      netoAdelantos,
+      totalNE,
+      saldoTotal,
+      saldoNeto: redondear(netoNE - netoAdelantos),
+      discrimina,
+      excedido: saldoTotal < -0.01,
+    };
   }
   //#endregion
 
@@ -1383,6 +1495,7 @@ export class AddModVentasComponent {
           }
 
           this.SincronizarBloqueoDescuentoGeneral();
+          this.CargarAdelantosDisponibles();
           alTerminar?.();
         });
   }
@@ -1606,6 +1719,10 @@ export class AddModVentasComponent {
     this.OrdenarProductosPorLineaTalle();
     if(this.venta.servicios) this.serviciosFactura = this.venta.servicios;
     if(this.venta.pagos) this.pagosFactura = this.venta.pagos;
+
+    // Adelantos ya vinculados a esta NE (se reconcilian con los disponibles en CargarAdelantosDisponibles).
+    this.adelantosSeleccionados = this.venta.adelantos ?? [];
+    this.adelantosIdCliente = this.venta.cliente?.id;
 
     this.ObtenerMetodosPago(this.venta.idEmpresa!);
     this.SeleccionarCliente(this.venta.idTipoComprobante);
@@ -2746,6 +2863,11 @@ export class AddModVentasComponent {
       return;
     }
 
+    if (this.esNotaEmpaque && this.resumenAdelantos?.excedido) {
+      this.Notificaciones.Warn("Los adelantos vinculados superan el total estimado de la nota de empaque. Revisá la selección.");
+      return;
+    }
+
     const descuentoPreInvalido = !validarFacturacion && !!this.formFacturacion.get('descuento')?.invalid;
 
     const formularioInvalido =
@@ -3188,6 +3310,10 @@ export class AddModVentasComponent {
     }
     this.venta.servicios = this.serviciosFactura;
     this.venta.pagos = this.esEntregaSinCargo ? [] : this.pagosFactura;
+    // Adelantos facturados vinculados (solo NE): el backend reemplaza los vínculos por esta lista.
+    this.venta.adelantos = this.venta.idProceso == ID_PROCESO.NOTA_EMPAQUE
+      ? this.adelantosSeleccionados.map(a => ({ idFactura: a.idFactura } as AdelantoVenta))
+      : undefined;
   }
 
   //Marca los campos del formulario como tocados para validar
