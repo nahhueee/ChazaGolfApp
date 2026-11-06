@@ -57,8 +57,9 @@ export class AddmodProductosComponent {
   modalAddClienteVisible: boolean = false;
 
   empresas:any[] = [
-    {id:70, descripcion:'SUCEDE'},
+    {id:70, descripcion:'CHAZA GOLF'},
     {id:81, descripcion:'SUELTO Y CONFIO'},
+    {id:82, descripcion:'RETA'},
   ];
   clientes:Cliente[]=[];
   clientesFiltrados:Cliente[]=[];
