@@ -25,6 +25,7 @@ import { AjusteStockComponent } from './components/contenido/stock/ajuste-stock/
 import { MainAdministracionComponent } from './components/contenido/administracion/main-administracion/main-administracion.component';
 import { ErroresComponent } from './components/contenido/administracion/errores/errores.component';
 import { PendientesFiscalesComponent } from './components/contenido/administracion/pendientes-fiscales/pendientes-fiscales.component';
+import { ChequesComponent } from './components/contenido/administracion/cheques/cheques.component';
 
 export const routes: Routes = [
     {
@@ -137,5 +138,9 @@ export const routes: Routes = [
         // F4.3 - HANDOFF blindaje facturacion y logs
         path: 'administracion/pendientes-fiscales',
         component:PendientesFiscalesComponent
+    },
+    {
+        path: 'administracion/cheques',
+        component:ChequesComponent
     },
 ];

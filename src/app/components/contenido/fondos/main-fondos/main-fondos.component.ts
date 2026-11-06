@@ -25,6 +25,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AddTransferencia } from "../add-transferencia/add-transferencia.component";
 import { Caja, DesglosePorEmpresa, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo, TotalesValores, ValorPendiente } from '../../../../models/Fondos';
 import { Dialog } from 'primeng/dialog';
+import { ChequesEmitidosService } from '../../../../services/cheques-emitidos.service';
+import { ChequeEmitido } from '../../../../models/ChequeEmitido';
 
 @Component({
   selector: 'app-main-fondos',
@@ -52,7 +54,8 @@ import { Dialog } from 'primeng/dialog';
     Dialog
 ],
   templateUrl: './main-fondos.component.html',
-  styleUrls: ['./main-fondos.component.scss']
+  styleUrls: ['./main-fondos.component.scss'],
+  providers: [ConfirmationService]
 })
 export class MainFondosComponent implements OnInit {
   sesion: any;
@@ -99,11 +102,25 @@ export class MainFondosComponent implements OnInit {
   fondoDestinoSeleccionado: ResumenFondo | null = null;
   fondosDisponibles: ResumenFondo[] = [];
 
+  // Fondos de tránsito: los mueve el sistema (no son un destino real de plata) y se muestran en una fila aparte
+  private esFondoTransito(f: ResumenFondo): boolean {
+    return f.tipo === 'VALOR_PENDIENTE' || f.tipo === 'CHEQUE_EMITIDO';
+  }
+  get fondosReales(): ResumenFondo[] { return this.resumenFondos.filter(f => !this.esFondoTransito(f)); }
+  get fondosTransito(): ResumenFondo[] { return this.resumenFondos.filter(f => this.esFondoTransito(f)); }
+
+  // Cheques emitidos (cheques propios todavía no debitados, fondo puente "Cheques emitidos a debitar")
+  chequesEmitidos: ChequeEmitido[] = [];
+  chequesCargados = false;
+  readonly DIAS_ALERTA_CHEQUE = 7;
+
   constructor(
     private fondosService:    FondosService,
     private usuariosService:  UsuariosService,
     private notificaciones:   NotificacionesService,
-    private filesService:     FilesService
+    private filesService:     FilesService,
+    private chequesService:   ChequesEmitidosService,
+    private confirmationService: ConfirmationService
   ) {
     this.filtrosForm = new FormGroup({
       caja:    new FormControl(),
@@ -163,8 +180,9 @@ export class MainFondosComponent implements OnInit {
       .subscribe(r => {
         this.resumenFondos      = r;
         this.resumenFondosCargado = true;
-        // Fondos disponibles para acreditar (excluir el fondo VA)
-        this.fondosDisponibles = r.filter((f: any) => f.tipo !== 'VALOR_PENDIENTE');
+        // Fondos disponibles para acreditar (excluir el fondo VA y el puente de cheques emitidos: ambos
+        // son fondos de tránsito que mueve el sistema, no un destino real)
+        this.fondosDisponibles = r.filter((f: any) => f.tipo !== 'VALOR_PENDIENTE' && f.tipo !== 'CHEQUE_EMITIDO');
 
         // si había un fondo seleccionado, actualizamos su referencia
         if (this.fondoSeleccionado) {
@@ -235,6 +253,11 @@ export class MainFondosComponent implements OnInit {
       // Valores pendientes: recargar al seleccionar el fondo VA
       if (fondo.tipo === 'VALOR_PENDIENTE') {
         this.cargarValoresPendientes();
+      }
+
+      // Cheques emitidos: recargar al seleccionar el fondo puente
+      if (fondo.tipo === 'CHEQUE_EMITIDO') {
+        this.cargarChequesEmitidos();
       }
     }
     this.cargarMovimientos();
@@ -443,6 +466,51 @@ export class MainFondosComponent implements OnInit {
 
   get totalValoresPendientes(): number {
     return (this.totalesValores.CHEQUE ?? 0) + (this.totalesValores.TARJETA_CREDITO ?? 0);
+  }
+
+  // ── Cheques emitidos ─────────────────────────────────────────────────────────
+
+  // El puente no es un destino válido para un movimiento manual: lo mueven solo emitir y Debitar.
+  get fondosParaMovimientoManual(): ResumenFondo[] {
+    return this.resumenFondos.filter(f => f.tipo !== 'CHEQUE_EMITIDO');
+  }
+
+  get totalChequesEmitidos(): number {
+    return this.chequesEmitidos.reduce((acc, c) => acc + c.importe, 0);
+  }
+
+  cargarChequesEmitidos(): void {
+    this.chequesCargados = false;
+    this.chequesService.Obtener({ estado: 'EMITIDO' })
+      .subscribe(r => {
+        this.chequesEmitidos = r;
+        this.chequesCargados = true;
+      });
+  }
+
+  // Vence dentro de la ventana de alerta (o ya venció) -> se resalta la fila.
+  chequeProximo(cheque: ChequeEmitido): boolean {
+    return cheque.diasParaPago <= this.DIAS_ALERTA_CHEQUE;
+  }
+
+  debitarCheque(cheque: ChequeEmitido): void {
+    this.confirmationService.confirm({
+      key: 'debitarCheque',
+      header: 'Debitar cheque',
+      icon: 'pi pi-exclamation-triangle',
+      message: `Vas a registrar el débito del cheque #${cheque.numero} por $${cheque.importe.toLocaleString('es-AR')} de ${cheque.banco}. Se descuenta del banco ahora; no cargues además un egreso manual.`,
+      rejectButtonProps: { label: 'Cancelar', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Debitar' },
+      accept: () => {
+        this.chequesService.Debitar(cheque.id, this.cajaSeleccionada.id).subscribe(response => {
+          if (response == 'OK') {
+            this.notificaciones.Success('Cheque debitado correctamente.');
+            this.cargarChequesEmitidos();
+            this.cargarDatos();
+          }
+        });
+      },
+    });
   }
 }
 // export class MainFondosComponent implements OnInit {

@@ -84,6 +84,12 @@ p-floatlabel {
   margin-top: 20px;
 }
 
+// Fila de fondos de tránsito: mismo tamaño de card que la de arriba, pero sin estirarse a todo el ancho
+.fondos-grid--transito {
+  margin-top: 0.9rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
 .grafico-header{
   font-size: 0.92rem;
   color: var(--text-color-secondary);
@@ -347,4 +353,9 @@ p-floatlabel {
   display: flex;
   gap: 5px;
   align-items: center;
+}
+
+// Cheques emitidos: fila que vence dentro de la ventana de alerta (o ya vencida)
+.cheque-proximo {
+  background: var(--p-orange-50, #fff7ed);
 }

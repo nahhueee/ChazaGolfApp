@@ -1,0 +1,81 @@
+<p-dialog
+  header="Cheque propio"
+  [modal]="true"
+  [style]="{ width: '520px' }"
+  [(visible)]="visible"
+  appendTo="body"
+  (onHide)="onDialogHide()"
+>
+  <form [formGroup]="form" class="cheque-form" autocomplete="off">
+
+    <div class="fila">
+      <p-floatlabel variant="in">
+        <p-select [options]="cuentas" formControlName="cuenta" optionLabel="nombre" appendTo="body" />
+        <label>Cuenta (banco) <span class="req">*</span></label>
+        @if (campoInvalido('cuenta')) {
+          <small class="error">Requerido.</small>
+        }
+      </p-floatlabel>
+
+      <p-floatlabel variant="in">
+        <p-select [options]="tipos" formControlName="tipo" optionLabel="label" optionValue="value" appendTo="body" />
+        <label>Tipo <span class="req">*</span></label>
+      </p-floatlabel>
+    </div>
+
+    <div class="fila">
+      <p-floatlabel variant="in">
+        <input pInputText formControlName="numero" maxlength="30" placeholder="Ej: 00012345" />
+        <label>Número de cheque <span class="req">*</span></label>
+        @if (campoInvalido('numero')) {
+          <small class="error">Requerido.</small>
+        }
+      </p-floatlabel>
+
+      <p-floatlabel variant="in">
+        <input pInputText type="number" formControlName="importe" min="0.01" step="0.01" />
+        <label>Importe <span class="req">*</span></label>
+        @if (campoInvalido('importe')) {
+          <small class="error">El importe debe ser mayor a cero.</small>
+        }
+      </p-floatlabel>
+    </div>
+
+    <div class="fila">
+      <p-floatlabel variant="in">
+        <p-datepicker formControlName="fechaEmision" dateFormat="dd/mm/yy" showIcon iconDisplay="input" appendTo="body" />
+        <label>Fecha de emisión <span class="req">*</span></label>
+        @if (campoInvalido('fechaEmision')) {
+          <small class="error">Requerido.</small>
+        }
+      </p-floatlabel>
+
+      <p-floatlabel variant="in">
+        <p-datepicker formControlName="fechaPago" dateFormat="dd/mm/yy" showIcon iconDisplay="input" appendTo="body" />
+        <label>Fecha de pago <span class="req">*</span></label>
+        @if (campoInvalido('fechaPago')) {
+          <small class="error">Requerido.</small>
+        }
+        @if (fechaPagoAnteriorAEmision) {
+          <small class="error">No puede ser anterior a la emisión.</small>
+        }
+      </p-floatlabel>
+    </div>
+
+    <p-floatlabel variant="in">
+      <input pInputText formControlName="observaciones" maxlength="255" />
+      <label>Observaciones</label>
+    </p-floatlabel>
+
+    <small class="ayuda">
+      El cheque queda como <strong>emitido</strong>: la plata sale del banco recién cuando lo debitás desde Fondos.
+      No cargues el egreso a mano en el banco.
+    </small>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="onCancelar()" />
+    <p-button label="Confirmar" (onClick)="onConfirmar()" />
+  </ng-template>
+</p-dialog>

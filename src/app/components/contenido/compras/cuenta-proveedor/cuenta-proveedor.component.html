@@ -113,8 +113,16 @@
 
             <h4>Métodos de Pago</h4>
             <ul>
-                @for(metodo of pagoSeleccionado.metodos; track metodo.idMetodo){
-                    <li>{{ metodo.metodoPago }}: ${{ metodo.monto | decimalFormat }}</li>
+                @for(metodo of pagoSeleccionado.metodos; track $index){
+                    <li>
+                        {{ metodo.metodoPago }}: ${{ metodo.monto | decimalFormat }}
+                        @if(metodo.chequeNumero){
+                            <br><small>{{ metodo.chequeBanco }} · {{ metodo.chequeTipo == 'ECHEQ' ? 'eCheq' : 'Cheque' }} #{{ metodo.chequeNumero }} · cobro {{ metodo.chequeFechaPago | date:'dd-MM-yyyy' }} · {{ metodo.chequeEstado }}</small>
+                        }
+                        @if(metodo.endosoNumero){
+                            <br><small>Cheque endosado #{{ metodo.endosoNumero }} · {{ metodo.endosoBanco }} · {{ metodo.endosoLibrador }}</small>
+                        }
+                    </li>
                 }
             </ul>
 
