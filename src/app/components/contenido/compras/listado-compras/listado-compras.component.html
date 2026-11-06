@@ -126,6 +126,11 @@
                     </div>
                     <div class="der">
                         <p><strong>Método de Pago:</strong> {{ compraSeleccionada.metodoPago }}</p>
+                        @for (pago of compraSeleccionada.pagos ?? []; track $index) {
+                            @if (pago.detalleCheque) {
+                                <p><i class="pi pi-file-edit"></i> {{ pago.detalleCheque }} · ${{ pago.monto ?? 0 | decimalFormat }}</p>
+                            }
+                        }
                         <p><strong>Estado:</strong> {{ compraSeleccionada.estado }}</p>
                     </div>
                 </div>

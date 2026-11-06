@@ -1,0 +1,119 @@
+<div class="contenido">
+    <app-encabezado-seccion titulo="Cheques" icono="pi pi-file-edit" subtitulo="Estado de los cheques propios y de terceros. Para debitar o acreditar, usá Fondos.">
+        <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="Buscar()" [loading]="cargando"/>
+    </app-encabezado-seccion>
+
+    <div class="vistas">
+        <p-selectbutton [options]="vistas" [(ngModel)]="vista" optionLabel="label" optionValue="value" [allowEmpty]="false" (onChange)="CambioVista()" />
+    </div>
+
+    <div class="filtros">
+        <p-floatlabel variant="on">
+            <p-select [options]="empresas" [(ngModel)]="idEmpresa" optionLabel="razonSocial" optionValue="id" [showClear]="true" (onChange)="Buscar()" />
+            <label>Empresa</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+            <p-datepicker [(ngModel)]="rango" selectionMode="range" dateFormat="dd/mm/yy" [showClear]="true" [readonlyInput]="true"
+                (onSelect)="RangoSeleccionado()" (onClearClick)="RangoLimpio()" />
+            <label>{{ vista === 'PROPIOS' ? 'Fecha de pago' : 'Fecha de cobro' }}</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+            <p-select [options]="estadosVista" [(ngModel)]="estadoFiltro" optionLabel="label" optionValue="value" [showClear]="true" />
+            <label>Estado</label>
+        </p-floatlabel>
+    </div>
+
+    <div class="totales">
+        @for (t of totales; track t.label) {
+            <p-tag [severity]="$any(t.severity)" [value]="t.label + ': ' + t.cantidad + ' · $' + (t.importe | decimalFormat)" />
+        }
+    </div>
+
+    @if (truncado) {
+        <small class="aviso">Se muestran las primeras {{ LIMITE_FILAS }} filas: acotá con los filtros para ver el resto.</small>
+    }
+
+    @if (vista === 'PROPIOS') {
+        <p-table [value]="filasPropias" [loading]="cargando" [tableStyle]="{ 'min-width': '60rem' }" [rowHover]="true">
+            <ng-template #header>
+                <tr>
+                    <th>Fecha de pago</th>
+                    <th>Banco</th>
+                    <th>Cheque</th>
+                    <th>Proveedor</th>
+                    <th>Empresa</th>
+                    <th class="der">Importe</th>
+                    <th>Estado</th>
+                    <th>Emitido</th>
+                    <th>Debitado</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-c>
+                <tr>
+                    <td>
+                        {{ c.fechaPago | date:'dd/MM/yy' }}
+                        @if (c.estado === 'EMITIDO') {
+                            @if (c.diasParaPago < 0) {
+                                <p-tag severity="danger" value="Vencido" />
+                            } @else if (c.diasParaPago <= DIAS_ALERTA) {
+                                <p-tag severity="warn" [value]="c.diasParaPago === 0 ? 'Hoy' : 'En ' + c.diasParaPago + ' d'" />
+                            }
+                        }
+                    </td>
+                    <td>{{ c.banco || '—' }}</td>
+                    <td><p-tag [value]="c.tipo === 'ECHEQ' ? 'eCheq' : 'Físico'" severity="info" /> #{{ c.numero }}</td>
+                    <td>{{ c.proveedor || '—' }}</td>
+                    <td>{{ NombreEmpresa(c.idEmpresa) }}</td>
+                    <td class="der">${{ c.importe | decimalFormat }}</td>
+                    <td><p-tag [value]="Etiqueta(c.estado)" [severity]="$any(Severity(c.estado))" /></td>
+                    <td>{{ c.fechaEmision | date:'dd/MM/yy' }}</td>
+                    <td>{{ c.fechaDebito ? (c.fechaDebito | date:'dd/MM/yy') : '—' }}</td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr><td colspan="9" class="vacio">No hay cheques propios con esos filtros.</td></tr>
+            </ng-template>
+        </p-table>
+    } @else {
+        <p-table [value]="filasTerceros" [loading]="cargando" [tableStyle]="{ 'min-width': '64rem' }" [rowHover]="true">
+            <ng-template #header>
+                <tr>
+                    <th>Fecha de cobro</th>
+                    <th>Librador</th>
+                    <th>Banco</th>
+                    <th>Número</th>
+                    <th>Recibido de</th>
+                    <th>Empresa</th>
+                    <th class="der">Importe</th>
+                    <th>Estado</th>
+                    <th>Destino</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-c>
+                <tr>
+                    <td>{{ c.chequeFechaCobro ? (c.chequeFechaCobro | date:'dd/MM/yy') : '—' }}</td>
+                    <td>{{ c.chequeLibradorNombre || '—' }}</td>
+                    <td>{{ c.chequeBanco || '—' }}</td>
+                    <td>#{{ c.chequeNumero }}</td>
+                    <td>{{ c.cliente || '—' }}</td>
+                    <td>{{ NombreEmpresa(c.idEmpresa) }}</td>
+                    <td class="der">${{ c.monto | decimalFormat }}</td>
+                    <td><p-tag [value]="Etiqueta(c.estado)" [severity]="$any(Severity(c.estado))" /></td>
+                    <td>
+                        @switch (c.estado) {
+                            @case ('ENDOSADO') { Endosado a {{ c.proveedorEndoso || '—' }}{{ c.fechaEndoso ? ' · ' + (c.fechaEndoso | date:'dd/MM/yy') : '' }} }
+                            @case ('ACREDITADO') { Acreditado en {{ c.fondoDestino || '—' }}{{ c.fechaAcreditacion ? ' · ' + (c.fechaAcreditacion | date:'dd/MM/yy') : '' }} }
+                            @case ('RECHAZADO') { Rechazado{{ c.observaciones ? ': ' + c.observaciones : '' }} }
+                            @default { En Valores a Acreditar }
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr><td colspan="9" class="vacio">No hay cheques de terceros con esos filtros.</td></tr>
+            </ng-template>
+        </p-table>
+    }
+</div>

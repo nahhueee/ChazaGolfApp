@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { MovimientoFondo } from '../models/Movimiento';
 import { Caja } from '../models/Caja';
+import { ChequeTercero, FiltroChequesTerceros } from '../models/ChequeTercero';
 import { DesglosePorEmpresa, DetalleMetodoPago, FiltrosFondos, ResumenCaja, ResumenFondo, TotalesValores, ValorPendiente } from '../models/Fondos';
 
 @Injectable({
@@ -41,8 +42,11 @@ export class FondosService {
   ObtenerDesglosePorEmpresa(filtro: FiltrosFondos): Observable<DesglosePorEmpresa[] | any> {
     return this.apiService.post('fondos/desglose-por-empresa', filtro);
   }
-  ObtenerValoresPendientes(): Observable<any> {
-    return this.apiService.post('valores/pendientes', {});
+  ObtenerValoresPendientes(filtro?: { tipo?: string; idEmpresa?: number }): Observable<any> {
+    return this.apiService.post('valores/pendientes', filtro ?? {});
+  }
+  ObtenerChequesTerceros(filtro: FiltroChequesTerceros): Observable<ChequeTercero[]> {
+    return this.apiService.post<ChequeTercero[]>('valores/cheques', filtro).pipe(map(r => r ?? []));
   }
   AcreditarValor(params: { idValor: number; idCaja: number; usuario: string; idFondoDestino?: number; observaciones?: string }): Observable<any> {
     return this.apiService.post('valores/acreditar', params);

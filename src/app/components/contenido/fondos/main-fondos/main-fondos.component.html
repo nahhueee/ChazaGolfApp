@@ -131,22 +131,36 @@
 
   </div>
 
+  <!-- Fondos donde está la plata (bancos, caja, billeteras) -->
   <div class="fondos-grid" *ngIf="resumenFondosCargado">
-    @for(fondo of resumenFondos; track fondo.id) {
-      <app-card-resumen-fondo
-        [nombre]="fondo.nombre"
-        [saldoTotal]="fondo.saldoTotal"
-        [ingresosPeriodo]="fondo.ingresosPeriodo"
-        [egresosPeriodo]="fondo.egresosPeriodo"
-        [netoPeriodo]="fondo.netoPeriodo"
-        [movimientos]="fondo.movimientos"
-        [icono]="fondo.icono"
-        [seleccionado]="fondoSeleccionado?.id === fondo.id"
-        (seleccionar)="seleccionarFondo(fondo)"
-        pTooltip="Click para ver detalle" tooltipPosition="bottom">
-      </app-card-resumen-fondo>
+    @for(fondo of fondosReales; track fondo.id) {
+      <ng-container *ngTemplateOutlet="cardFondo; context: { $implicit: fondo }"></ng-container>
     }
   </div>
+
+  <!-- Fondos de tránsito (los mueve el sistema): van en su propia fila para no amontonarse con los reales -->
+  @if (resumenFondosCargado && fondosTransito.length > 0) {
+    <div class="fondos-grid fondos-grid--transito">
+      @for(fondo of fondosTransito; track fondo.id) {
+        <ng-container *ngTemplateOutlet="cardFondo; context: { $implicit: fondo }"></ng-container>
+      }
+    </div>
+  }
+
+  <ng-template #cardFondo let-fondo>
+    <app-card-resumen-fondo
+      [nombre]="fondo.nombre"
+      [saldoTotal]="fondo.saldoTotal"
+      [ingresosPeriodo]="fondo.ingresosPeriodo"
+      [egresosPeriodo]="fondo.egresosPeriodo"
+      [netoPeriodo]="fondo.netoPeriodo"
+      [movimientos]="fondo.movimientos"
+      [icono]="fondo.icono"
+      [seleccionado]="fondoSeleccionado?.id === fondo.id"
+      (seleccionar)="seleccionarFondo(fondo)"
+      pTooltip="Click para ver detalle" tooltipPosition="bottom">
+    </app-card-resumen-fondo>
+  </ng-template>
 
   <div class="fondo-detalle" *ngIf="fondoSeleccionado">
     <!-- cabecera -->
@@ -451,13 +465,81 @@
 </div>
   }
 
+  @if (fondoSeleccionado?.tipo === 'CHEQUE_EMITIDO') {
+<!-- ── Cheques emitidos (propios, todavía no debitados) ───────────── -->
+<div class="seccion-valores">
+
+  <div class="valores-header">
+    <h3><i class="pi pi-file-edit"></i> Cheques emitidos</h3>
+    <div class="valores-totales">
+      @if (totalChequesEmitidos > 0) {
+        <p-tag severity="warn" [value]="'A debitar: $' + (totalChequesEmitidos | decimalFormat)" />
+      }
+    </div>
+  </div>
+
+  @if (!chequesCargados) {
+    <div class="valores-loading"><i class="pi pi-spin pi-spinner"></i> Cargando...</div>
+  } @else if (chequesEmitidos.length === 0) {
+    <div class="valores-vacio">
+      <i class="pi pi-check-circle text-3xl text-500"></i>
+      <span>No hay cheques emitidos pendientes de débito.</span>
+    </div>
+  } @else {
+    <p-table [value]="chequesEmitidos" [rowHover]="true">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Fecha de pago</th>
+          <th>Banco</th>
+          <th>Cheque</th>
+          <th>Proveedor</th>
+          <th>Importe</th>
+          <th>Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-cheque>
+        <tr [class.cheque-proximo]="chequeProximo(cheque)">
+          <td>
+            {{ cheque.fechaPago | date:'dd/MM/yy' }}
+            @if (cheque.diasParaPago < 0) {
+              <p-tag severity="danger" value="Vencido" />
+            } @else if (chequeProximo(cheque)) {
+              <p-tag severity="warn" [value]="cheque.diasParaPago === 0 ? 'Hoy' : 'En ' + cheque.diasParaPago + ' d'" />
+            }
+          </td>
+          <td>{{ cheque.banco }}</td>
+          <td>
+            <p-tag [value]="cheque.tipo === 'ECHEQ' ? 'eCheq' : 'Físico'" severity="info" />
+            #{{ cheque.numero }}
+          </td>
+          <td>{{ cheque.proveedor }}</td>
+          <td class="egreso">${{ cheque.importe | decimalFormat }}</td>
+          <td class="acciones-tabla">
+            <p-button
+              label="Debitar"
+              icon="pi pi-check"
+              severity="success"
+              [outlined]="true"
+              styleClass="p-button-sm"
+              (onClick)="debitarCheque(cheque)" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+
 </div>
+  }
+
+</div>
+
+<p-confirmdialog key="debitarCheque" />
 
 
 <app-addmod-movimiento-manual
     [(visible)]="mostrarMovimientoModal"
     [tipoMovimiento]="tipoMovimientoModal"
-    [fondos]="resumenFondos"
+    [fondos]="fondosParaMovimientoManual"
     (guardar)="insertarMovimientoManual($event)"
     (cerrar)="mostrarMovimientoModal = false">
 </app-addmod-movimiento-manual>

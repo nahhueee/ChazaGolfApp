@@ -1,0 +1,16 @@
+.ayuda {
+  color: var(--p-text-muted-color, #94a3b8);
+  margin: 0 0 0.75rem;
+}
+
+.estado {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 0.5rem;
+  color: var(--p-text-muted-color, #94a3b8);
+}
+
+.der {
+  text-align: right;
+}

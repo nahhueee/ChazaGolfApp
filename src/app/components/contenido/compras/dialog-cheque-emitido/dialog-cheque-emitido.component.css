@@ -1,0 +1,27 @@
+.cheque-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.fila {
+  display: flex;
+  gap: 1rem;
+}
+
+.fila p-floatlabel {
+  flex: 1;
+}
+
+.req {
+  color: var(--p-red-500, #ef4444);
+}
+
+.error {
+  color: var(--p-red-500, #ef4444);
+}
+
+.ayuda {
+  color: var(--p-text-muted-color, #94a3b8);
+}

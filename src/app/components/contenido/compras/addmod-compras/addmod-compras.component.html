@@ -286,3 +286,18 @@
     <p-button label="Volver" severity="secondary" (click)="Volver()" icon="pi pi-angle-left"/>
     <p-button label="Guardar" (onClick)="Guardar()" icon="pi pi-save" />
 </div>
+
+<app-dialog-cheque-emitido
+    [(visible)]="dialogChequeVisible"
+    [importeDefault]="importeChequeDefault"
+    [cuentas]="cuentasCheque"
+    (confirmar)="ConfirmarChequePropio($event)" />
+
+<app-dialog-seleccion-valores
+    [(visible)]="dialogValoresVisible"
+    [idEmpresa]="formulario.get('empresa')?.value"
+    [excluidos]="valoresElegidos"
+    [faltante]="remanente > 0 ? remanente : null"
+    avisoExcedente="Supera lo que falta pagar"
+    (seleccionar)="ConfirmarEndoso($event)" />
+

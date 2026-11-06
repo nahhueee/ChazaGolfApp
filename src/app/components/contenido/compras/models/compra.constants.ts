@@ -98,7 +98,8 @@ export type EstadoCompra = ValueOf<typeof ESTADO_COMPRA>;
  * pero no tenían un enum equivalente en el frontend.
  */
 export const TIPO_METODO_PAGO_COMPRA = {
-  CHEQUE: 'CHEQUE',
+  CHEQUE: 'CHEQUE',               // Cheque de terceros: endoso de un cheque recibido de un cliente (habilitado en la entrega B)
+  CHEQUE_PROPIO: 'CHEQUE_PROPIO', // Cheque de chequera propia / eCheq: egresa del fondo puente y sale del banco al debitarse
   CREDITO: 'CREDITO',
   DEBITO: 'DEBITO',
   TRANSFERENCIA: 'TRANSFERENCIA',

@@ -23,6 +23,16 @@
             </div>
         </p-card>
 
+        <p-card class="card-admin" routerLink="/administracion/cheques" pTooltip="Click para ver el estado de los cheques" tooltipPosition="bottom">
+            <div class="contenido-card">
+                <div class="header">
+                    <i class="pi pi-file-edit"></i>
+                </div>
+                <div class="nombre">Cheques</div>
+                <div class="descripcion">Estado de los cheques propios y de terceros: emitidos, debitados, endosados, acreditados.</div>
+            </div>
+        </p-card>
+
         <!-- F4.3 - HANDOFF blindaje facturacion y logs -->
         @if (esAdministrador) {
             <p-card class="card-admin" routerLink="/administracion/pendientes-fiscales" pTooltip="Click para ver los comprobantes pendientes de regularizar" tooltipPosition="bottom">

@@ -86,3 +86,17 @@
         <p-button label="Registrar Pago" severity="primary" [disabled]="pagosNuevos.length == 0" (onClick)="Pagar()" icon="pi pi-save" />
     </div>
 </p-dialog>
+
+<app-dialog-cheque-emitido
+    [(visible)]="dialogChequeVisible"
+    [importeDefault]="importeChequeDefault"
+    [cuentas]="cuentasCheque"
+    (confirmar)="ConfirmarChequePropio($event)" />
+
+<app-dialog-seleccion-valores
+    [(visible)]="dialogValoresVisible"
+    [idEmpresa]="formPago.get('empresa')?.value"
+    [excluidos]="valoresElegidos"
+    [faltante]="faltanteDeuda"
+    (seleccionar)="ConfirmarEndoso($event)" />
+

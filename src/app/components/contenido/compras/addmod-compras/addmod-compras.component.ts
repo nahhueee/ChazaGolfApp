@@ -5,6 +5,8 @@ import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { TableModule } from 'primeng/table';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TooltipModule } from 'primeng/tooltip';
+import { ArmarCuentasCheque, CuentaCheque, DatosChequeEmitido, DialogChequeEmitidoComponent } from '../dialog-cheque-emitido/dialog-cheque-emitido.component';
+import { DialogSeleccionValoresComponent, ValorEndosable } from '../dialog-seleccion-valores/dialog-seleccion-valores.component';
 
 import { Compra, CompraIva, CompraPercepcionIibb, DetalleCompra, PagoCompra } from '../../../../models/Compra';
 import { Proveedor } from '../../../../models/Proveedor';
@@ -40,6 +42,8 @@ import {
     TableModule,
     DatePickerModule,
     TooltipModule,
+    DialogChequeEmitidoComponent,
+    DialogSeleccionValoresComponent,
   ],
   templateUrl: './addmod-compras.component.html',
   styleUrl: './addmod-compras.component.scss',
@@ -69,6 +73,14 @@ export class AddModComprasComponent implements OnInit {
   formPago: FormGroup;
   pagosNuevos: PagoCompra[] = [];
   saldoAFavor: number = 0;
+
+  //Cheque propio: cuentas (bancos) de la empresa y estado del diálogo
+  cuentasCheque: CuentaCheque[] = [];
+  dialogChequeVisible: boolean = false;
+
+  //Cheque de terceros (endoso): selector de valores PENDIENTES de Valores a Acreditar
+  dialogValoresVisible: boolean = false;
+  importeChequeDefault: number = 0;
   private idEmpresaAnterior: number | null = null;
 
   alicuotasIva = ALICUOTAS_IVA_COMPRA;
@@ -210,8 +222,11 @@ export class AddModComprasComponent implements OnInit {
   //(es la forma en que una compra puede generar deuda).
   ObtenerMetodosPago(idEmpresa: number) {
     this.comprasService.SelectorMetodosPago(idEmpresa).subscribe(response => {
+      //Las cuentas del cheque propio salen de los métodos TRANSFERENCIA de la empresa (su idFondo es el banco).
+      this.cuentasCheque = ArmarCuentasCheque(response);
+
       this.metodosPago = response.filter((m: MetodoPago) =>
-        m.tipo != TIPO_METODO_PAGO_COMPRA.SALDO_FAVOR_PROVEEDOR || this.saldoAFavor > 0
+        (m.tipo != TIPO_METODO_PAGO_COMPRA.SALDO_FAVOR_PROVEEDOR || this.saldoAFavor > 0)
       );
       this.formPago.get('metodo')?.setValue(this.metodosPago[0]);
     });
@@ -256,6 +271,21 @@ export class AddModComprasComponent implements OnInit {
     const montoIngresado = this.formPago.get('monto')?.value;
     const metodoSeleccionado = this.formPago.get('metodo')?.value;
 
+    //Cheque propio: el importe y los datos se cargan en el diálogo; el monto del campo es solo el valor
+    //inicial (si está vacío se propone lo que falta cubrir).
+    if (metodoSeleccionado?.tipo === TIPO_METODO_PAGO_COMPRA.CHEQUE_PROPIO) {
+      const montoPrevio = montoIngresado ? this.globalesService.EstandarizarDecimal(montoIngresado) : 0;
+      this.importeChequeDefault = montoPrevio > 0 ? montoPrevio : Math.max(this.remanente, 0);
+      this.dialogChequeVisible = true;
+      return;
+    }
+
+    //Cheque de terceros: se elige cuál endosar en el selector; el importe es el del cheque (no se parte).
+    if (metodoSeleccionado?.tipo === TIPO_METODO_PAGO_COMPRA.CHEQUE) {
+      this.dialogValoresVisible = true;
+      return;
+    }
+
     if (!montoIngresado) return;
     const montoFinal = this.globalesService.EstandarizarDecimal(montoIngresado);
     if (montoFinal <= 0) return;
@@ -268,6 +298,52 @@ export class AddModComprasComponent implements OnInit {
 
     this.formPago.get('monto')?.reset();
     this.formPago.get('metodo')?.setValue(this.metodosPago[0]);
+  }
+
+  ConfirmarChequePropio(datos: DatosChequeEmitido) {
+    const metodoSeleccionado = this.formPago.get('metodo')?.value;
+    if (!metodoSeleccionado) return;
+
+    const pago = new PagoCompra();
+    pago.idMetodo = metodoSeleccionado.id;
+    pago.metodo = `${metodoSeleccionado.descripcion} · ${datos.cuentaNombre} #${datos.cheque.numero} (cobro ${this.FormatearFechaIso(datos.cheque.fechaPago)})`;
+    pago.monto = datos.importe;
+    pago.cheque = datos.cheque;
+    this.pagosNuevos.push(pago);
+
+    this.formPago.get('monto')?.reset();
+    this.formPago.get('metodo')?.setValue(this.metodosPago[0]);
+  }
+
+  ConfirmarEndoso(valor: ValorEndosable) {
+    const metodoSeleccionado = this.formPago.get('metodo')?.value;
+    if (!metodoSeleccionado) return;
+
+    const pago = new PagoCompra();
+    pago.idMetodo = metodoSeleccionado.id;
+    pago.metodo = this.DescribirEndoso(metodoSeleccionado.descripcion, valor);
+    pago.monto = valor.monto;
+    pago.idValorAcreditar = valor.id;
+    this.pagosNuevos.push(pago);
+
+    this.formPago.get('monto')?.reset();
+    this.formPago.get('metodo')?.setValue(this.metodosPago[0]);
+  }
+
+  private DescribirEndoso(metodo: string, v: ValorEndosable): string {
+    const cobro = v.chequeFechaCobro ? ` (cobro ${this.FormatearFechaIso(String(v.chequeFechaCobro).substring(0, 10))})` : '';
+    return `${metodo} · ${v.chequeBanco ?? ''} #${v.chequeNumero}${cobro}`;
+  }
+
+  //Valores ya elegidos en esta compra: el selector no los vuelve a ofrecer
+  get valoresElegidos(): number[] {
+    return this.pagosNuevos.filter(p => p.idValorAcreditar).map(p => p.idValorAcreditar!);
+  }
+
+  //'2026-12-03' -> '03/12/2026' (sin pasar por Date: evita correr el día por zona horaria)
+  private FormatearFechaIso(iso: string): string {
+    const [anio, mes, dia] = iso.split('-');
+    return `${dia}/${mes}/${anio}`;
   }
 
   EliminarPago(indice: number) {
