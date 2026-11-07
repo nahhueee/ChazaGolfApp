@@ -1,0 +1,16 @@
+.campo-motivo{
+    display: block;
+    margin-top: 1rem;
+}
+
+.campo-motivo textarea{
+    resize: none;
+    width: 100%;
+}
+
+.botones{
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+}

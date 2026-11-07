@@ -1,0 +1,15 @@
+@use '../../../../../styles/formularios-compartidos';
+
+.modal-header{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header i{
+    color: var(--p-primary-color);
+}
+
+.detalle .alerta{
+    margin-bottom: 20px;
+}

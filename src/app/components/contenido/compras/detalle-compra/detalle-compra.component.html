@@ -1,0 +1,124 @@
+<!-- Detalle de compra (solo lectura). Reutilizable: Listado de Compras y Cuenta Proveedor. -->
+<p-dialog [modal]="true" [(visible)]="visible" (visibleChange)="visibleChange.emit($event)" [style]="{ width: '70vw' }">
+    <ng-template #header>
+        <div class="modal-header">
+            <i class="pi pi-eye"></i>
+            <span>Detalle de Compra</span>
+        </div>
+    </ng-template>
+
+    @if(compra){
+        <div class="detalle">
+
+            @if(compra.baja){
+                <div class="alerta alerta-danger">
+                    <i class="alerta-icon pi pi-ban"></i>
+                    <span class="alerta-texto">
+                        Esta compra está dada de baja el {{ compra.baja | date:'dd-MM-yyyy HH:mm' }}@if(compra.usuarioBaja){ por {{ compra.usuarioBaja }}}.
+                        @if(compra.observacionBaja){
+                            <br><strong>Motivo:</strong> {{ compra.observacionBaja }}
+                        }
+                    </span>
+                </div>
+            }
+
+            <div class="seccion">
+                <h3><i class="pi pi-info-circle"></i>Datos Generales</h3>
+                <div class="enLinea">
+                    <div class="izq">
+                        <p><strong>Proveedor:</strong> {{ compra.proveedor }}</p>
+                        <p><strong>Condición IVA:</strong> {{ compra.condicionIvaProveedor }}</p>
+                        <p><strong>Comprobante:</strong> {{ compra.tipoComprobante }} {{ compra.nroComprobante }}</p>
+                        <p><strong>Fecha:</strong> {{ compra.fecha | date:'dd-MM-yyyy' }}</p>
+                    </div>
+                    <div class="der">
+                        <p><strong>Método de Pago:</strong> {{ compra.metodoPago }}</p>
+                        @for (pago of compra.pagos ?? []; track $index) {
+                            @if (pago.detalleCheque) {
+                                <p><i class="pi pi-file-edit"></i> {{ pago.detalleCheque }} · ${{ pago.monto ?? 0 | decimalFormat }}</p>
+                            }
+                        }
+                        <p><strong>Estado:</strong> {{ compra.estado }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="seccion">
+                <h3><i class="pi pi-list"></i>Conceptos</h3>
+                <p-table [value]="compra.detalle ?? []">
+                    <ng-template #header>
+                        <tr>
+                            <th>Cantidad</th>
+                            <th>Concepto</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template #body let-linea>
+                        <tr>
+                            <td>{{ linea.cantidad }}</td>
+                            <td>{{ linea.concepto }}</td>
+                            <td>{{ linea.importe ?? 0 | decimalFormat }}</td>
+                            <td>{{ (linea.cantidad ?? 1) * (linea.importe ?? 0) | decimalFormat }}</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="tres-columnas">
+                @if(compra.percepcionesIibb && compra.percepcionesIibb.length > 0){
+                    <div class="seccion col iibb">
+                        <h3><i class="pi pi-map-marker"></i>Percepciones IIBB</h3>
+                        <p-table [value]="compra.percepcionesIibb">
+                            <ng-template #header>
+                                <tr>
+                                    <th>Provincia</th>
+                                    <th>Importe</th>
+                                </tr>
+                            </ng-template>
+                            <ng-template #body let-percepcion>
+                                <tr>
+                                    <td>{{ percepcion.provincia }}</td>
+                                    <td>{{ percepcion.importe ?? 0 | decimalFormat }}</td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                }
+
+                @if(compra.iva && compra.iva.length > 0){
+                    <div class="seccion col iva-resumen">
+                        <h3><i class="pi pi-percentage"></i>IVA</h3>
+                        <p-table [value]="compra.iva">
+                            <ng-template #header>
+                                <tr>
+                                    <th>Alícuota</th>
+                                    <th>Importe</th>
+                                </tr>
+                            </ng-template>
+                            <ng-template #body let-iva>
+                                <tr>
+                                    <td>{{ iva.alicuota }}</td>
+                                    <td>{{ iva.importe ?? 0 | decimalFormat }}</td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                }
+
+                <div class="seccion col resumen">
+                    <h3><i class="pi pi-calculator"></i>Resumen</h3>
+                    <div class="totales">
+                        <div class="fila"><span>Neto:</span><span>{{ compra.totalNeto ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>IVA:</span><span>{{ compra.totalIva ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>IIBB:</span><span>{{ compra.totalIibb ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Tasa Municipal:</span><span>{{ compra.tasaMunicipal ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Percepción IVA:</span><span>{{ compra.percepcionIva ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila"><span>Retención Ganancias:</span><span>{{ compra.retencionGanancia ?? 0 | decimalFormat }}</span></div>
+                        <div class="fila total"><span>Total:</span><span>{{ compra.total ?? 0 | decimalFormat }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</p-dialog>

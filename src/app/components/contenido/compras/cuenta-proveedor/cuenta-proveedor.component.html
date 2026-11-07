@@ -65,6 +65,15 @@
                             @if(movimiento.proceso == 'PAGO' && movimiento.estado != 'ANULADO'){
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AnularPago(movimiento)" pTooltip="Anular Pago" tooltipPosition="bottom"/>
                             }
+                            @if(movimiento.proceso == 'COMPRA'){
+                                <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerDetalleCompra(movimiento.id)" pTooltip="Ver Detalle de la Compra" tooltipPosition="bottom"/>
+                            }
+                            @if(movimiento.proceso == 'COMPRA' && movimiento.estado != 'ANULADA'){
+                                <!-- El span lleva el tooltip porque un botón deshabilitado no dispara eventos de mouse -->
+                                <span [pTooltip]="movimiento.pagado > 0 ? 'Tiene pagos aplicados: anulá primero los pagos' : 'Dar de Baja la Compra'" tooltipPosition="bottom">
+                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-ban" [disabled]="movimiento.pagado > 0" (onClick)="DarDeBajaCompra(movimiento)"/>
+                                </span>
+                            }
                             @if(movimiento.observaciones && movimiento.observaciones != ""){
                                 <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-info-circle" (onClick)="VerObservaciones(movimiento.observaciones)" pTooltip="Ver Observaciones" tooltipPosition="bottom"/>
                             }
@@ -145,3 +154,7 @@
 </p-dialog>
 
 <p-confirmdialog key="confirmarAnularPago" />
+
+<app-detalle-compra [(visible)]="detalleCompraVisible" [idCompra]="idCompraDetalle" />
+
+<app-dialog-baja-compra [(visible)]="bajaCompraVisible" [compra]="compraBaja" (bajaRealizada)="onRecargar(true)" />

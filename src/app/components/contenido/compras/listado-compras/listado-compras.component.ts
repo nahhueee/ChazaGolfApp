@@ -3,12 +3,9 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { Compra } from '../../../../models/Compra';
@@ -21,6 +18,8 @@ import { FilesService } from '../../../../services/files.service';
 import { ProveedoresService } from '../../../../services/proveedores.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
+import { DetalleCompraComponent } from '../detalle-compra/detalle-compra.component';
+import { CompraBaja, DialogBajaCompraComponent } from '../dialog-baja-compra/dialog-baja-compra.component';
 
 @Component({
   selector: 'app-listado-compras',
@@ -29,15 +28,14 @@ import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-secc
     TableModule,
     Button,
     RouterLink,
-    Dialog,
     TooltipModule,
     TagModule,
     DatePickerModule,
-    ConfirmDialogModule,
     ...FORMS_IMPORTS,
     EncabezadoSeccionComponent,
+    DetalleCompraComponent,
+    DialogBajaCompraComponent,
   ],
-  providers: [ConfirmationService],
   templateUrl: './listado-compras.component.html',
   styleUrl: './listado-compras.component.scss',
 })
@@ -51,15 +49,17 @@ export class ListadoComprasComponent implements OnInit {
   proveedoresFiltrados: Proveedor[] = [];
   comprobantes = COMPROBANTES_COMPRA;
 
-  compraSeleccionada: Compra | undefined;
-  mostrarModalDetalle: boolean = false;
+  detalleVisible: boolean = false;
+  idCompraDetalle: number | null = null;
+
+  bajaVisible: boolean = false;
+  compraBaja: CompraBaja | null = null;
 
   filtros: FormGroup;
 
   constructor(
     private comprasService: ComprasService,
     private proveedoresService: ProveedoresService,
-    private confirmationService: ConfirmationService,
     private Notificaciones: NotificacionesService,
     private filesService: FilesService,
   ) {
@@ -152,10 +152,8 @@ export class ListadoComprasComponent implements OnInit {
   }
 
   VerDetalle(id: number) {
-    this.comprasService.ObtenerCompra(id).subscribe(response => {
-      this.compraSeleccionada = response;
-      this.mostrarModalDetalle = true;
-    });
+    this.idCompraDetalle = id;
+    this.detalleVisible = true;
   }
 
   GetSeverity(compra: Compra): 'danger' | 'success' {
@@ -164,36 +162,16 @@ export class ListadoComprasComponent implements OnInit {
 
   //No existe Modificar: la única acción posible sobre una compra ya registrada es darla de baja.
   DarDeBaja(compra: Compra) {
-    const generaReverso = !!compra.metodoPago;
+    this.compraBaja = {
+      id: compra.id!,
+      comprobante: `${compra.tipoComprobante ?? ''} ${compra.nroComprobante ?? ''}`.trim(),
+      total: compra.total ?? 0,
+      metodoPago: compra.metodoPago,
+    };
+    this.bajaVisible = true;
+  }
 
-    this.confirmationService.confirm({
-      key: 'bajaCompra',
-      message: generaReverso
-        ? `¿Estás seguro de dar de baja la compra Nro ${compra.id}? Se revertirá el egreso generado en Fondos (${compra.metodoPago}).`
-        : `¿Estás seguro de dar de baja la compra Nro ${compra.id}?`,
-      header: 'Confirmación',
-      closable: true,
-      closeOnEscape: true,
-      icon: 'pi pi-exclamation-triangle',
-      rejectButtonProps: {
-        label: 'Cancelar',
-        severity: 'secondary',
-        outlined: true,
-      },
-      acceptButtonProps: {
-        label: 'Aceptar',
-      },
-      accept: () => {
-        this.comprasService.Eliminar(compra.id!).subscribe(response => {
-          if (response == 'OK') {
-            this.Notificaciones.Success("Compra dada de baja correctamente.");
-            this.Buscar(undefined, true);
-          } else {
-            this.Notificaciones.Warn(response);
-          }
-        });
-      },
-      reject: () => {},
-    });
+  OnBajaRealizada() {
+    this.Buscar(undefined, true);
   }
 }

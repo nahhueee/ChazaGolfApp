@@ -18,6 +18,8 @@ import { CuentasProveedoresService } from '../../../../services/cuentas-proveedo
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
 import { PagarProveedorComponent } from '../pagar-proveedor/pagar-proveedor.component';
+import { DetalleCompraComponent } from '../detalle-compra/detalle-compra.component';
+import { CompraBaja, DialogBajaCompraComponent } from '../dialog-baja-compra/dialog-baja-compra.component';
 
 @Component({
   selector: 'app-cuenta-proveedor',
@@ -32,6 +34,8 @@ import { PagarProveedorComponent } from '../pagar-proveedor/pagar-proveedor.comp
     Dialog,
     ConfirmDialogModule,
     PagarProveedorComponent,
+    DetalleCompraComponent,
+    DialogBajaCompraComponent,
   ],
   templateUrl: './cuenta-proveedor.component.html',
   styleUrl: './cuenta-proveedor.component.scss',
@@ -56,6 +60,12 @@ export class CuentaProveedorComponent {
 
   detalleVisible: boolean = false;
   pagoSeleccionado: any = null;
+
+  detalleCompraVisible: boolean = false;
+  idCompraDetalle: number | null = null;
+
+  bajaCompraVisible: boolean = false;
+  compraBaja: CompraBaja | null = null;
 
   constructor(
     private rutaActiva: ActivatedRoute,
@@ -138,6 +148,18 @@ export class CuentaProveedorComponent {
     });
   }
 
+  VerDetalleCompra(idCompra: number) {
+    this.idCompraDetalle = idCompra;
+    this.detalleCompraVisible = true;
+  }
+
+  // El motivo del bloqueo con pagos aplicados lo muestra el tooltip del botón (pagado > 0 lo deshabilita)
+  // y, si igual llegara el request, lo rechaza el backend.
+  DarDeBajaCompra(movimiento: MovimientoProveedor) {
+    this.compraBaja = { id: movimiento.id, comprobante: movimiento.comprobante, total: movimiento.debe };
+    this.bajaCompraVisible = true;
+  }
+
   AnularPago(movimiento: MovimientoProveedor) {
     this.confirmationService.confirm({
       key: 'confirmarAnularPago',
@@ -166,10 +188,11 @@ export class CuentaProveedorComponent {
     });
   }
 
-  GetSeverity(estado: string): 'info' | 'warn' | 'success' | 'danger' {
+  GetSeverity(estado: string): 'info' | 'warn' | 'success' | 'danger' | 'secondary' {
     if (estado === 'PAGADA') return 'success';
     if (estado === 'PARCIAL') return 'warn';
     if (estado === 'IMPAGA') return 'danger';
+    if (estado === 'CONTADO') return 'secondary';
     if (estado === 'ANULADA') return 'info';
     if (estado === 'ANULADO') return 'info';
     if (estado === 'INICIAL') return 'info';

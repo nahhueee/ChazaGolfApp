@@ -28,8 +28,8 @@ export class ComprasService {
     return this.apiService.post('compras/agregar', compra)
   }
 
-  Eliminar(id:number): Observable<any>{
-    return this.apiService.put('compras/eliminar', {id})
+  Eliminar(id:number, motivo:string): Observable<any>{
+    return this.apiService.put('compras/eliminar', {id, motivo})
   }
   //#endregion
 }

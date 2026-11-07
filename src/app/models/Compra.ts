@@ -23,6 +23,8 @@ export class Compra {
     usuario?:string;
     alta?:Date;
     baja?:Date;
+    observacionBaja?:string; // motivo obligatorio de la baja
+    usuarioBaja?:string;
     detalle?:DetalleCompra[];
     iva?:CompraIva[];
     percepcionesIibb?:CompraPercepcionIibb[];
