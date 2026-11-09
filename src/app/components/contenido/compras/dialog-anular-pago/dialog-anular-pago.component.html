@@ -1,0 +1,27 @@
+<p-dialog
+    header="Anular pago a proveedor"
+    [(visible)]="visible"
+    (visibleChange)="visibleChange.emit($event)"
+    [modal]="true"
+    [style]="{ width: '440px' }"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    @if(pago){
+        <p>
+            Se va a anular <strong>{{ pago.comprobante }}</strong> por ${{ pago.total | decimalFormat }}.
+            Se revertirán los movimientos de fondos y la deuda o saldo a favor que haya generado.
+            Esta acción no se puede deshacer.
+        </p>
+
+        <p-floatlabel variant="in" class="campo-motivo">
+            <textarea pTextarea rows="3" maxlength="300" [(ngModel)]="motivo"></textarea>
+            <label>Motivo (obligatorio)</label>
+        </p-floatlabel>
+
+        <div class="botones">
+            <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="Cerrar()" />
+            <p-button label="Confirmar anulación" severity="danger" [disabled]="!puedeConfirmar" (onClick)="Confirmar()" />
+        </div>
+    }
+</p-dialog>

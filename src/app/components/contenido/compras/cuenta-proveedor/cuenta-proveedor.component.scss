@@ -66,3 +66,28 @@
         margin: 5px 0px;
     }
 }
+
+.filtros{
+    display: flex;
+    gap: 30px;
+    margin: 0px 0px 25px 15px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    p-floatlabel{
+        margin-bottom: 0px;
+        min-width: 220px;
+    }
+
+    .izq{
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex: 1;
+    }
+
+    .der{
+        display: flex;
+        gap: 10px;
+    }
+}

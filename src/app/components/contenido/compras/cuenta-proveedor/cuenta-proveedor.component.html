@@ -12,8 +12,27 @@
             </div>
             <div class="elemento">
                 <p-button label="Pagar a Proveedor" icon="pi pi-dollar" severity="primary" (onClick)="Pagar()" />
+                <p-button label="Imprimir Reporte" icon="pi pi-print" severity="contrast" (onClick)="ImprimirReporte()" />
             </div>
         </div>
+
+        <form [formGroup]="filtros" class="filtros">
+            <div class="izq">
+                <p-floatlabel variant="on">
+                    <p-select [options]="procesos" formControlName="proceso" [showClear]="true"/>
+                    <label>Proceso</label>
+                </p-floatlabel>
+
+                <p-floatlabel variant="on">
+                    <p-datepicker formControlName="fechas" selectionMode="range" [showClear]="true"/>
+                    <label>Rango de Fecha</label>
+                </p-floatlabel>
+            </div>
+            <div class="der">
+                <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="BuscarConFiltros()"/>
+                <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
+            </div>
+        </form>
     </div>
 
     <div class="tabla">
@@ -21,7 +40,8 @@
         [value]="movimientos"
         [lazy]="true"
         [paginator]="true"
-        [rows]="15"
+        [rows]="rows"
+        [first]="first"
         [totalRecords]="totalRecords"
         (onLazyLoad)="Buscar($event)"
         [loading]="loading"
@@ -62,11 +82,17 @@
                             @if(movimiento.proceso == 'PAGO'){
                                 <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerDetalle(movimiento.id)" pTooltip="Ver Detalle del Pago" tooltipPosition="bottom"/>
                             }
+                            @if(movimiento.proceso == 'PAGO'){
+                                <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ImprimirOrdenPago(movimiento.id)" pTooltip="Imprimir Orden de Pago" tooltipPosition="bottom"/>
+                            }
                             @if(movimiento.proceso == 'PAGO' && movimiento.estado != 'ANULADO'){
                                 <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AnularPago(movimiento)" pTooltip="Anular Pago" tooltipPosition="bottom"/>
                             }
                             @if(movimiento.proceso == 'COMPRA'){
                                 <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerDetalleCompra(movimiento.id)" pTooltip="Ver Detalle de la Compra" tooltipPosition="bottom"/>
+                            }
+                            @if(movimiento.proceso == 'COMPRA' && movimiento.debe > 0){
+                                <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ImprimirOrdenPagoCompra(movimiento.id)" pTooltip="Imprimir Orden de Pago (pago al contado)" tooltipPosition="bottom"/>
                             }
                             @if(movimiento.proceso == 'COMPRA' && movimiento.estado != 'ANULADA'){
                                 <!-- El span lleva el tooltip porque un botón deshabilitado no dispara eventos de mouse -->
@@ -119,6 +145,13 @@
             @if(pagoSeleccionado.observaciones){
                 <p><strong>Observaciones:</strong> {{ pagoSeleccionado.observaciones }}</p>
             }
+            @if(pagoSeleccionado.baja){
+                <p>
+                    <strong>Anulado</strong> el {{ FechaBaja(pagoSeleccionado.baja) }}
+                    @if(pagoSeleccionado.usuarioBaja){ por {{ pagoSeleccionado.usuarioBaja }}}
+                    <br><strong>Motivo:</strong> {{ pagoSeleccionado.observacionBaja || 'sin motivo registrado' }}
+                </p>
+            }
 
             <h4>Métodos de Pago</h4>
             <ul>
@@ -153,8 +186,8 @@
     }
 </p-dialog>
 
-<p-confirmdialog key="confirmarAnularPago" />
-
 <app-detalle-compra [(visible)]="detalleCompraVisible" [idCompra]="idCompraDetalle" />
 
 <app-dialog-baja-compra [(visible)]="bajaCompraVisible" [compra]="compraBaja" (bajaRealizada)="onRecargar(true)" />
+
+<app-dialog-anular-pago [(visible)]="anularPagoVisible" [pago]="pagoAnular" (anulacionRealizada)="onRecargar(true)" />

@@ -19,6 +19,10 @@ export class CuentasProveedoresService {
     return this.apiService.post('compras-cuentas/movimientos-proveedor', filtro)
   }
 
+  ObtenerMovimientosProveedorReporte(filtro:FiltroComprasProveedor): Observable<any> {
+    return this.apiService.post('compras-cuentas/movimientos-proveedor-reporte', filtro)
+  }
+
   ObtenerPago(idPagoProveedor:number): Observable<any> {
     return this.apiService.get(`compras-cuentas/pago/${idPagoProveedor}`)
   }
@@ -28,7 +32,7 @@ export class CuentasProveedoresService {
     return this.apiService.put('compras-cuentas/pagar', {idEmpresa, idCaja, idProveedor, metodos, observaciones})
   }
 
-  RevertirPago(idPagoProveedor:number): Observable<any> {
-    return this.apiService.put('compras-cuentas/revertir-pago', {idPagoProveedor})
+  RevertirPago(idPagoProveedor:number, motivo:string): Observable<any> {
+    return this.apiService.put('compras-cuentas/revertir-pago', {idPagoProveedor, motivo})
   }
 }

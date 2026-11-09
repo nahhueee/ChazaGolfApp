@@ -1,5 +1,12 @@
 import { Injectable } from '@angular/core';
+import {
+    BloqueAnulado, BloqueContraparte, BloqueFirmas, EmpresaA4, EncabezadoEmpresa, FilaImporte,
+    FormatoFecha, MarcaAgua, Seccion, TablaImportes
+} from './helpers/reporte-a4.helper';
 
+// Recibo de cobro a clientes. Hasta 7-nov-2026 era un ticket (220pt de ancho, alto automático) y al imprimirlo
+// en A4 el diálogo de impresión lo escalaba hasta llenar la hoja ("sale gigante"). Ahora es A4 real, con el
+// mismo esquema visual que la Orden de Pago (helpers/reporte-a4.helper.ts).
 @Injectable({
   providedIn: 'root'
 })
@@ -27,34 +34,15 @@ export class ReciboReporteService {
     private async ArmarArchivo(data: any) {
         try {
 
-            const formatMoney = (value: number) =>
-                '$' + value.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+            // empresa viene null en recibos viejos sin entrega ni venta con empresa: el encabezado se omite.
+            const empresa: EmpresaA4 | null = data.empresa ?? null;
 
-            const formatFecha = (fecha: string, hora: string) => {
-                const d = new Date(fecha);
+            const pagos: FilaImporte[] = (data.pagos ?? []).map(p => ({
+                texto: p.metodo,
+                importe: p.monto
+            }));
 
-                const fechaFormateada = d.toLocaleDateString('es-AR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-
-                return `${fechaFormateada} ${hora}`;
-            };
-
-            const pagosBody = data.pagos.map(p => ([
-                { text: p.metodo, alignment: 'left' },
-                { text: formatMoney(p.monto), alignment: 'right' }
-            ]));
-
-            const ventasBody = data.ventas?.map(v => ([
-                {
-                    text: `${v.proceso} #${v.nroProceso}`,
-                    alignment: 'left'
-                }
-            ])) || [];
-
-            const detallesBody = data.detalles?.map(d => {
+            const detalles: FilaImporte[] = (data.detalles ?? []).map(d => {
                 let descripcion = '';
 
                 switch (d.tipoAplicacion) {
@@ -74,130 +62,41 @@ export class ReciboReporteService {
                         descripcion = 'Aplicación';
                 }
 
-                return [
-                    {
-                        text: descripcion,
-                        alignment: 'left'
-                    },
-                    {
-                        text: formatMoney(d.montoAplicado),
-                        alignment: 'right'
-                    }
-                ];
-            }) || [];
+                return { texto: descripcion, importe: d.montoAplicado };
+            });
 
-            const documentDefinition = {
-                pageSize: {
-                    width: 220, 
-                    height: 'auto'
-                },
-                pageMargins: [10, 10, 10, 10],
+            // Recibos sin detalle de aplicación: se lista a qué ventas corresponden (sin importe).
+            const ventas: FilaImporte[] = (data.ventas ?? []).map(v => ({
+                texto: `${v.proceso} #${v.nroProceso}`
+            }));
 
-                content: [
+            const contenido: any[] = [
+                EncabezadoEmpresa(empresa, 'RECIBO', data.id.toString().padStart(8, '0'), FormatoFecha(data.fecha, data.hora)),
+                BloqueContraparte('Cliente', data.cliente, data.clienteDocumento, data.clienteCondicionIva),
+                Seccion('Detalle de pagos'),
+                TablaImportes(pagos, data.total, 'TOTAL PAGADO'),
+            ];
 
-                    {
-                        text: `RECIBO DE PAGO N°: ${data.id.toString().padStart(8, '0')}`,
-                        bold: true,
-                        fontSize: 10,
-                        alignment: 'left'
-                    },
+            if (detalles.length > 0) {
+                contenido.push(Seccion('Aplicación del importe'), TablaImportes(detalles, null));
+            } else if (ventas.length > 0) {
+                contenido.push(Seccion('Aplicado a'), TablaImportes(ventas, null));
+            }
 
-                    {
-                        text: `Fecha: ${formatFecha(data.fecha, data.hora)}`,
-                        fontSize: 9
-                    },
+            // El motivo de la baja queda guardado en observaciones (ver ObtenerRecibo / DarBajaRecibo).
+            if (data.fechaBaja) {
+                contenido.push(BloqueAnulado(FormatoFecha(data.fechaBaja), null, data.observaciones, 'ANULADO'));
+            }
 
-                    {
-                        text: `Cliente: ${data.cliente}`,
-                        margin: [0, 0, 0, 5],
-                        fontSize: 9
-                    },
+            contenido.push(BloqueFirmas(['Recibí (firma y aclaración)']));
 
-                    {
-                        canvas: [
-                            { type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1 }
-                        ],
-                        margin: [0, 5, 0, 5]
-                    },
-
-                    {
-                        text: 'DETALLE DE PAGOS',
-                        bold: true,
-                        fontSize: 9,
-                        margin: [0, 0, 0, 5]
-                    },
-
-                    {
-                        table: {
-                            widths: ['*', 'auto'],
-                            body: pagosBody
-                        },
-                        layout: 'noBorders'
-                    },
-
-                    {
-                        canvas: [
-                            { type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1 }
-                        ],
-                        margin: [0, 5, 0, 5]
-                    },
-
-                    {
-                        columns: [
-                            { text: 'TOTAL PAGADO:', bold: true },
-                            { text: formatMoney(data.total), alignment: 'right', bold: true }
-                        ],
-                        fontSize: 10
-                    },
-
-                    {
-                        canvas: [
-                            { type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1 }
-                        ],
-                        margin: [0, 5, 0, 5]
-                    },
-
-                    (detallesBody.length > 0)
-                    ? [
-                        {
-                            text: 'APLICACIÓN DEL IMPORTE',
-                            bold: true,
-                            fontSize: 9,
-                            margin: [0, 3, 0, 1]
-                        },
-                        {
-                            table: {
-                                widths: ['*', 'auto'],
-                                body: detallesBody
-                            },
-                            layout: 'noBorders',
-                            fontSize: 8,
-                            margin: [0, 0, 0, 0]
-                        }
-                    ]
-                    : (ventasBody.length > 0)
-                    ? [
-                        {
-                            text: 'APLICADO A',
-                            bold: true,
-                            fontSize: 9,
-                            margin: [0, 3, 0, 1]
-                        },
-                        {
-                            table: {
-                                widths: ['*'],
-                                body: ventasBody
-                            },
-                            layout: 'noBorders',
-                            fontSize: 8,
-                            margin: [0, 0, 0, 0]
-                        }
-                    ]
-                    : []
-                ]
+            return {
+                pageSize: 'A4',
+                pageMargins: [40, 40, 40, 40],
+                defaultStyle: { fontSize: 10 },
+                watermark: data.fechaBaja ? MarcaAgua('ANULADO') : undefined,
+                content: contenido
             };
-
-            return documentDefinition;
 
         } catch (e) {
             console.error('Error generando reporte', e);

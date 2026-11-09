@@ -1,13 +1,13 @@
 import { DatePipe, Location } from '@angular/common';
 import { Component } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
+import { DatePicker } from 'primeng/datepicker';
 import { ActivatedRoute } from '@angular/router';
 import { Button } from 'primeng/button';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { Dialog } from 'primeng/dialog';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { CuentaCorrienteProveedor } from '../../../../models/CuentaCorrienteProveedor';
@@ -15,11 +15,16 @@ import { MovimientoProveedor } from '../../../../models/MovimientoProveedor';
 import { FiltroCuentasProveedores } from '../../../../models/filtros/FiltroCuentasProveedores';
 import { FiltroComprasProveedor } from '../../../../models/filtros/FiltroComprasProveedor';
 import { CuentasProveedoresService } from '../../../../services/cuentas-proveedores.service';
+import { ComprasService } from '../../../../services/compras.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
 import { NotificacionesService } from '../../../../services/notificaciones.service';
+import { OrdenPagoReporteService } from '../../../../services/orden-pago-reporte.service';
+import { FormatoFecha } from '../../../../services/helpers/reporte-a4.helper';
+import { CuentaProveedorReporteService } from '../../../../services/cuenta-proveedor.reporte.service';
 import { PagarProveedorComponent } from '../pagar-proveedor/pagar-proveedor.component';
 import { DetalleCompraComponent } from '../detalle-compra/detalle-compra.component';
 import { CompraBaja, DialogBajaCompraComponent } from '../dialog-baja-compra/dialog-baja-compra.component';
+import { DialogAnularPagoComponent, PagoAnular } from '../dialog-anular-pago/dialog-anular-pago.component';
 
 @Component({
   selector: 'app-cuenta-proveedor',
@@ -32,14 +37,14 @@ import { CompraBaja, DialogBajaCompraComponent } from '../dialog-baja-compra/dia
     TagModule,
     TooltipModule,
     Dialog,
-    ConfirmDialogModule,
+    DatePicker,
     PagarProveedorComponent,
     DetalleCompraComponent,
     DialogBajaCompraComponent,
+    DialogAnularPagoComponent,
   ],
   templateUrl: './cuenta-proveedor.component.html',
   styleUrl: './cuenta-proveedor.component.scss',
-  providers: [ConfirmationService],
 })
 export class CuentaProveedorComponent {
   idProveedor: number = 0;
@@ -50,6 +55,16 @@ export class CuentaProveedorComponent {
   totalRecords: number = 0;
   loading: boolean = false;
   primeraCarga = true;
+
+  // Paginado controlado: al filtrar hay que volver a la página 1, y "Imprimir"/recargas deben respetar las filas elegidas.
+  first: number = 0;
+  rows: number = 15;
+
+  procesos = ['COMPRA', 'PAGO'];
+  filtros: FormGroup = new FormGroup({
+    proceso: new FormControl(),
+    fechas: new FormControl(),
+  });
 
   pagarVisible: boolean = false;
   cajaActiva: number = 0;
@@ -67,13 +82,18 @@ export class CuentaProveedorComponent {
   bajaCompraVisible: boolean = false;
   compraBaja: CompraBaja | null = null;
 
+  anularPagoVisible: boolean = false;
+  pagoAnular: PagoAnular | null = null;
+
   constructor(
     private rutaActiva: ActivatedRoute,
     private location: Location,
     private cuentasService: CuentasProveedoresService,
     private usuariosService: UsuariosService,
     private notificaciones: NotificacionesService,
-    private confirmationService: ConfirmationService,
+    private ordenPagoService: OrdenPagoReporteService,
+    private comprasService: ComprasService,
+    private reporteService: CuentaProveedorReporteService,
   ) {}
 
   ngAfterViewInit() {
@@ -105,19 +125,59 @@ export class CuentaProveedorComponent {
 
     this.loading = true;
 
-    const pageIndex = (event?.first ?? 0) / (event?.rows ?? 15);
-    const pageSize = event?.rows ?? 15;
+    if (event) {
+      this.first = event.first ?? 0;
+      this.rows = event.rows ?? this.rows;
+    }
+
+    const pageIndex = this.first / this.rows;
 
     const filtro = new FiltroComprasProveedor({
       pagina: pageIndex + 1,
-      tamanioPagina: pageSize,
+      tamanioPagina: this.rows,
       idProveedor: this.idProveedor,
+      proceso: this.filtros.value.proceso,
+      fechas: this.filtros.value.fechas,
     });
 
     this.cuentasService.ObtenerMovimientosProveedor(filtro).subscribe(response => {
       this.movimientos = response.registros;
       this.totalRecords = response.total;
       this.loading = false;
+    });
+  }
+
+  // Botón Buscar: aplica los filtros desde la primera página.
+  BuscarConFiltros() {
+    this.first = 0;
+    this.Buscar();
+  }
+
+  LimpiarFiltros() {
+    this.filtros.reset();
+    this.BuscarConFiltros();
+  }
+
+  // Extracto con los filtros actuales, completo (sin paginado) y en orden cronológico.
+  ImprimirReporte() {
+    const fechas: Date[] | null = this.filtros.value.fechas;
+    const proceso: string | null = this.filtros.value.proceso;
+
+    const filtro = new FiltroComprasProveedor({
+      idProveedor: this.idProveedor,
+      proceso,
+      fechas,
+    });
+
+    this.cuentasService.ObtenerMovimientosProveedorReporte(filtro).subscribe(response => {
+      this.reporteService.VerReporte({
+        proveedor: this.proveedor,
+        saldo: this.cuenta.saldo,
+        fechaDesde: fechas?.[0] ? FormatoFecha(fechas[0]) : null,
+        fechaHasta: fechas?.[1] ? FormatoFecha(fechas[1]) : null,
+        proceso: proceso || null,
+        movimientos: response,
+      });
     });
   }
 
@@ -156,36 +216,32 @@ export class CuentaProveedorComponent {
   // El motivo del bloqueo con pagos aplicados lo muestra el tooltip del botón (pagado > 0 lo deshabilita)
   // y, si igual llegara el request, lo rechaza el backend.
   DarDeBajaCompra(movimiento: MovimientoProveedor) {
-    this.compraBaja = { id: movimiento.id, comprobante: movimiento.comprobante, total: movimiento.debe };
+    this.compraBaja = { id: movimiento.id, comprobante: movimiento.comprobante, total: movimiento.haber };
     this.bajaCompraVisible = true;
   }
 
-  AnularPago(movimiento: MovimientoProveedor) {
-    this.confirmationService.confirm({
-      key: 'confirmarAnularPago',
-      message: `¿Anular el pago # ${movimiento.id} por $${movimiento.haber.toLocaleString('es-AR')}? Se revertirán los movimientos de fondos y la deuda o saldo a favor que haya generado.`,
-      header: 'Confirmación',
-      closable: true,
-      closeOnEscape: true,
-      icon: 'pi pi-exclamation-triangle',
-      rejectButtonProps: {
-        label: 'Cancelar',
-        severity: 'secondary',
-        outlined: true,
-      },
-      acceptButtonProps: {
-        label: 'Aceptar',
-      },
-      accept: () => {
-        this.cuentasService.RevertirPago(movimiento.id).subscribe(response => {
-          if (response == 'OK') {
-            this.notificaciones.Success('Pago anulado correctamente.');
-            this.onRecargar(true);
-          }
-        });
-      },
-      reject: () => {},
+  // Imprime la Orden de Pago A4. Se pide el pago completo al backend (mismo endpoint que Ver Detalle); sirve
+  // también para pagos anulados (salen con marca de agua y motivo).
+  ImprimirOrdenPago(idPagoProveedor: number) {
+    this.cuentasService.ObtenerPago(idPagoProveedor).subscribe(response => {
+      if (response) this.ordenPagoService.VerReporte(response);
     });
+  }
+
+  // Compra con pago al contado: no tiene registro de pago, la OP se arma desde la propia compra.
+  ImprimirOrdenPagoCompra(idCompra: number) {
+    this.comprasService.ObtenerCompra(idCompra).subscribe(response => {
+      if (response) this.ordenPagoService.VerReporteCompra(response);
+    });
+  }
+
+  AnularPago(movimiento: MovimientoProveedor) {
+    this.pagoAnular = { id: movimiento.id, comprobante: movimiento.comprobante, total: movimiento.debe };
+    this.anularPagoVisible = true;
+  }
+
+  FechaBaja(baja: any): string {
+    return FormatoFecha(baja);
   }
 
   GetSeverity(estado: string): 'info' | 'warn' | 'success' | 'danger' | 'secondary' {
