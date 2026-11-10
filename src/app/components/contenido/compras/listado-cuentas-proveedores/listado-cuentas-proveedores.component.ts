@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { CuentaCorrienteProveedor } from '../../../../models/CuentaCorrienteProveedor';
 import { FiltroCuentasProveedores } from '../../../../models/filtros/FiltroCuentasProveedores';
 import { CuentasProveedoresService } from '../../../../services/cuentas-proveedores.service';
+import { FilesService } from '../../../../services/files.service';
 import { FORMS_IMPORTS } from '../../../../imports/forms.import';
 import { EncabezadoSeccionComponent } from '../../../compartidos/encabezado-seccion/encabezado-seccion.component';
 
@@ -36,6 +37,7 @@ export class ListadoCuentasProveedoresComponent {
 
   constructor(
     private cuentasService: CuentasProveedoresService,
+    private filesService: FilesService,
     private router: Router,
   ) {
     this.filtros = new FormGroup({
@@ -67,6 +69,27 @@ export class ListadoCuentasProveedoresComponent {
   LimpiarFiltros() {
     this.filtros.reset({ razonSocial: '' });
     this.Buscar();
+  }
+
+  // Exporta TODOS los proveedores que cumplen el filtro actual (el backend ignora el paginado).
+  DescargarResultados() {
+    if (this.cuentas.length == 0) return;
+
+    this.filesService.DescargarCuentasProveedoresExcel(this.filtroActual).subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+
+      // Fecha en formato DD-MM-YY
+      const fecha = new Date();
+      const dd = String(fecha.getDate()).padStart(2, '0');
+      const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+      const yy = String(fecha.getFullYear()).slice(-2);
+
+      a.href = url;
+      a.download = `CuentasProveedores_${dd}-${mm}-${yy}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
   }
 
   VerCuenta(idProveedor: number, proveedor: string) {
