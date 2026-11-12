@@ -214,7 +214,7 @@ export function esItemNoCatalogado(tipoItem?: string | null): boolean {
  * cliente (jul-2026): no hay tabla maestra atrás, son opciones fijas. El motivo elegido
  * se persiste en `ventas.observacion`.
  */
-export const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra', 'Embajadores-premios'];
+export const MOTIVOS_SIN_PRODUCTOS = ['Adelanto de producción', 'Saldo orden de compra', 'Embajadores-premios', 'Camisas y pantalones'];
 
 /**
  * Fiscal (pide CAE a ARCA) vs Interna/NC X (no pasa por ARCA, no anula ni
