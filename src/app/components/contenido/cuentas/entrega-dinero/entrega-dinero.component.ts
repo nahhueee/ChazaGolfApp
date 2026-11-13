@@ -4,7 +4,7 @@ import { PagosFactura, Venta } from '../../../../models/Factura';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MetodoPago } from '../../../../models/MetodoPago';
 import { Empresa } from '../../../../models/Empresa';
-import { TIPO_METODO_PAGO, TIPO_RETENCION_OPCIONES } from '../../ventas/models/venta.constants';
+import { TIPO_METODO_PAGO, TIPO_RETENCION_OPCIONES, esMetodoDeCobro } from '../../ventas/models/venta.constants';
 import { MiscService } from '../../../../services/misc.service';
 import { TableModule } from 'primeng/table';
 import { GlobalesService } from '../../../../services/globales.service';
@@ -281,6 +281,7 @@ export class EntregaDineroComponent {
     this.miscService.ObtenerMetodosPago(idEmpresa)
       .subscribe(response => {
         this.metodosPago = response.filter((m: MetodoPago) =>
+          esMetodoDeCobro(m.tipo) &&
           m.tipo !== TIPO_METODO_PAGO.CUENTA_CORRIENTE &&
           (m.tipo !== TIPO_METODO_PAGO.SALDO_FAVOR || this.saldoAFavor > 0)
         );

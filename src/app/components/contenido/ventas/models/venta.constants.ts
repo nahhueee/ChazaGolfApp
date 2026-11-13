@@ -629,6 +629,15 @@ export const TIPO_METODO_PAGO = {
 export type TipoMetodoPago = keyof typeof TIPO_METODO_PAGO;
 
 /**
+ * Un método sirve para cobrarle a un cliente solo si su tipo está en TIPO_METODO_PAGO.
+ * El endpoint misc/metodos-pago también devuelve métodos de Compras (TARJETA_PROVEEDOR,
+ * CHEQUE_PROPIO): si se ofrecen en un cobro, la plata cae directo al fondo del método en
+ * vez de ir a Valores a Acreditar. Lista blanca: un tipo nuevo no aparece hasta sumarlo acá.
+ */
+export const esMetodoDeCobro = (tipo?: string): boolean =>
+  !!tipo && (Object.values(TIPO_METODO_PAGO) as string[]).includes(tipo);
+
+/**
  * Tipos de retención sufrida al cobrar (Ganancias/IIBB/SUSS).
  * Hoy solo se habilita en la UI cuando el método es CHEQUE (ver DatosRetencion en
  * Factura.ts), pero el valor persiste igual sin importar el método, para no tener

@@ -73,6 +73,7 @@ import {
   ID_CONDICION_PAGO,
   MAX_TALLES,
   TIPO_METODO_PAGO,
+  esMetodoDeCobro,
   TALLES_ESTANDAR,
   TIPO_ITEM,
   esMayoristaConListaPropia,
@@ -1058,8 +1059,11 @@ export class AddModVentasComponent {
     this.miscService.ObtenerMetodosPago(idEmpresa)
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => {
-        this.metodosPago         = response;
-        this.metodosPagoOriginal = [...response];
+        // Solo métodos de cobro a clientes: el endpoint también trae los de Compras
+        // (TARJETA_PROVEEDOR, CHEQUE_PROPIO), ver esMetodoDeCobro en venta.constants.ts
+        const metodosCobro       = response.filter((m: any) => esMetodoDeCobro(m.tipo));
+        this.metodosPago         = metodosCobro;
+        this.metodosPagoOriginal = [...metodosCobro];
         this.formPagos.get('metodo')?.setValue(this.metodoEfectivo ?? this.metodosPago[0]);
       });
   }
