@@ -357,5 +357,8 @@ p-floatlabel {
 
 // Cheques emitidos: fila que vence dentro de la ventana de alerta (o ya vencida)
 .cheque-proximo {
-  background: var(--p-orange-50, #fff7ed);
+  background: #fff7ed; // fallback para navegadores sin color-mix
+  // Tinte translúcido en vez de un pastel fijo: se adapta al tema. Con orange-50 el texto claro
+  // del dark mode quedaba ilegible sobre el fondo claro (nov-2026).
+  background: color-mix(in srgb, var(--p-orange-500, #f97316) 12%, transparent);
 }
