@@ -1830,6 +1830,18 @@ export class AddModVentasComponent {
     if (this.soloLecturaPorEdicion) return;
     if(venta.nroProceso == this.nroRelacionado) return;
 
+    // Bug real (oct/nov-2026): nroRelacionado/tipoRelacionado se asignan ANTES de que el
+    // operador confirme el diálogo. Si cancelaba (o cerraba con la X / Esc), la relación
+    // quedaba seteada sin que se hubiera cargado nada del documento relacionado, y al guardar
+    // una venta armada a mano el backend cerraba ese Pedido (caso Pedido 453 / Factura 554).
+    // restaurarRelacion() devuelve ambos campos a lo que había antes de elegir.
+    const nroRelacionadoPrevio = this.nroRelacionado;
+    const tipoRelacionadoPrevio = this.tipoRelacionado;
+    const restaurarRelacion = () => {
+      this.nroRelacionado = nroRelacionadoPrevio;
+      this.tipoRelacionado = tipoRelacionadoPrevio;
+    };
+
     this.nroRelacionado = venta.nroProceso!;
 
     if (venta.idProceso === this.ProcesoControl.id) {
@@ -1854,7 +1866,7 @@ export class AddModVentasComponent {
           this.modificando = true;
           this.Notificaciones.Info("Proceso cargado correctamente para edición.");
         },
-        reject: () => {},
+        reject: restaurarRelacion,
       });
       return;
     }
@@ -1869,7 +1881,7 @@ export class AddModVentasComponent {
       // operador arma el nuevo proceso a mano (comportamiento sin cambios).
       const esParaFacturar = this.ProcesoControl.id === ID_PROCESO.FACTURA || this.ProcesoControl.id === ID_PROCESO.COTIZACION;
       if(esParaFacturar){
-        this.ConfirmarFacturacionRelacionado(venta);
+        this.ConfirmarFacturacionRelacionado(venta, false, restaurarRelacion);
         return;
       }
 
@@ -1885,18 +1897,20 @@ export class AddModVentasComponent {
 
     if(venta.idProceso == ID_PROCESO.PEDIDO){
       this.tipoRelacionado = TIPO_RELACIONADO.PEDIDO;
-      this.ConfirmarFacturacionRelacionado(venta);
+      this.ConfirmarFacturacionRelacionado(venta, false, restaurarRelacion);
       return;
     }
 
     if(venta.idProceso == ID_PROCESO.NOTA_EMPAQUE){
       this.tipoRelacionado = TIPO_RELACIONADO.NOTA_EMPAQUE;
-      this.ConfirmarFacturacionRelacionado(venta);
+      this.ConfirmarFacturacionRelacionado(venta, false, restaurarRelacion);
       return;
     }
   }
 
-  ConfirmarFacturacionRelacionado(venta:Venta, sinConfirmar = false){
+  // alCancelar: se ejecuta si el operador cancela o cierra el diálogo (ver restaurarRelacion en
+  // RelacionarActualizarProceso).
+  ConfirmarFacturacionRelacionado(venta:Venta, sinConfirmar = false, alCancelar?: () => void){
     const aceptar = () => this.CargarVentaRelacionada(venta);
     if(sinConfirmar){ aceptar(); return; }
     this.confirmationService.confirm({
@@ -1915,7 +1929,7 @@ export class AddModVentasComponent {
           label: 'Aceptar',
       },
       accept: aceptar,
-      reject: () => {},
+      reject: () => alCancelar?.(),
     });
   }
 
