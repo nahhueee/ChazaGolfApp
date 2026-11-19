@@ -83,11 +83,11 @@ import {
   PORCENTAJE_RECARGO_TRANSFERENCIA,
   CONDICION_IVA_RESPONSABLE_INSCRIPTO,
   MOTIVO_ENTREGA_SIN_CARGO,
-  MOTIVOS_SIN_PRODUCTOS,
 } from '../models/venta.constants';
 import { DialogChequeComponent, DatosCheque } from '../dialog-cheque/dialog-cheque.component';
 import { TotalesVenta } from '../models/venta.types';
 import { ParametrosService } from '../../../../services/parametros.service';
+import { CatalogosService } from '../../../../services/catalogos.service';
 
 // Resumen de los adelantos facturados vinculados a una Nota de Empaque (ver RecalcularResumenAdelantos).
 interface ResumenAdelantos {
@@ -214,7 +214,8 @@ export class AddModVentasComponent {
   // reportes/NC fiscal funcionen sin tratamiento especial. El motivo viaja además en
   // ventas.observacion (ver ArmarObjetoVenta).
   adelantoSinProductos = false;
-  motivosAdelanto = MOTIVOS_SIN_PRODUCTOS;
+  // Catálogo 'motivos-sin-productos' (solo activos, ya ordenados). Se carga en ngOnInit.
+  motivosAdelanto: string[] = [];
   formAdelanto: FormGroup = new FormGroup({
     motivo: new FormControl(''),
     total: new FormControl(''),
@@ -320,7 +321,8 @@ export class AddModVentasComponent {
     private serviciosService:ServiciosService,
     private cuentasService:CuentasCorrientesService,
     private usuariosService:UsuariosService,
-    private parametrosService:ParametrosService
+    private parametrosService:ParametrosService,
+    private catalogosService:CatalogosService
   ){
     this.ArmarFormularios();
   }
@@ -385,6 +387,13 @@ export class AddModVentasComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => { if (this.adelantoSinProductos) this.ActualizarAdelanto(); });
     this.ObtenerTopeDescuentoListaEditable();
+    this.CargarMotivosAdelanto();
+  }
+
+  private CargarMotivosAdelanto(): void {
+    this.catalogosService.Listar('motivos-sin-productos', true)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(motivos => this.motivosAdelanto = (motivos ?? []).map(m => m.descripcion));
   }
 
   // Lee el tope min/max parametrizable del descuento editable de Lista 3.0 (tabla

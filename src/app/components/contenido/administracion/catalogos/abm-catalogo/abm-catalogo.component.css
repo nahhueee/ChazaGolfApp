@@ -1,0 +1,58 @@
+.barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.ver-bajas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buscar {
+  margin-left: auto;
+}
+
+.centro {
+  text-align: center;
+}
+
+.acciones {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Los dados de baja se ven atenuados pero siguen legibles */
+.fila-baja td {
+  color: var(--p-text-muted-color, #94a3b8);
+}
+
+.vacio {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--p-text-muted-color, #94a3b8);
+}
+
+.form-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 0.5rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.campo input {
+  width: 100%;
+}
+
+.aviso {
+  color: var(--p-text-muted-color, #94a3b8);
+}
