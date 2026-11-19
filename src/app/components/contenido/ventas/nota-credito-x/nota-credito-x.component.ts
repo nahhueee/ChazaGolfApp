@@ -15,6 +15,7 @@ import { ColorDisponible, LineasTalle, Producto, ProductoBusqueda } from '../../
 import { ProductosService } from '../../../../services/productos.service';
 import { MiscService } from '../../../../services/misc.service';
 import { UsuariosService } from '../../../../services/usuarios.service';
+import { CatalogosService } from '../../../../services/catalogos.service';
 import { GlobalesService } from '../../../../services/globales.service';
 import { ProductosFactura, ServiciosFactura, Venta } from '../../../../models/Factura';
 import { VentasService } from '../../../../services/ventas.service';
@@ -24,10 +25,10 @@ import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { Servicio } from '../../../../models/Servicio';
 import { ServiciosService } from '../../../../services/servicios.service';
 import { calcularPrecioCliente } from '../services/precio-cliente.utils';
-import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO, MOTIVOS_SIN_PRODUCTOS } from '../models/venta.constants';
+import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, MAX_TALLES, LISTA_PRECIO } from '../models/venta.constants';
 
-// Motivos fijos para una NC "sin productos" (ver checkbox homónimo): ver
-// MOTIVOS_SIN_PRODUCTOS en venta.constants.ts (compartido con la Factura de adelanto).
+// Motivos de una NC "sin productos" (ver checkbox homónimo): vienen del catálogo
+// 'motivos-sin-productos' (Administración > Catálogos), compartido con la Factura de adelanto.
 
 // Nota de Crédito "X": nota de crédito interna, no fiscal (no pasa por AFIP/ARCA),
 // cargada libremente (sin partir de una venta existente) desde el listado de
@@ -95,7 +96,7 @@ export class NotaCreditoXComponent {
 
   // SIN PRODUCTOS (adelanto de producción / saldo orden de compra)
   sinProductos = false;
-  motivos = MOTIVOS_SIN_PRODUCTOS;
+  motivos: string[] = [];
   formSinProductos: FormGroup;
 
   // PRODUCTOS
@@ -177,6 +178,7 @@ export class NotaCreditoXComponent {
     private Notificaciones: NotificacionesService,
     private confirmationService: ConfirmationService,
     private globalesService: GlobalesService,
+    private catalogosService: CatalogosService,
   ) {
     this.ArmarFormularios();
   }
@@ -235,6 +237,11 @@ export class NotaCreditoXComponent {
     this.miscService.ObtenerLineasTalle(true)
       .pipe(takeUntil(this.destroy$))
       .subscribe(response => this.lineasTalles = response);
+
+    // Se lee cada vez que se abre el diálogo: el catálogo se edita desde Administración.
+    this.catalogosService.Listar('motivos-sin-productos', true)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(response => this.motivos = (response ?? []).map(m => m.descripcion));
 
     this.clientesService.SelectorClientes()
       .pipe(takeUntil(this.destroy$))

@@ -26,6 +26,7 @@ import { MainAdministracionComponent } from './components/contenido/administraci
 import { ErroresComponent } from './components/contenido/administracion/errores/errores.component';
 import { PendientesFiscalesComponent } from './components/contenido/administracion/pendientes-fiscales/pendientes-fiscales.component';
 import { ChequesComponent } from './components/contenido/administracion/cheques/cheques.component';
+import { CatalogosComponent } from './components/contenido/administracion/catalogos/catalogos.component';
 
 export const routes: Routes = [
     {
@@ -142,5 +143,9 @@ export const routes: Routes = [
     {
         path: 'administracion/cheques',
         component:ChequesComponent
+    },
+    {
+        path: 'administracion/catalogos/:catalogo',
+        component:CatalogosComponent
     },
 ];

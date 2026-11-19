@@ -1,0 +1,17 @@
+<div class="contenido">
+    <app-encabezado-seccion titulo="Catálogos" icono="pi pi-list" [subtitulo]="actual.subtitulo"/>
+
+    <p-tabs [value]="actual.clave" (valueChange)="CambiarTab($event)">
+        <p-tablist>
+            @for (c of catalogos; track c.clave) {
+                <p-tab [value]="c.clave">{{ c.titulo }}</p-tab>
+            }
+        </p-tablist>
+    </p-tabs>
+
+    @for (c of catalogos; track c.clave) {
+        @if (c.clave === actual.clave) {
+            <app-abm-catalogo [config]="c"/>
+        }
+    }
+</div>

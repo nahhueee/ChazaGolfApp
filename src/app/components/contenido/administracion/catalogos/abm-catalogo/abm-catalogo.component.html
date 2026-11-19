@@ -1,0 +1,88 @@
+<p-confirmdialog/>
+
+<div class="barra">
+    <p-button label="Nuevo" icon="pi pi-plus" (onClick)="Nuevo()"/>
+
+    <div class="ver-bajas">
+        <p-checkbox [(ngModel)]="verBajas" [binary]="true" inputId="verBajas"/>
+        <label for="verBajas">Ver dados de baja @if (cantidadBajas > 0) {({{ cantidadBajas }})}</label>
+    </div>
+
+    <input pInputText type="text" class="buscar" placeholder="Buscar..." (input)="dt.filterGlobal($any($event.target).value, 'contains')"/>
+</div>
+
+<p-table #dt [value]="filas" [loading]="cargando" [globalFilterFields]="['descripcion']" [rowHover]="true" [tableStyle]="{ 'min-width': '40rem' }">
+    <ng-template #header>
+        <tr>
+            @for (campo of config.campos; track campo.key) {
+                <th>{{ campo.label }}</th>
+            }
+            @if (config.mostrarEnUso) {
+                <th class="centro">En uso</th>
+            }
+            <th>Estado</th>
+            <th class="acciones"></th>
+        </tr>
+    </ng-template>
+
+    <ng-template #body let-fila>
+        <tr [class.fila-baja]="fila.fechaBaja">
+            @for (campo of config.campos; track campo.key) {
+                <td>{{ fila[campo.key] }}</td>
+            }
+            @if (config.mostrarEnUso) {
+                <td class="centro">{{ fila.enUso }}</td>
+            }
+            <td>
+                @if (fila.fechaBaja) {
+                    <p-tag severity="secondary" value="Baja" [pTooltip]="'Baja el ' + (fila.fechaBaja | date:'dd/MM/yyyy') + (fila.usuarioBaja ? ' por ' + fila.usuarioBaja : '')" tooltipPosition="top"/>
+                } @else {
+                    <p-tag severity="success" value="Activo"/>
+                }
+            </td>
+            <td class="acciones">
+                <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" pTooltip="Editar" tooltipPosition="top" (onClick)="Editar(fila)"/>
+                @if (fila.fechaBaja) {
+                    <p-button icon="pi pi-replay" [rounded]="true" [text]="true" severity="success" pTooltip="Reactivar" tooltipPosition="top" (onClick)="Reactivar(fila)"/>
+                } @else {
+                    <p-button icon="pi pi-ban" [rounded]="true" [text]="true" severity="danger" pTooltip="Dar de baja" tooltipPosition="top" (onClick)="DarBaja(fila)"/>
+                }
+            </td>
+        </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+        <tr>
+            <td [attr.colspan]="config.campos.length + (config.mostrarEnUso ? 3 : 2)" class="vacio">No hay registros para mostrar.</td>
+        </tr>
+    </ng-template>
+</p-table>
+
+<p-dialog [(visible)]="dialogVisible" [modal]="true" [draggable]="false" [header]="(editando ? 'Editar' : 'Nuevo') + ' - ' + config.titulo" [style]="{ width: '28rem' }">
+    <div class="form-dialog">
+        @for (campo of config.campos; track campo.key) {
+            <div class="campo">
+                <p-floatlabel variant="in">
+                    @if (campo.tipo === 'numero') {
+                        <input pInputText type="number" min="0" step="1" [(ngModel)]="form[campo.key]" [readOnly]="CampoBloqueado(campo.key)" autocomplete="off"/>
+                    } @else {
+                        <input pInputText type="text" [(ngModel)]="form[campo.key]" [attr.maxlength]="campo.maxLength ?? null" [readOnly]="CampoBloqueado(campo.key)" autocomplete="off"/>
+                    }
+                    <label>{{ campo.label }}@if (campo.requerido) {<span> *</span>}</label>
+                </p-floatlabel>
+
+                @if (CampoBloqueado(campo.key)) {
+                    <small class="aviso">Ya se usó en {{ editando?.enUso }} comprobante(s): no se puede renombrar porque los comprobantes guardan este texto. Si ya no corresponde, dalo de baja y creá uno nuevo.</small>
+                }
+                @if (campo.key === 'orden' && !editando) {
+                    <small class="aviso">Si lo dejás vacío va al final de la lista.</small>
+                }
+            </div>
+        }
+    </div>
+
+    <ng-template #footer>
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="dialogVisible = false"/>
+        <p-button label="Guardar" icon="pi pi-check" [loading]="guardando" [disabled]="!FormValido()" (onClick)="Guardar()"/>
+    </ng-template>
+</p-dialog>

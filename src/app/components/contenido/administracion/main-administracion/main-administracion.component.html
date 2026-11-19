@@ -33,6 +33,18 @@
             </div>
         </p-card>
 
+        @if (esAdministrador) {
+            <p-card class="card-admin" routerLink="/administracion/catalogos/motivos-sin-productos" pTooltip="Click para administrar los catálogos" tooltipPosition="bottom">
+                <div class="contenido-card">
+                    <div class="header">
+                        <i class="pi pi-list"></i>
+                    </div>
+                    <div class="nombre">Catálogos</div>
+                    <div class="descripcion">Listas que se eligen en los comprobantes, como los motivos de adelanto.</div>
+                </div>
+            </p-card>
+        }
+
         <!-- F4.3 - HANDOFF blindaje facturacion y logs -->
         @if (esAdministrador) {
             <p-card class="card-admin" routerLink="/administracion/pendientes-fiscales" pTooltip="Click para ver los comprobantes pendientes de regularizar" tooltipPosition="bottom">

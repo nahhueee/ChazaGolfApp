@@ -20,8 +20,8 @@ import { PuntoVenta } from '../../../../models/PuntoVenta';
 import { ID_PROCESO, TIPO_COMPROBANTE, ESTADO_VENTA, LISTA_PRECIO } from '../models/venta.constants';
 
 // Motivos fijos para una ND "X" (cargo interno, no fiscal). Hoy el cliente solo
-// usa "CARGO POR DEPÓSITO", pero se deja como array (mismo patrón que
-// MOTIVOS_SIN_PRODUCTOS en nota-credito-x.component.ts) para poder sumar más
+// usa "CARGO POR DEPÓSITO", pero se deja como array (a diferencia de los motivos
+// de la NC X sin productos, que viven en el catálogo de la API) para poder sumar más
 // opciones a futuro sin tocar la estructura del componente. Mientras haya una
 // sola opción, queda preseleccionada.
 const MOTIVOS_ND_X = ['CARGO POR DEPÓSITO'];
