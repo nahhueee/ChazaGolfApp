@@ -30,6 +30,11 @@ export class FacturarVentaComponent {
   @Input() titulo = ""; 
   @Output() cerrar = new EventEmitter<FacturaVenta>(); //Pasa el objeto facturado
   @Output() visibleChange = new EventEmitter<boolean>();
+  // "Confirmar y ver comprobante" (nov-2026): solo lo habilita el padre que sabe mostrarlo (addmod-ventas).
+  // La pestaña se abre ACÁ, dentro del clic, y se le entrega al padre por este output: si se abriera cuando
+  // vuelve la respuesta de ARCA, el navegador la bloquearía como ventana emergente. Emite null si la bloqueó.
+  @Input() permiteVerComprobante = false;
+  @Output() ventanaComprobante = new EventEmitter<Window | null>();
   @Input() set objFacturar(value: ObjFacturar) { 
     if (value){
       this.datosFacturar = value;
@@ -73,7 +78,21 @@ export class FacturarVentaComponent {
     }
   }
 
-  Facturar(){
+  // Solo Factura A/B/C: son las que pasan por /ventas/emitir (Cotización y notas quedan afuera).
+  get puedeVerComprobante(): boolean {
+    return this.permiteVerComprobante && !this.datosFacturar.entregaSinCargo && [
+      TipoComprobante.FACTURA_A,
+      TipoComprobante.FACTURA_B,
+      TipoComprobante.FACTURA_C
+    ].includes(this.datosFacturar.tipoComprobante!);
+  }
+
+  Facturar(verComprobante = false){
+    if (verComprobante && this.puedeVerComprobante) {
+      const ventana = window.open('', '_blank');
+      ventana?.document.write('<p style="font-family:sans-serif">Generando comprobante...</p>');
+      this.ventanaComprobante.emit(ventana);
+    }
     let esCotizacion = this.datosFacturar.tipoComprobante === TipoComprobante.COTIZACION || this.datosFacturar.tipoComprobante === TipoComprobante.NC_X;
     if(!esCotizacion){
       // F4.2 - HANDOFF blindaje facturacion y logs. /ventas/emitir ya persiste la

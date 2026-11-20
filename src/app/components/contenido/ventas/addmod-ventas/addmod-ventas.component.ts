@@ -31,6 +31,8 @@ import { MetodoPago } from '../../../../models/MetodoPago';
 import { ProcesoVenta } from '../../../../models/ProcesoVenta';
 import { ObjFacturar } from '../../../../models/ObjFacturar';
 import { FacturarVentaComponent } from '../facturar-venta/facturar-venta.component';
+import { FacturaService } from '../../../../services/factura.service';
+import { PrepararPreciosVenta } from '../../../../services/helpers/precios-venta.helper';
 import { FacturaVenta } from '../../../../models/FacturaVenta';
 import { TagModule } from 'primeng/tag';
 import { ServiciosService } from '../../../../services/servicios.service';
@@ -303,6 +305,9 @@ export class AddModVentasComponent {
   private _pendingIdProceso: number | null = null;
 
   objFacturar:ObjFacturar = new ObjFacturar();
+  // Pestaña reservada por "Confirmar y ver comprobante" (ver MostrarComprobanteGuardado). undefined = el operador
+  // eligió "Confirmar" a secas; null = pidió verlo pero el navegador bloqueó la pestaña.
+  ventanaParaComprobante: Window | null | undefined = undefined;
 
   @ViewChild('inputCodigo') inputCodigo: ElementRef<HTMLInputElement>; //Para usar el input de codigo
   @ViewChild('tablaProductos') tablaProductos: Table | undefined;
@@ -322,7 +327,8 @@ export class AddModVentasComponent {
     private cuentasService:CuentasCorrientesService,
     private usuariosService:UsuariosService,
     private parametrosService:ParametrosService,
-    private catalogosService:CatalogosService
+    private catalogosService:CatalogosService,
+    private facturaService:FacturaService
   ){
     this.ArmarFormularios();
   }
@@ -2986,6 +2992,7 @@ export class AddModVentasComponent {
       this.Notificaciones.Success(
         !this.modificando ? "Se guardaron los cambios y se facturó correctamente" : "Venta actualizada y facturada correctamente"
       );
+      this.MostrarComprobanteGuardado(this.venta.id);
       this.router.navigateByUrl("/ventas?tipo=" + this.tipo);
       return;
     }
@@ -3332,6 +3339,8 @@ export class AddModVentasComponent {
       if (factura?.estado === "Error") {
         this.Notificaciones.Error("No se pudo realizar la facturación electrónica, consulte los registros.")
       }
+      // No se facturó: la pestaña reservada para el comprobante no se va a usar.
+      this.CerrarVentanaComprobante();
 
       // F4.2 fix (sep-2026) - ver comentario en AbrirModalFacturar(). Solo revertimos
       // si el error es recuperable (o si directamente no hubo intento, caso "Volver"):
@@ -3344,6 +3353,36 @@ export class AddModVentasComponent {
     }
 
     this.modalFacturarVisible = false;
+  }
+
+  // "Confirmar y ver comprobante" (nov-2026): con la venta ya guardada y facturada, trae su versión persistida
+  // y la muestra en la pestaña que se abrió al hacer clic. Mismo camino que "Ver Factura" del listado
+  // (Obtener y ObtenerVenta arman el objeto con el mismo CompletarObjeto + PrepararPreciosVenta). Es
+  // fire-and-forget a propósito: la pantalla navega al listado enseguida y no debe cancelarlo.
+  private MostrarComprobanteGuardado(idVenta: number): void {
+    const pidioVerlo = this.ventanaParaComprobante !== undefined;
+    const ventana = this.ventanaParaComprobante ?? null;
+    this.ventanaParaComprobante = undefined;
+    if (!pidioVerlo) return;
+    if (!ventana) {
+      this.Notificaciones.Warn("El navegador bloqueó la pestaña del comprobante. Habilitá las ventanas emergentes o abrilo desde el listado.");
+      return;
+    }
+    firstValueFrom(this.ventasService.ObtenerVenta(idVenta))
+      .then(async (venta: any) => {
+        PrepararPreciosVenta(venta);
+        await this.facturaService.VerFactura(venta, ventana);
+      })
+      .catch(() => {
+        ventana.close();
+        this.Notificaciones.Warn("La venta se guardó, pero no se pudo abrir el comprobante. Podés verlo desde el listado.");
+      });
+  }
+
+  private CerrarVentanaComprobante(): void {
+    const ventana = this.ventanaParaComprobante;
+    this.ventanaParaComprobante = undefined;
+    if (ventana && !ventana.closed) ventana.close();
   }
 
   // Arma la línea persistible del recargo por transferencia (bug 1 del

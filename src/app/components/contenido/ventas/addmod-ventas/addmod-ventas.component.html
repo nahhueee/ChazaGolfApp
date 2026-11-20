@@ -1079,7 +1079,7 @@
 </p-dialog>
 
 <!-- Modal Facturar -->
-<app-facturar-venta [objFacturar]="objFacturar" [venta]="venta" [modificando]="modificando" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" (cerrar)="GuardarFacturar($event)"/>
+<app-facturar-venta [objFacturar]="objFacturar" [venta]="venta" [modificando]="modificando" [visible]="modalFacturarVisible" [titulo]="'Facturar Venta'" [permiteVerComprobante]="true" (ventanaComprobante)="ventanaParaComprobante = $event" (cerrar)="GuardarFacturar($event)"/>
 
 <!-- Dialog Cheque -->
 <app-dialog-cheque

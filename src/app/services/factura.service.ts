@@ -38,11 +38,13 @@ export class FacturaService {
   }
 
   //#region PDF
-    async VerFactura(venta: Venta) {
+    // ventana: pestaña abierta de antemano por el llamador ("Confirmar y ver comprobante"), para que el
+    // navegador no la bloquee como emergente cuando el PDF se abre después de una llamada al servidor.
+    async VerFactura(venta: Venta, ventana?: Window | null) {
       await this.init();
 
       const documentDefinition = await this.ArmarComprobante(venta);
-      this.pdfMake.createPdf(documentDefinition).open();
+      this.pdfMake.createPdf(documentDefinition).open({}, ventana && !ventana.closed ? ventana : undefined);
     }
 
   

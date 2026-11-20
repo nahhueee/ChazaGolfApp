@@ -93,6 +93,9 @@
     <div class="botones">
         <p-button label="Volver" severity="secondary" (click)="onHide()" icon="pi pi-angle-left"/>
         <p-button label="Confirmar" (onClick)="Facturar()" icon="pi pi-check" />
+        @if(puedeVerComprobante){
+            <p-button label="Confirmar y ver comprobante" severity="success" (onClick)="Facturar(true)" icon="pi pi-print" />
+        }
     </div>
 </p-dialog>
 
