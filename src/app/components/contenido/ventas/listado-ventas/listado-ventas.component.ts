@@ -419,6 +419,12 @@ export class ListadoVentasComponent implements OnDestroy {
     this.router.navigate(['/ventas/administrar/0'], { queryParams: { tipo: 'factura', notaEmpaque: venta.id } });
   }
 
+  // Pasar a NE (nov-2026): abre la pantalla de Pre-Facturación con el Pedido Aprobado precargado como
+  // origen de una Nota de Empaque nueva (ítems y cliente bloqueados, copia fiel del Pedido).
+  PasarANotaEmpaque(venta:Venta){
+    this.router.navigate(['/ventas/administrar/0'], { queryParams: { tipo: 'pre', pedido: venta.id } });
+  }
+
   Aprobar(venta:Venta){
     this.confirmationService.confirm({
         key: 'cerrarDialog',

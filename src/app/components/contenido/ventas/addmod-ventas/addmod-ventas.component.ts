@@ -435,6 +435,8 @@ export class AddModVentasComponent {
         const tipo = query['tipo'] ?? 'factura';
         // Facturar desde el listado de Notas de Empaque (fase 4): llega el id de la NE.
         const idNotaEmpaque = id === 0 && tipo !== 'pre' ? Number(query['notaEmpaque']) || 0 : 0;
+        // Pasar a Nota de Empaque desde el listado de Pedidos (nov-2026): llega el id del Pedido.
+        const idPedido = id === 0 && tipo === 'pre' ? Number(query['pedido']) || 0 : 0;
 
         this.tipo = tipo;
 
@@ -448,12 +450,15 @@ export class AddModVentasComponent {
             : of(null),
           notaEmpaque: idNotaEmpaque > 0
             ? this.ventasService.ObtenerVenta(idNotaEmpaque)
+            : of(null),
+          pedido: idPedido > 0
+            ? this.ventasService.ObtenerVenta(idPedido)
             : of(null)
         });
       })
     )
     .subscribe({
-      next: ({ maestros, procesos, venta, notaEmpaque }) => {
+      next: ({ maestros, procesos, venta, notaEmpaque, pedido }) => {
 
         // Datos maestros
         this.poblarDatosMaestros(maestros);
@@ -503,6 +508,7 @@ export class AddModVentasComponent {
           }
 
           if (notaEmpaque) this.PrecargarNotaEmpaque(notaEmpaque);
+          if (pedido) this.PrecargarPedido(pedido);
         }
       },
       error: err => {
@@ -958,6 +964,10 @@ export class AddModVentasComponent {
       [ID_PROCESO.FACTURA, ID_PROCESO.COTIZACION].includes(procesoActual)
     ) {
       return 'Click para Facturar';
+    }
+
+    if (idProceso === ID_PROCESO.PEDIDO && procesoActual === ID_PROCESO.NOTA_EMPAQUE) {
+      return 'Click para armar la Nota de Empaque';
     }
 
     if (
@@ -1767,6 +1777,12 @@ export class AddModVentasComponent {
     if(this.tipoRelacionado == TIPO_RELACIONADO.NOTA_EMPAQUE)
       this.formGenerales.get('nroNota')?.setValue(this.nroRelacionado);
 
+    // NE armada desde un Pedido (nov-2026): sigue siendo copia fiel al reabrirla. Se asigna siempre (no solo
+    // en true) para no arrastrar el bloqueo de un documento anterior al reutilizar la pantalla.
+    const esNotaDesdePedido = this.venta.idProceso === ID_PROCESO.NOTA_EMPAQUE && this.tipoRelacionado === TIPO_RELACIONADO.PEDIDO;
+    this.itemsBloqueadosPorRelacion = esNotaDesdePedido;
+    this.clienteBloqueadoPorRelacion = esNotaDesdePedido;
+
     this.formGenerales.get('cliente')?.setValue(this.venta.cliente);
 
     this.CargarProductosDesdeVenta();
@@ -1813,6 +1829,22 @@ export class AddModVentasComponent {
         this.titulo = antelacion + this.ProcesoControl.descripcion + " Nro: " + this.proximoNroVenta;
       }
     });
+  }
+
+  // Pasar a NE desde el listado de Pedidos (nov-2026): precarga el Pedido Aprobado elegido como origen de
+  // una Nota de Empaque nueva, sin pedir confirmación (el clic en "Pasar a NE" ya lo es). Mismo camino que
+  // elegirlo a mano en Relacionados: ítems y cliente quedan bloqueados (ver CargarVentaRelacionada).
+  PrecargarPedido(pedido:Venta){
+    if(pedido.idProceso !== ID_PROCESO.PEDIDO || pedido.estado !== ESTADO_VENTA.APROBADO){
+      this.Notificaciones.Warn(`El pedido Nro ${pedido.nroProceso} no está aprobado, no se puede pasar a nota de empaque.`);
+      return;
+    }
+    const procesoNota = this.procesos.find(p => p.id === ID_PROCESO.NOTA_EMPAQUE);
+    if (procesoNota) this.formGenerales.get('proceso')?.setValue(procesoNota);
+    this.nroRelacionado = pedido.nroProceso!;
+    this.tipoRelacionado = TIPO_RELACIONADO.PEDIDO;
+    this.formGenerales.get('cliente')?.setValue(pedido.cliente);
+    this.SeleccionarCliente(undefined, () => this.ConfirmarFacturacionRelacionado(pedido, true));
   }
 
   // Fase 4: precarga una NE Aprobada elegida en el listado, sin pedir confirmación (el clic
@@ -1922,9 +1954,13 @@ export class AddModVentasComponent {
   ConfirmarFacturacionRelacionado(venta:Venta, sinConfirmar = false, alCancelar?: () => void){
     const aceptar = () => this.CargarVentaRelacionada(venta);
     if(sinConfirmar){ aceptar(); return; }
+    // Pedido elegido desde una Nota de Empaque (nov-2026): no se factura, se arma la NE a partir de él.
+    const armaNotaDesdePedido = venta.idProceso === ID_PROCESO.PEDIDO && this.ProcesoControl.id === ID_PROCESO.NOTA_EMPAQUE;
     this.confirmationService.confirm({
       key: 'cerrarDialog',
-      message: '¿Estas seguro de pasar a facturar el proceso nro ' + venta.nroProceso + "?",
+      message: armaNotaDesdePedido
+        ? '¿Estas seguro de armar la nota de empaque a partir del pedido nro ' + venta.nroProceso + "?"
+        : '¿Estas seguro de pasar a facturar el proceso nro ' + venta.nroProceso + "?",
       header: 'Confirmación',
       closable: true,
       closeOnEscape: true,
@@ -2015,7 +2051,14 @@ export class AddModVentasComponent {
           // porque ese control ya tiene [disabled]="soloLecturaPorEdicion" en el html: mezclar
           // ambos mecanismos hace que la próxima detección de cambios pise el .disable().
           this.clienteBloqueadoPorRelacion = true;
-          this.Notificaciones.Info("Se facturará el pedido Nro: " + venta.nroProceso);
+          if (this.ProcesoControl.id === ID_PROCESO.NOTA_EMPAQUE) {
+            // Nota de Empaque armada desde un Pedido (nov-2026): copia fiel, igual que la Factura lo es de la
+            // NE. Para cambiar algo se corrige el Pedido o se da de baja la NE (el Pedido vuelve a Aprobado).
+            this.itemsBloqueadosPorRelacion = true;
+            this.Notificaciones.Info("Se armará la nota de empaque a partir del pedido Nro: " + venta.nroProceso + ". Los ítems no se pueden modificar.");
+          } else {
+            this.Notificaciones.Info("Se facturará el pedido Nro: " + venta.nroProceso);
+          }
         }
         if(venta.idProceso == ID_PROCESO.NOTA_EMPAQUE){
           this.formGenerales.get('nroNota')?.setValue(venta.nroProceso);
