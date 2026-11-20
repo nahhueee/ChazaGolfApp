@@ -2161,15 +2161,15 @@ export class AddModVentasComponent {
     return 0;
   }
 
-  // La venta sale de un Pedido o una Nota de Empaque: ese documento ya tiene reservado su stock, así que
+  // La venta sale de una Nota de Empaque: ese documento ya tiene reservado su stock, así que
   // el tope en pantalla es el stock físico y el backend valida el excedente (ValidarDisponibleReservas).
   get tieneOrigenQueReserva(): boolean {
-    return !!this.nroRelacionado
-      && (this.tipoRelacionado === TIPO_RELACIONADO.PEDIDO || this.tipoRelacionado === TIPO_RELACIONADO.NOTA_EMPAQUE);
+    // El Pedido no reserva (nov-2026): facturar desde un Pedido se topea por disponible, como una venta directa.
+    return !!this.nroRelacionado && this.tipoRelacionado === TIPO_RELACIONADO.NOTA_EMPAQUE;
   }
 
   // Máximo de unidades que se pueden cargar de un talle (reserva de stock, oct-2026): el stock físico
-  // menos lo reservado por Pedidos/NE Aprobadas (`disponible`). Si el talle no trae `disponible` (fila
+  // menos lo reservado por NE Aprobadas (`disponible`). Si el talle no trae `disponible` (fila
   // guardada, escaneo sin refresco) se usa el físico y la reserva la hace cumplir el backend al guardar.
   // Los Pedidos no se topean (venta a futuro): los callers ya los excluyen.
   TopeStockTalle(talle: any): number {
@@ -2182,7 +2182,7 @@ export class AddModVentasComponent {
     const fisico = talle?.cantidad ?? 0;
     const tope = this.TopeStockTalle(talle);
     return tope < fisico
-      ? `La cantidad ingresada supera el stock disponible (${tope}) para el talle ${talle.talle}: hay ${fisico} en stock pero ${fisico - tope} están reservadas por notas de empaque o pedidos aprobados.`
+      ? `La cantidad ingresada supera el stock disponible (${tope}) para el talle ${talle.talle}: hay ${fisico} en stock pero ${fisico - tope} están reservadas por notas de empaque aprobadas.`
       : `La cantidad ingresada supera el stock disponible (${fisico}) para el talle ${talle.talle}.`;
   }
 
@@ -2288,7 +2288,7 @@ export class AddModVentasComponent {
           idTalle = parseInt(codigo.slice(6, 9));
           this.productoSeleccionado = response;
           // ValidarCodigo trae el stock físico pero no lo reservado: se refresca para que el tope
-          // del escaneo (abajo) respete lo reservado por NE/Pedidos aprobados. Pedido no se topea.
+          // del escaneo (abajo) respete lo reservado por NE aprobadas. Pedido no se topea.
           if(this.ProcesoControl.id !== ID_PROCESO.PEDIDO && this.productoSeleccionado.talles){
             const frescos = await firstValueFrom(
               this.productosService.ObtenerStockDisponiblePorProducto(this.productoSeleccionado.id!.toString(), this.venta?.id || undefined));
