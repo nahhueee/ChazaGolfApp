@@ -11,14 +11,14 @@
     <input pInputText type="text" class="buscar" placeholder="Buscar..." (input)="dt.filterGlobal($any($event.target).value, 'contains')"/>
 </div>
 
-<p-table #dt [value]="filas" [loading]="cargando" [globalFilterFields]="['descripcion']" [rowHover]="true" [tableStyle]="{ 'min-width': '40rem' }">
+<p-table #dt [value]="filas" [loading]="cargando" [globalFilterFields]="['descripcion', 'abreviatura']" [rowHover]="true" [tableStyle]="{ 'min-width': '40rem' }">
     <ng-template #header>
         <tr>
             @for (campo of config.campos; track campo.key) {
                 <th>{{ campo.label }}</th>
             }
             @if (config.mostrarEnUso) {
-                <th class="centro">En uso</th>
+                <th class="centro">{{ config.etiquetaEnUso ?? 'En uso' }}</th>
             }
             <th>Estado</th>
             <th class="acciones"></th>
@@ -66,13 +66,16 @@
                     @if (campo.tipo === 'numero') {
                         <input pInputText type="number" min="0" step="1" [(ngModel)]="form[campo.key]" [readOnly]="CampoBloqueado(campo.key)" autocomplete="off"/>
                     } @else {
-                        <input pInputText type="text" [(ngModel)]="form[campo.key]" [attr.maxlength]="campo.maxLength ?? null" [readOnly]="CampoBloqueado(campo.key)" autocomplete="off"/>
+                        <input pInputText type="text" [(ngModel)]="form[campo.key]" [attr.maxlength]="campo.maxLength ?? null" [class.mayusculas]="campo.key === 'abreviatura'" [readOnly]="CampoBloqueado(campo.key)" autocomplete="off"/>
                     }
                     <label>{{ campo.label }}@if (campo.requerido) {<span> *</span>}</label>
                 </p-floatlabel>
 
                 @if (CampoBloqueado(campo.key)) {
                     <small class="aviso">Ya se usó en {{ editando?.enUso }} comprobante(s): no se puede renombrar porque los comprobantes guardan este texto. Si ya no corresponde, dalo de baja y creá uno nuevo.</small>
+                }
+                @if (AvisoCambio(campo); as aviso) {
+                    <small class="aviso"><i class="pi pi-info-circle"></i> {{ aviso }}</small>
                 }
                 @if (campo.key === 'orden' && !editando) {
                     <small class="aviso">Si lo dejás vacío va al final de la lista.</small>

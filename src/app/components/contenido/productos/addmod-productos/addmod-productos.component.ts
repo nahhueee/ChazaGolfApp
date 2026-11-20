@@ -46,7 +46,10 @@ export class AddmodProductosComponent {
     if (value){
       this.ObtenerProducto(value);
     } 
-    else this.formulario.reset(); //Si no hay valores reiniciamos el formulario
+    else {
+      this.formulario.reset(); //Si no hay valores reiniciamos el formulario
+      this.ActualizarOpciones();
+    }
   }
 
   producto:Producto;
@@ -67,6 +70,12 @@ export class AddmodProductosComponent {
   tiposProducto: TipoProducto[] = [];
   subtiposProducto: SubtipoProducto[] = [];
   generos: Genero[] = [];
+  // Lo que ofrecen los selects: solo los activos (+ el valor que ya tiene el formulario, aunque esté dado de baja).
+  // Las listas de arriba quedan completas porque ObtenerProducto busca ahí el valor guardado del producto.
+  opcionesTemporadas: Temporada[] = [];
+  opcionesTipos: TipoProducto[] = [];
+  opcionesSubtipos: SubtipoProducto[] = [];
+  opcionesGeneros: Genero[] = [];
   materiales: Material[] = [];
   coloresMaterial: Color[] = [];
   previousValue: any[] = [];
@@ -178,6 +187,7 @@ export class AddmodProductosComponent {
     this.miscService.ObtenerGeneros()
     .subscribe(response => {
       this.generos = response;
+      this.ActualizarOpciones();
     });
 
     this.miscService.ObtenerMateriales()
@@ -190,16 +200,19 @@ export class AddmodProductosComponent {
     this.miscService.ObtenerTiposProducto()
     .subscribe(response => {
       this.tiposProducto = response;
+      this.ActualizarOpciones();
     });
 
     this.miscService.ObtenerSubtiposProducto()
     .subscribe(response => {
       this.subtiposProducto = response;
+      this.ActualizarOpciones();
     });
 
     this.miscService.ObtenerTemporadas()
     .subscribe(response => {
       this.temporadas = response;
+      this.ActualizarOpciones();
     });
 
     this.clientesService.SelectorClientes()
@@ -258,6 +271,20 @@ export class AddmodProductosComponent {
     return !!(control && control.invalid && control.dirty);
   }
 
+  // Producto / Tipo / Temporada / Género: se ofrecen solo los activos. Un valor dado de baja se sigue mostrando si el
+  // formulario ya lo tiene seleccionado; si se filtrara también ahí, al editar un producto viejo ese dato se perdería al guardar.
+  private OpcionesActivas<T extends { id?: number; fechaBaja?: string | null }>(lista: T[], control: string): T[] {
+    const actual = this.formulario.get(control)?.value?.id;
+    return lista.filter(x => !x.fechaBaja || x.id === actual);
+  }
+
+  private ActualizarOpciones(): void {
+    this.opcionesTemporadas = this.OpcionesActivas(this.temporadas, 'temporada');
+    this.opcionesTipos = this.OpcionesActivas(this.tiposProducto, 'producto');
+    this.opcionesSubtipos = this.OpcionesActivas(this.subtiposProducto, 'tipo');
+    this.opcionesGeneros = this.OpcionesActivas(this.generos, 'genero');
+  }
+
   ObtenerProducto(idProducto){
     this.productosService.ObtenerProducto(idProducto)
     .subscribe(response => {
@@ -268,6 +295,7 @@ export class AddmodProductosComponent {
       this.formulario.get('producto')?.setValue(this.tiposProducto.find(t=> t.id == this.producto.tipo?.id) ?? new TipoProducto());
       this.formulario.get('tipo')?.setValue(this.subtiposProducto.find(t=> t.id == this.producto.subtipo?.id) ?? new SubtipoProducto());
       this.formulario.get('genero')?.setValue(this.generos.find(t=> t.id == this.producto.genero?.id) ?? new Genero());
+      this.ActualizarOpciones(); //Ahora que el formulario tiene el valor del producto, se conserva aunque esté dado de baja
       this.formulario.get('material')?.setValue(this.producto.material?.id);
       this.MaterialChange();
       this.formulario.get('moldeleria')?.setValue(this.producto.moldeleria);

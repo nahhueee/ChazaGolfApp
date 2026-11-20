@@ -2,7 +2,9 @@
 export interface CatalogoItem {
   id: number;
   descripcion: string;
-  orden: number;
+  abreviatura?: string;
+  // No todos los catálogos tienen orden (los de producto van por descripción).
+  orden?: number;
   fechaBaja: string | null;
   usuarioBaja: string | null;
   // Cantidad de registros que usan el valor (hoy: comprobantes que lo tienen como motivo).
@@ -19,6 +21,8 @@ export interface CampoCatalogo {
   tipo: TipoCampoCatalogo;
   requerido?: boolean;
   maxLength?: number;
+  // Aviso que se muestra en el diálogo al cambiar este campo de un registro en uso. '{n}' = cantidad en uso.
+  avisoCambioEnUso?: string;
 }
 
 export interface CatalogoConfig {
@@ -28,4 +32,6 @@ export interface CatalogoConfig {
   subtitulo?: string;
   campos: CampoCatalogo[];
   mostrarEnUso?: boolean;
+  // Título de la columna "En uso" (default "En uso").
+  etiquetaEnUso?: string;
 }

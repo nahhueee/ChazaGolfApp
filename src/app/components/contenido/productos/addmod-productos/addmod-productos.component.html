@@ -23,7 +23,7 @@
 
                     <!-- Temporada -->
                     <p-floatlabel variant="in">
-                        <p-select [options]="temporadas" formControlName="temporada" optionLabel="descripcion"/>
+                        <p-select [options]="opcionesTemporadas" formControlName="temporada" optionLabel="descripcion"/>
                         <label>Temporada</label>
                     </p-floatlabel>
                 </div>
@@ -56,19 +56,19 @@
             <div class="horizontal">
                <!-- Tipo Producto -->
                 <p-floatlabel variant="in">
-                    <p-select [options]="tiposProducto" formControlName="producto" optionLabel="descripcion"/>
+                    <p-select [options]="opcionesTipos" formControlName="producto" optionLabel="descripcion"/>
                     <label>Producto</label>
                 </p-floatlabel>
 
                 <!-- Subtipo -->
                 <p-floatlabel variant="in">
-                    <p-select [options]="subtiposProducto" formControlName="tipo" optionLabel="descripcion"/>
+                    <p-select [options]="opcionesSubtipos" formControlName="tipo" optionLabel="descripcion"/>
                     <label>Tipo</label>
                 </p-floatlabel>
 
                 <!-- Genero -->
                 <p-floatlabel variant="in">
-                    <p-select [options]="generos" formControlName="genero" optionLabel="descripcion"/>
+                    <p-select [options]="opcionesGeneros" formControlName="genero" optionLabel="descripcion"/>
                     <label>Genero</label>
                 </p-floatlabel>
             </div>

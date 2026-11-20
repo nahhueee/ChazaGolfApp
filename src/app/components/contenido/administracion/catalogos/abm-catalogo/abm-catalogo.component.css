@@ -56,3 +56,8 @@
 .aviso {
   color: var(--p-text-muted-color, #94a3b8);
 }
+
+/* La abreviatura se guarda en mayúsculas: se ve así mientras se escribe */
+.mayusculas {
+  text-transform: uppercase;
+}

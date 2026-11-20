@@ -7,7 +7,7 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { FORMS_IMPORTS } from '../../../../../imports/forms.import';
-import { CatalogoConfig, CatalogoItem } from '../../../../../models/Catalogo';
+import { CampoCatalogo, CatalogoConfig, CatalogoItem } from '../../../../../models/Catalogo';
 import { CatalogosService } from '../../../../../services/catalogos.service';
 import { NotificacionesService } from '../../../../../services/notificaciones.service';
 
@@ -89,6 +89,14 @@ export class AbmCatalogoComponent implements OnChanges {
   // Un campo no se puede editar si es la descripción de un valor ya usado (lo bloquea también el backend).
   CampoBloqueado(key: string): boolean {
     return key === 'descripcion' && !!this.editando?.descripcionBloqueada;
+  }
+
+  // Aviso al cambiar un campo de un registro que ya usan productos (ej. la abreviatura, que arma el nombre de los productos nuevos).
+  AvisoCambio(campo: CampoCatalogo): string | null {
+    if (!campo.avisoCambioEnUso || !this.editando || this.editando.enUso <= 0) return null;
+    const original = String((this.editando as any)[campo.key] ?? '').trim().toUpperCase();
+    const actual = String(this.form[campo.key] ?? '').trim().toUpperCase();
+    return original !== actual ? campo.avisoCambioEnUso.replace('{n}', String(this.editando.enUso)) : null;
   }
 
   FormValido(): boolean {

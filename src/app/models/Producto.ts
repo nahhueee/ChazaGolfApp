@@ -87,6 +87,7 @@ export class TipoProducto {
     id?:number;
     descripcion?:string;
     abreviatura?:string;
+    fechaBaja?:string | null; // dado de baja en Administración > Catálogos
 
     constructor(data?: any) {
         if (data) {
@@ -100,6 +101,7 @@ export class SubtipoProducto {
     id?:number;
     descripcion?:string;
     abreviatura?:string;
+    fechaBaja?:string | null; // dado de baja en Administración > Catálogos
 
     constructor(data?: any) {
         if (data) {
@@ -113,6 +115,7 @@ export class Genero {
     id?:number;
     descripcion?:string;
     abreviatura?:string;
+    fechaBaja?:string | null; // dado de baja en Administración > Catálogos
 
     constructor(data?: any) {
         if (data) {
@@ -126,6 +129,7 @@ export class Temporada {
     id?:number;
     descripcion?:string;
     abreviatura?:string;
+    fechaBaja?:string | null; // dado de baja en Administración > Catálogos
 
     constructor(data?: any) {
         if (data) {

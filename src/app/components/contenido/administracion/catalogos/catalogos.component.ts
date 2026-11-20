@@ -19,6 +19,54 @@ const CATALOGOS: CatalogoConfig[] = [
     ],
     mostrarEnUso: true,
   },
+  {
+    clave: 'tipos-producto',
+    titulo: 'Producto',
+    subtitulo: 'Producto del formulario de productos (tipos de prenda). La abreviatura arma el nombre de los productos nuevos.',
+    campos: [
+      { key: 'descripcion', label: 'Descripción', tipo: 'texto', requerido: true, maxLength: 50 },
+      { key: 'abreviatura', label: 'Abreviatura', tipo: 'abreviatura', requerido: true, maxLength: 10,
+        avisoCambioEnUso: 'Los {n} productos existentes conservan su nombre actual; solo afecta a los productos que se creen desde ahora.' },
+    ],
+    mostrarEnUso: true,
+    etiquetaEnUso: 'Productos',
+  },
+  {
+    clave: 'subtipos-producto',
+    titulo: 'Tipo',
+    subtitulo: 'Tipo del formulario de productos. La abreviatura arma el nombre de los productos nuevos.',
+    campos: [
+      { key: 'descripcion', label: 'Descripción', tipo: 'texto', requerido: true, maxLength: 50 },
+      { key: 'abreviatura', label: 'Abreviatura', tipo: 'abreviatura', requerido: true, maxLength: 10,
+        avisoCambioEnUso: 'Los {n} productos existentes conservan su nombre actual; solo afecta a los productos que se creen desde ahora.' },
+    ],
+    mostrarEnUso: true,
+    etiquetaEnUso: 'Productos',
+  },
+  {
+    clave: 'temporadas',
+    titulo: 'Temporada',
+    subtitulo: 'Temporadas que se asignan a los productos.',
+    campos: [
+      { key: 'descripcion', label: 'Descripción', tipo: 'texto', requerido: true, maxLength: 50 },
+      { key: 'abreviatura', label: 'Abreviatura', tipo: 'abreviatura', requerido: true, maxLength: 10,
+        avisoCambioEnUso: 'Los {n} productos existentes conservan su nombre actual; solo afecta a los productos que se creen desde ahora.' },
+    ],
+    mostrarEnUso: true,
+    etiquetaEnUso: 'Productos',
+  },
+  {
+    clave: 'generos',
+    titulo: 'Género',
+    subtitulo: 'Géneros que se asignan a los productos.',
+    campos: [
+      { key: 'descripcion', label: 'Descripción', tipo: 'texto', requerido: true, maxLength: 50 },
+      { key: 'abreviatura', label: 'Abreviatura', tipo: 'abreviatura', requerido: true, maxLength: 10,
+        avisoCambioEnUso: 'Los {n} productos existentes conservan su nombre actual; solo afecta a los productos que se creen desde ahora.' },
+    ],
+    mostrarEnUso: true,
+    etiquetaEnUso: 'Productos',
+  },
 ];
 
 // Pantalla "Administración > Catálogos". Solo ADMINISTRADOR (la card está oculta para el resto y acá se
