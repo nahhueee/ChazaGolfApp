@@ -38,27 +38,35 @@
         </div>
     }
 
-    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)='Buscar()'>
-        <div class="izq">
-            <!-- Proceso (con el tilde de saldo por devolver justo debajo, solo para Entrega sin cargo) -->
-            <div class="col-proceso">
-                <p-floatlabel variant="on">
-                    <p-select [options]="procesos" formControlName="proceso" optionLabel="descripcion"/>
-                    <label>Proceso</label>
-                </p-floatlabel>
+    <!-- Proceso como botones (primer paso): al elegir uno se habilita el Estado con sus opciones -->
+    <div class="fila-proceso" role="group" aria-label="Proceso">
+        @for (p of procesos; track p.id) {
+            <p-button [label]="(p.descripcion ?? '') | titlecase" size="small"
+                [outlined]="filtros.controls['proceso'].value?.id !== p.id"
+                [attr.aria-pressed]="filtros.controls['proceso'].value?.id === p.id"
+                (onClick)="ElegirProceso(p)"/>
+        }
+    </div>
 
-                @if(EsFiltroEntregaSinCargo){
-                    <!-- Entregas sin cargo con mercadería todavía sin devolver -->
-                    <div class="check-saldo">
-                        <p-checkbox formControlName="conSaldoPorDevolver" [binary]="true" inputId="conSaldoPorDevolver"/>
-                        <label for="conSaldoPorDevolver">Con saldo por devolver</label>
-                    </div>
-                }
-            </div>
+    <form [formGroup]="filtros" autocomplete="off" class="filtros filtros-busqueda" (keyup.enter)="AplicarFiltros()">
+        <div class="izq">
+            <!-- Estado: se habilita al elegir un proceso y solo ofrece los estados de ese proceso -->
+            <p-floatlabel variant="on">
+                <p-select [options]="EstadosDisponibles" formControlName="estado" [showClear]="true" appendTo="body"/>
+                <label>Estado</label>
+            </p-floatlabel>
+
+            @if(EsFiltroEntregaSinCargo){
+                <!-- Entregas sin cargo con mercadería todavía sin devolver -->
+                <div class="check-saldo">
+                    <p-checkbox formControlName="conSaldoPorDevolver" [binary]="true" inputId="conSaldoPorDevolver"/>
+                    <label for="conSaldoPorDevolver">Con saldo por devolver</label>
+                </div>
+            }
 
             <!-- Nro Proceso -->
             <p-floatlabel variant="on">
-                <input pInputText formControlName="nroProceso"  type="text"/>
+                <input pInputText formControlName="nroProceso"  type="text" inputmode="numeric"/>
                 <label>N° Proceso</label>
             </p-floatlabel>
 
@@ -96,30 +104,54 @@
             </p-floatlabel>
         </div>
         <div class="der">
-            <p-button label="Buscar" severity="primary" icon="pi pi-search" (onClick)="Buscar()"/>
             <p-button label="Limpiar" severity="secondary" icon="pi pi-filter-slash" (onClick)="LimpiarFiltros()" />
         </div>
     </form>
 
-    <!-- Filtro "pendientes de control": no se elige a mano, lo activa "Ver pendientes" (cartel,
-         menú) y lo saca "Limpiar". Solo se informa acá para que se vea que el listado está filtrado. -->
-    @if(tipo == 'pre' && filtros.value.estadoRapido){
-        <div class="filtro-activo">
-            @if(filtros.value.estadoRapido == 'Aprobada'){
-                <p-tag icon="pi pi-filter" severity="info" value="Mostrando solo notas de empaque controladas, pendientes de facturar"/>
-            }@else{
-                <p-tag icon="pi pi-filter" severity="warn" value="Mostrando solo notas de empaque pendientes de control"/>
+    @if(FiltrosActivos.length > 0){
+        <div class="filtros-activos">
+            <span class="etiqueta">Filtros activos:</span>
+            @for (f of FiltrosActivos; track f.clave) {
+                <span class="pill">
+                    {{ f.texto }}
+                    <button type="button" class="pill-x" [attr.aria-label]="'Quitar filtro ' + f.texto" (click)="QuitarFiltro(f.clave)">
+                        <i class="pi pi-times"></i>
+                    </button>
+                </span>
             }
-            <small>Usá "Limpiar" para ver todo.</small>
         </div>
     }
 
-    <div class="tabla">
-        <p-table 
+    @if(HayFiltros){
+        <div class="barra-resultados">
+            <span><b>{{ totalRecords }} {{ totalRecords == 1 ? 'resultado' : 'resultados' }}</b></span>
+            <div class="orden">
+                <span>Ordenar por</span>
+                <p-select [formControl]="ControlOrden" [options]="OpcionesOrden" optionLabel="label" optionValue="value" appendTo="body"/>
+            </div>
+        </div>
+    } @else {
+        <div class="estado-vacio">
+            <i class="pi pi-filter"></i>
+            <h3>{{ tipo == 'pre' ? 'Elegí un proceso para ver los registros' : 'Elegí al menos un filtro para ver los registros' }}</h3>
+            <p>La lista se completa a medida que aplicás filtros, así ves solo lo que te interesa.</p>
+            @if(tipo == 'pre'){
+                <div class="atajos">
+                    <p-button [label]="'Pendientes de control' + (pendientes.total > 0 ? ' (' + pendientes.total + ')' : '')" severity="secondary" icon="pi pi-filter" (onClick)="VerPendientes()"/>
+                    <p-button [label]="'Por facturar' + (pendientes.porFacturar > 0 ? ' (' + pendientes.porFacturar + ')' : '')" severity="secondary" icon="pi pi-receipt" (onClick)="VerPorFacturar()"/>
+                    <p-button label="Entregas de esta semana" severity="secondary" icon="pi pi-calendar" (onClick)="AtajoEntregasSemana()"/>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="tabla" [hidden]="!HayFiltros">
+        <p-table
         [value]="ventas"
         [lazy]="true"
         [paginator]="true"
         [rows]="10"
+        [(first)]="primerRegistro"
         [totalRecords]="totalRecords"
         (onLazyLoad)="Buscar($event)"
         [loading]="loading"
@@ -133,7 +165,7 @@
                     <th>Proceso</th>
                     <th>Nro</th>
                     <th>Fecha</th>
-                    @if(tipo != "factura"){<th>Entrega</th>}
+                    @if(tipo != "factura"){<th class="th-orden" role="button" tabindex="0" (click)="ToggleOrdenEntrega()" (keyup.enter)="ToggleOrdenEntrega()">Entrega <i [class]="IconoOrdenEntrega"></i></th>}
                     <th>Cliente</th>
                     <th>Total</th>
                     @if(tipo == "factura"){<th>Factura</th>}
@@ -142,11 +174,18 @@
                 </tr>
             </ng-template>
             <ng-template #body let-venta>
-                <tr>
+                <tr class="fila-clic" (click)="AlHacerClicFila($event, venta)">
                     <td>{{ venta.proceso }}</td>
                     <td>{{ venta.nroProceso }}</td>
                     <td>{{ venta.fecha | date:'dd-MM-yyyy' }} | {{ venta.hora }}</td>
-                    @if(tipo != "factura"){<td>{{ venta.fechaEntrega ? (venta.fechaEntrega | date:'dd-MM-yyyy') : '--' }}</td>}
+                    @if(tipo != "factura"){
+                        <td>
+                            {{ venta.fechaEntrega ? (venta.fechaEntrega | date:'dd-MM-yyyy') : '--' }}
+                            @if(EntregaUrgencia(venta); as u){
+                                <p-tag styleClass="ml-1" [severity]="u.severidad" [value]="u.texto"/>
+                            }
+                        </td>
+                    }
                     <td>{{ venta.cliente.nombre }}</td>
                     <td>${{ venta.total | decimalFormat }}</td>
                     
@@ -175,44 +214,19 @@
                     </td>
                     <td>
                         <div class="acciones">
-                            <p-button severity="warn" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-pencil" (onClick)="Editar(venta.id)" pTooltip="Editar" tooltipPosition="bottom" [disabled]="venta.proceso === 'NOTA DE CREDITO' || venta.proceso === 'NOTA DE DEBITO' || venta.idProceso == 8 || venta.idProceso == 9 || !PuedeEditar(venta)"/>
-
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-eye" (onClick)="VerResumen(venta)" pTooltip="Ver Resumen" tooltipPosition="bottom"/>
-
-                            @if(tipo == "factura" && (venta.estado == "Finalizada" || venta.estado == "Facturada")
-                            && venta.proceso != "NOTA DE CREDITO" && venta.proceso != "NOTA DE DEBITO"
-                            && venta.idProceso != 8 && venta.idProceso != 9){
-                                <p-button severity="primary" styleClass="p-button-sm"
-                                [rounded]="true" [outlined]="true" icon="pi pi-file-edit"
-                                (onClick)="ElegirTipoNotaCredito($event, venta)"
-                                pTooltip="Emitir Nota de Crédito"
-                                tooltipPosition="bottom"/>
-                            }
-
-                            @if(tipo == "factura" && venta.idProceso == 8 && venta.estado == "Finalizada"){
-                                <p-button severity="primary" styleClass="p-button-sm"
-                                [rounded]="true" [outlined]="true" icon="pi pi-replay"
-                                (onClick)="EmitirDevolucionEntrega(venta)"
-                                [disabled]="TieneNotaInterna(venta)"
-                                [pTooltip]="TieneNotaInterna(venta) ? 'Entrega devuelta por completo' : 'Devolver entrega'"
-                                tooltipPosition="bottom"/>
-                            }
-                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Comprobante" tooltipPosition="bottom"/>
-
                             @if(tipo != "factura"){
                                 @if(venta.idProceso == 7 && venta.estado == "Pendiente"){
-                                    <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-check" (onClick)="Aprobar(venta)" pTooltip="Aprobar" tooltipPosition="bottom"/>
+                                    <p-button label="Aprobar" icon="pi pi-check" severity="primary" size="small" [outlined]="true" (onClick)="Aprobar(venta)" pTooltip="Aprobar nota de empaque" tooltipPosition="bottom"/>
                                 }
                                 @if(venta.idProceso == 7 && venta.estado == "Aprobada"){
-                                    <p-button severity="success" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-receipt" (onClick)="Facturar(venta)" pTooltip="Facturar" tooltipPosition="bottom"/>
+                                    <p-button label="Facturar" icon="pi pi-receipt" severity="success" size="small" [outlined]="true" (onClick)="Facturar(venta)" pTooltip="Facturar nota de empaque" tooltipPosition="bottom"/>
                                 }
                                 @if(venta.idProceso == 6 && venta.estado == "Aprobado"){
-                                    <p-button severity="success" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-box" (onClick)="PasarANotaEmpaque(venta)" pTooltip="Pasar a Nota de Empaque" tooltipPosition="bottom"/>
-                                }
-                                @if(PuedeDarseDeBaja(venta)){
-                                    <p-button severity="danger" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-times" (onClick)="AbrirDarBaja(venta)" pTooltip="Dar de baja" tooltipPosition="bottom"/>
+                                    <p-button label="Pasar a NE" icon="pi pi-box" severity="success" size="small" [outlined]="true" (onClick)="PasarANotaEmpaque(venta)" pTooltip="Pasar a Nota de Empaque" tooltipPosition="bottom"/>
                                 }
                             }
+                            <p-button severity="primary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-print" (onClick)="ElegirComprobante(venta)" pTooltip="Imprimir comprobante" tooltipPosition="bottom"/>
+                            <p-button severity="secondary" styleClass="p-button-sm" [rounded]="true" [outlined]="true" icon="pi pi-ellipsis-v" (onClick)="AbrirMenu($event, venta)" pTooltip="Más acciones" tooltipPosition="bottom" ariaLabel="Más acciones"/>
                         </div>
                     </td>
                 </tr>
@@ -247,6 +261,8 @@
         <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
     </div>
 </p-dialog>
+
+<p-menu #menuAcciones [popup]="true" [model]="itemsMenu" appendTo="body"/>
 
 <p-popover #op>
     <div class="opciones-impresion">

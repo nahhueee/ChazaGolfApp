@@ -515,6 +515,8 @@ export function esMayoristaConListaPropia(
  * compatibilidad con el sistema actual.
  */
 export const ESTADO_VENTA = {
+  // Estado inicial del Presupuesto (nov-2026). Pedido/Factura/Cotización siguen naciendo Aprobado.
+  EMITIDO: 'Emitido',
   APROBADO: 'Aprobado',
   APROBADA: 'Aprobada',
 
@@ -579,7 +581,7 @@ export const estadoVenta = {
  * el front; la validación real (la que importa) la hace el backend.
  */
 const ESTADOS_ABIERTOS_BAJA: Partial<Record<IdProceso, EstadoVenta[]>> = {
-  [ID_PROCESO.PRESUPUESTO]:  [ESTADO_VENTA.APROBADO],
+  [ID_PROCESO.PRESUPUESTO]:  [ESTADO_VENTA.EMITIDO],
   [ID_PROCESO.PEDIDO]:       [ESTADO_VENTA.APROBADO],
   [ID_PROCESO.NOTA_EMPAQUE]: [ESTADO_VENTA.PENDIENTE, ESTADO_VENTA.APROBADA],
 };
@@ -601,6 +603,29 @@ export function puedeEditarseVenta(idProceso?: number, estado?: string): boolean
   if (idProceso !== ID_PROCESO.NOTA_EMPAQUE) return true;
   return estado === ESTADO_VENTA.PENDIENTE || estado === ESTADO_VENTA.APROBADA;
 }
+
+/**
+ * Estados que ofrece el filtro "Estado" del listado según el proceso elegido (nov-2026). Salen de los
+ * estados reales que hay en la base (key = idProceso). Asociado/Asociada: la Nota de Empaque tiene filas con
+ * los dos géneros; el backend los trae juntos.
+ */
+export const ESTADOS_POR_PROCESO: Record<number, string[]> = {
+  1: [ESTADO_VENTA.FACTURADA],
+  2: [ESTADO_VENTA.FINALIZADA, ESTADO_VENTA.FACTURADA],
+  3: [ESTADO_VENTA.FACTURADA, ESTADO_VENTA.FINALIZADA],
+  4: [ESTADO_VENTA.FINALIZADA],
+  5: [ESTADO_VENTA.EMITIDO, ESTADO_VENTA.RELACIONADO, ESTADO_VENTA.FACTURADO],
+  6: [ESTADO_VENTA.APROBADO, ESTADO_VENTA.ASOCIADO, ESTADO_VENTA.RELACIONADO, ESTADO_VENTA.FACTURADO],
+  7: [ESTADO_VENTA.PENDIENTE, ESTADO_VENTA.APROBADA, ESTADO_VENTA.ASOCIADA, ESTADO_VENTA.FACTURADA],
+  8: [ESTADO_VENTA.FINALIZADA],
+  9: [ESTADO_VENTA.FINALIZADA],
+};
+
+/** Estados "abiertos": solo ahí tiene sentido avisar que la entrega está vencida / por vencer. */
+export const ESTADOS_ENTREGA_ABIERTA = new Set<string>([
+  ESTADO_VENTA.EMITIDO, ESTADO_VENTA.APROBADO, ESTADO_VENTA.APROBADA, ESTADO_VENTA.PENDIENTE,
+  ESTADO_VENTA.ASOCIADO, ESTADO_VENTA.ASOCIADA,
+]);
 
 /**
  * Tipos de método de pago (string, tal como viene del backend).

@@ -74,3 +74,131 @@
     gap: 0.5rem;
     white-space: nowrap;
 }
+
+
+/* ---- Listado con filtros que se aplican solos (nov-2026) ---- */
+.fila-proceso{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.filtros-activos{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 12px;
+}
+
+.filtros-activos .etiqueta{
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+.pill{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px 2px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--p-content-border-color);
+    background: var(--p-content-background);
+    font-size: 0.85rem;
+}
+
+.pill-x{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.pill-x:hover{
+    background: color-mix(in srgb, var(--p-red-500) 20%, transparent);
+}
+
+.barra-resultados{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.barra-resultados .orden{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+/* "Ordenar por" siempre en una sola línea */
+.barra-resultados .orden > span{
+    white-space: nowrap;
+    flex: none;
+}
+
+.estado-vacio{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    border: 1px dashed var(--p-content-border-color);
+    border-radius: 12px;
+}
+
+.estado-vacio > i{
+    font-size: 1.6rem;
+    color: var(--p-primary-color);
+}
+
+.estado-vacio h3, .estado-vacio p{
+    margin: 0;
+}
+
+.estado-vacio p{
+    max-width: 460px;
+    color: var(--text-color-secondary);
+}
+
+.atajos{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.fila-clic{
+    cursor: pointer;
+}
+
+.th-orden{
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.acciones{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* El menú "⋯" se dibuja en el body: Dar de baja va en rojo */
+::ng-deep .item-baja .p-menu-item-link,
+::ng-deep .item-baja .p-menu-item-icon,
+::ng-deep .item-baja .p-menu-item-label{
+    color: var(--p-red-500);
+}
