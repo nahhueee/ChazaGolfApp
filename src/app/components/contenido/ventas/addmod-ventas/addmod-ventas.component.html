@@ -89,7 +89,7 @@
                         </p-floatlabel>
                         @if(!soloLecturaPorEdicion){
                             <p-inputgroup-addon>
-                                <p-button class="btnAdd" icon="pi pi-plus" (onClick)="modalAddClienteVisible = true" severity="success" />
+                                <p-button class="btnAdd" icon="pi pi-plus" (onClick)="AbrirAltaCliente()" severity="success" />
                             </p-inputgroup-addon>
                         }
                     </p-inputgroup>
@@ -350,8 +350,9 @@
                         }
 
                         <th>Cant.</th>
-                        <th>Precio</th>
+                        <th>{{ esPresupuesto ? 'Sugerido' : 'Precio' }}</th>
                         @if(!ocultarColumnaDescuento){ <th>Desc. %</th> }
+                        @if(esPresupuesto){ <th>Unitario</th> }
                         <th>Total</th>
                         @if(!itemsSoloLectura){
                             <th>Quitar</th>
@@ -465,10 +466,10 @@
                             </ng-template>
                         </td>
 
-                        <td [pEditableColumn]="(permiteEditarPrecio && !itemsSoloLectura) ? producto.unitario : null"
+                        <td [pEditableColumn]="(permiteEditarPrecio && !esPresupuesto && !itemsSoloLectura) ? producto.unitario : null"
                             pEditableColumnField="unitario">
 
-                            <ng-container *ngIf="permiteEditarPrecio && !itemsSoloLectura; else soloLecturaPrecio">
+                            <ng-container *ngIf="permiteEditarPrecio && !esPresupuesto && !itemsSoloLectura; else soloLecturaPrecio">
                                 <p-cellEditor>
 
                                     <ng-template pTemplate="input">
@@ -524,14 +525,48 @@
                                     </ng-template>
 
                                     <ng-template pTemplate="output">
-                                        {{ producto.descuentoManual ?? 0 }}%
+                                        {{ (producto.descuentoManual ?? 0) | number:'1.0-2' }}%
                                     </ng-template>
 
                                 </p-cellEditor>
                             </ng-container>
 
                             <ng-template #soloLecturaDescItem>
-                                {{ producto.descuentoManual ?? 0 }}%
+                                {{ (producto.descuentoManual ?? 0) | number:'1.0-2' }}%
+                            </ng-template>
+                        </td> }
+
+                        <!-- Unitario neto (solo Presupuesto) = sugerido - descuento. Editable bajo las mismas
+                             condiciones que Desc. %: al editarlo, el % se adapta (ActualizarUnitarioNeto). -->
+                        @if(esPresupuesto){ <td [pEditableColumn]="(!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo) ? producto.unitario : null"
+                            pEditableColumnField="unitarioNeto">
+
+                            <ng-container *ngIf="!itemsDescuentoSoloLectura && !hayDescuentoGeneralActivo; else soloLecturaUnitarioNeto">
+                                <p-cellEditor>
+
+                                    <ng-template pTemplate="input">
+                                        <input
+                                            pInputText
+                                            type="text"
+                                            fluid
+                                            [imask]="decimal_mask"
+                                            [value]="UnitarioNeto(producto) | decimalFormat"
+                                            style="max-width: 100px;"
+                                            (focus)="SelectContent($event)"
+                                            (keydown.enter)="ActualizarUnitarioNeto(producto, $event)"
+                                            (keydown.tab)="ActualizarUnitarioNeto(producto, $event)"
+                                        />
+                                    </ng-template>
+
+                                    <ng-template pTemplate="output">
+                                        {{ UnitarioNeto(producto) | decimalFormat }}
+                                    </ng-template>
+
+                                </p-cellEditor>
+                            </ng-container>
+
+                            <ng-template #soloLecturaUnitarioNeto>
+                                {{ UnitarioNeto(producto) | decimalFormat }}
                             </ng-template>
                         </td> }
 
@@ -555,6 +590,7 @@
                             <td><strong>{{ totalUnidadesProductos }}</strong></td>
                             <td></td>
                             @if(!ocultarColumnaDescuento){ <td></td> }
+                            @if(esPresupuesto){ <td></td> }
                             <td></td>
                             @if(!itemsSoloLectura){
                                 <td></td>
@@ -1065,6 +1101,25 @@
             </div>
         </div>
     }
+</p-dialog>
+
+<!-- Modal alta rapida de cliente (solo Presupuesto) -->
+<p-dialog header="Nuevo cliente" [modal]="true" [style]="{ width: '420px' }" [(visible)]="modalClienteRapidoVisible">
+    <form class="cliente-rapido" autocomplete="off" (ngSubmit)="GuardarClienteRapido()" style="display:flex; flex-direction:column; gap:1rem; padding-top:.5rem;">
+        <p-floatlabel variant="in">
+            <input pInputText name="nombreClienteRapido" [(ngModel)]="clienteRapido.nombre" maxlength="100" autofocus style="width:100%"/>
+            <label>Nombre *</label>
+        </p-floatlabel>
+        <p-floatlabel variant="in">
+            <input pInputText name="telefonoClienteRapido" [(ngModel)]="clienteRapido.telefono" maxlength="20" style="width:100%"/>
+            <label>Teléfono (opcional)</label>
+        </p-floatlabel>
+        <small>Los datos fiscales (IVA, documento) se completan después, desde la ficha del cliente. Son obligatorios para facturar.</small>
+        <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+            <p-button label="Cancelar" severity="secondary" [outlined]="true" type="button" (onClick)="modalClienteRapidoVisible = false"/>
+            <p-button label="Guardar" icon="pi pi-check" type="submit" [loading]="guardandoClienteRapido"/>
+        </div>
+    </form>
 </p-dialog>
 
 <!-- Modal Nuevo Cliente -->

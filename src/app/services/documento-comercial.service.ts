@@ -38,6 +38,14 @@ const CONDICIONES_VENTA: string[] = [
     'hábiles acreditado el anticipo. Para prendas con Logo en parche, el tiempo de producción es de 14 días hábiles.',
 ];
 
+// Alícuota de IVA que se suma al total del Presupuesto impreso (pedido del cliente, nov-2026: los
+// precios del presupuesto son netos y el documento muestra Total + IVA 21% + Total General). Sigue
+// siendo informativo: el documento no es fiscal.
+const ALICUOTA_IVA_PRESUPUESTO = 21;
+
+const FormatearMonto = (n: number | undefined | null): string =>
+  (Number(n) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 @Injectable({
   providedIn: 'root'
 })
@@ -197,6 +205,61 @@ export class DocumentoComercialService {
       return comprobante;
     }
 
+    // Presupuesto (nov-2026, pedido del cliente): tabla vertical sin color/talles/descuento, con el nombre
+    // completo (la celda ocupa 2 renglones si es largo) y el precio UNITARIO NETO = sugerido - descuento,
+    // el mismo que ve la grilla de addmod-ventas. Requiere que ProcesarItemsConDescuento ya haya corrido
+    // sobre los ítems (GenerarDatosComunes) para que descuentoAplicado esté seteado. El total de cada
+    // línea es bruto - importeDescuento, y el unitario se deriva de él para que cierre exacto.
+    private ArmarTablaPresupuesto(items: any[], esServicio: boolean) {
+      const encabezado = [
+        { text: 'Código', style: 'tableHeader', alignment: 'left' },
+        { text: esServicio ? 'Servicio' : 'Producto', style: 'tableHeader', alignment: 'left' },
+        { text: 'Cant', style: 'tableHeader', alignment: 'center' },
+        { text: 'Precio', style: 'tableHeader', alignment: 'right' },
+        { text: 'Total', style: 'tableHeader', alignment: 'right' },
+      ];
+
+      const filas = items.map(item => {
+        const cantidad = Number(item.cantidad) || 0;
+        const bruto = (Number(item.unitario) || 0) * cantidad;
+        const descuento = item.importeDescuento != null
+          ? Number(item.importeDescuento) || 0
+          : bruto * ((Number(item.descuentoAplicado) || 0) / 100);
+        const neto = bruto - descuento;
+
+        return [
+          { text: esServicio ? item.codServicio : item.codProducto, alignment: 'left' },
+          { text: (esServicio ? item.nomServicio : item.nomProducto) ?? '', alignment: 'left' },
+          { text: FormatearCantidad(cantidad), alignment: 'center' },
+          { text: FormatearMonto(cantidad > 0 ? neto / cantidad : 0), alignment: 'right' },
+          { text: FormatearMonto(neto), alignment: 'right' },
+        ];
+      });
+
+      return {
+        table: {
+          headerRows: 1,
+          widths: ['auto', '*', 'auto', 'auto', 'auto'],
+          body: [encabezado, ...filas]
+        },
+        layout: {
+          fillColor: function (rowIndex) {
+            if (rowIndex === 0) return '#CCCCCC';
+            return rowIndex % 2 === 0 ? '#F5F5F5' : null;
+          },
+          hLineWidth: function (i, node) { return (i === 1 || i === node.table.body.length) ? 1 : 0.5; },
+          vLineWidth: function () { return 0.5; },
+          hLineColor: function (i) { return i === 1 ? 'black' : '#CCCCCC'; },
+          vLineColor: function () { return '#CCCCCC'; },
+          paddingTop: function () { return 3; },
+          paddingBottom: function () { return 3; },
+          paddingLeft: function () { return 5; },
+          paddingRight: function () { return 5; },
+        },
+        style: 'tableStyle'
+      };
+    }
+
     private ArmarDocumentoA4(comprobante: ObjComprobante, venta: Venta, empresa: any, sigla: string) {
       const cliente = venta.cliente;
       const direccionCliente = cliente?.direcciones?.[0]?.resumen || '-';
@@ -207,22 +270,27 @@ export class DocumentoComercialService {
       // - Pedido/Nota de Empaque: Observaciones + Fecha de Entrega. Sin Condiciones de
       //   Venta (ya no es una cotización, el pedido está en curso).
       const esPresupuesto = venta.idProceso === ID_PROCESO.PRESUPUESTO;
+      // IVA informativo sobre el total ya neto de descuento, redondeado a centavos.
+      const ivaPresupuesto = Math.round((comprobante.totalFinal ?? 0) * ALICUOTA_IVA_PRESUPUESTO) / 100;
 
       return {
         pageSize: 'A4',
-        pageOrientation: 'landscape',
+        // Presupuesto: vertical (nov-2026). Pedido/Nota de Empaque siguen en horizontal con talles.
+        pageOrientation: esPresupuesto ? 'portrait' : 'landscape',
         pageMargins: [10, 10, 10, 10],
         content: [
 
           //Datos de la empresa (fija, ver ID_EMPRESA_DEFAULT) y tipo/número de documento
           {
             table: {
-              widths: ['45%', '10%', '45%'],
+              widths: esPresupuesto ? ['42%', '16%', '42%'] : ['45%', '10%', '45%'],
               body: [
                 [
                   {
                     stack: [
-                      { text: empresa?.razonSocial?.toUpperCase(), style: 'titulo', alignment: 'center' },
+                      // Presupuesto: título con el nombre comercial y la razón social en una línea aparte.
+                      { text: esPresupuesto ? comprobante.nombreLocal : empresa?.razonSocial?.toUpperCase(), style: 'titulo', alignment: 'center' },
+                      esPresupuesto ? { text: [{ text: 'Razón Social: ', bold: true }, { text: empresa?.razonSocial?.toUpperCase() }], style: 'simple' } : [],
                       { text: [{ text: 'Dirección: ', bold: true }, { text: empresa?.direccion }], style: 'simple' },
                       { text: [{ text: 'Teléfono: ', bold: true }, { text: empresa?.telefono }], style: 'simple' },
                       { text: [{ text: 'Email: ', bold: true }, { text: empresa?.email }], style: 'simple' },
@@ -286,8 +354,23 @@ export class DocumentoComercialService {
               hLineColor: function () { return '#aaa'; },
               vLineColor: function () { return '#aaa'; }
             },
-            margin: [0, 10, 0, 10]
+            margin: [0, 10, 0, esPresupuesto && comprobante.observacion ? 0 : 10]
           },
+
+          //Observaciones: en Presupuesto van en un recuadro debajo de los datos del cliente
+          (esPresupuesto && comprobante.observacion) ? {
+            table: {
+              widths: ['*'],
+              body: [[{ text: [{ text: 'Observaciones: ', bold: true }, { text: comprobante.observacion }], style: 'condicion' }]]
+            },
+            layout: {
+              hLineWidth: function () { return 0.5; },
+              vLineWidth: function () { return 0.5; },
+              hLineColor: function () { return '#aaa'; },
+              vLineColor: function () { return '#aaa'; }
+            },
+            margin: [0, 0, 0, 10]
+          } : [],
 
           //Tabla de productos con desglose de talles (mismo layout que comprobante.service.ts)
           { text: `Detalle Productos`, style: 'recargaDescuento', alignment: 'left', bold: true },
@@ -296,6 +379,9 @@ export class DocumentoComercialService {
               text: comprobante.observacion ? `Motivo: ${comprobante.observacion}` : 'Sin productos',
               style: 'totalProducto', alignment: 'left', italics: true, margin: [3, 2, 3, 6]
             },
+          ] : esPresupuesto ? [
+            this.ArmarTablaPresupuesto(venta.productos ?? [], false),
+            { text: `Cantidad: ${comprobante.cantProductos}`, style: 'totalProducto', alignment: 'right' },
           ] : [
           {
             table: {
@@ -328,6 +414,7 @@ export class DocumentoComercialService {
 
           (comprobante.cantServicios! > 0) ? [ //Ocultamos si no hay servicios
             { text: `Detalle Servicios`, style: 'recargaDescuento', alignment: 'left', bold: true },
+            esPresupuesto ? this.ArmarTablaPresupuesto(venta.servicios ?? [], true) :
             {
               table: {
                 widths: ['auto', '*', ...Array(comprobante.ocultarDescuento ? 3 : 4).fill('auto')],
@@ -360,9 +447,6 @@ export class DocumentoComercialService {
                     stack: esPresupuesto ? [
                       { text: 'CONDICIONES DE VENTA', style: 'tituloCondiciones' },
                       ...CONDICIONES_VENTA.map(linea => ({ text: linea, style: 'condicion' })),
-                      ...(comprobante.observacion
-                        ? [{ text: [{ text: 'Observaciones: ', bold: true }, { text: comprobante.observacion }], style: 'condicion' }]
-                        : []),
                     ] : [
                       ...(comprobante.observacion
                         ? [{ text: [{ text: 'Observaciones: ', bold: true }, { text: comprobante.observacion }], style: 'condicion' }]
@@ -370,7 +454,12 @@ export class DocumentoComercialService {
                     ]
                   },
                   {
-                    stack: [
+                    stack: esPresupuesto ? [
+                      // Presupuesto: Total (neto, ya con descuento) + IVA 21% + Total General. No se imprime el descuento.
+                      { text: `Total: $${FormatearMonto(comprobante.totalFinal)}`, style: 'subtotal', alignment: 'right' },
+                      { text: `IVA ${ALICUOTA_IVA_PRESUPUESTO}%: $${FormatearMonto(ivaPresupuesto)}`, style: 'descuento', alignment: 'right' },
+                      { text: `Total General: $${FormatearMonto((comprobante.totalFinal ?? 0) + ivaPresupuesto)}`, style: 'total', alignment: 'right' },
+                    ] : [
                       ...(comprobante.ocultarDescuento ? [] : [
                         { text: `Subtotal: $${comprobante.subTotal?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'subtotal', alignment: 'right' },
                         { text: `Descuento: $${comprobante.descuento?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, style: 'descuento', alignment: 'right' },
@@ -410,7 +499,8 @@ export class DocumentoComercialService {
           leyendaNoFiscal: {
             fontSize: 8,
             italics: true,
-            margin: [0, 6, 0, 0]
+            // Margen izquierdo de 8 como el resto de las líneas del bloque ('simple'), para que quede alineada.
+            margin: [8, 6, 0, 0]
           },
           totalProducto: {
             fontSize: 11,

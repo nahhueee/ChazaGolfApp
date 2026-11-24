@@ -185,6 +185,10 @@ export class AddModVentasComponent {
   vistaPreviaVisible:boolean = false;
   modalClienteVisible:boolean = false;
   modalAddClienteVisible:boolean = false;
+  // Alta rapida de cliente (solo Presupuesto): alcanza con el nombre, ver GuardarClienteRapido.
+  modalClienteRapidoVisible:boolean = false;
+  clienteRapido = { nombre: '', telefono: '' };
+  guardandoClienteRapido:boolean = false;
   modalFacturarVisible:boolean = false;
   // F4.2 fix (sep-2026, HANDOFF blindaje facturacion y logs) - guarda el estado previo
   // a la mutación optimista que hace AbrirModalFacturar(), para poder revertirla si
@@ -587,6 +591,34 @@ export class AddModVentasComponent {
     get TipoComprobanteControl(){return this.formFacturacion.get('tComprobante')?.value ?? '';}
     get EmpresaControl(){return this.formFacturacion.get('empresa')?.value ?? '';}
     get esPresupuesto(): boolean {return this.ProcesoControl?.id === ID_PROCESO.PRESUPUESTO;}
+
+    // Datos que ARCA exige del receptor para emitir una Factura fiscal. Un cliente creado con el
+    // alta rapida de Presupuesto nace sin ellos: hasta completarlos no se puede facturar.
+    get datosFiscalesFaltantes(): string[] {
+      const c = this.clienteSeleccionado;
+      if (!c) return [];
+      const faltan: string[] = [];
+      if (!c.idCondicionIva) faltan.push('condición de IVA');
+      if (!c.idTipoDocumento) faltan.push('tipo de documento');
+      if (!c.documento) faltan.push('número de documento');
+      return faltan;
+    }
+
+    private get esFacturaFiscal(): boolean {
+      const comprobante = this.TipoComprobanteControl;
+      return this.tipo === 'factura'
+        && this.ProcesoControl?.id === ID_PROCESO.FACTURA
+        && (comprobante === TIPO_COMPROBANTE.FACTURA_A
+          || comprobante === TIPO_COMPROBANTE.FACTURA_B
+          || comprobante === TIPO_COMPROBANTE.FACTURA_C);
+    }
+
+    private AvisarDatosFiscalesFaltantes(): void {
+      this.Notificaciones.Warn(
+        `El cliente ${this.clienteSeleccionado?.nombre} no tiene cargados datos obligatorios para facturar: ` +
+        `${this.datosFiscalesFaltantes.join(', ')}. Completalos desde la ficha del cliente antes de facturar.`
+      );
+    }
 
     // Entrega sin cargo (ESC, oct-2026, ver HANDOFF-entrega-sin-cargo.md): se emite desde
     // Facturación a partir de una Nota de Empaque aprobada. Descuenta stock y queda registrada
@@ -1269,7 +1301,9 @@ export class AddModVentasComponent {
   private ReconstruirDescuentoManual(items: { total?: number; importeDescuento?: number; descuentoManual?: number }[]): void {
     items.forEach(item => {
       const total = item.total ?? 0;
-      item.descuentoManual = total > 0 ? Math.round(((item.importeDescuento ?? 0) / total) * 10000) / 100 : 0;
+      // 6 decimales (antes 2): en Presupuesto el % se deriva del Unitario tipeado (ver ActualizarUnitarioNeto)
+      // y con 2 decimales el unitario reconstruido podia variar centavos al reabrir.
+      item.descuentoManual = total > 0 ? Math.round(((item.importeDescuento ?? 0) / total) * 100 * 1e6) / 1e6 : 0;
     });
   }
 
@@ -1537,6 +1571,8 @@ export class AddModVentasComponent {
         .pipe(takeUntil(this.destroy$)) 
         .subscribe(response => {
           this.clienteSeleccionado = response;
+          if(this.tipo === 'factura' && this.ProcesoControl?.id === ID_PROCESO.FACTURA && this.datosFiscalesFaltantes.length > 0)
+            this.AvisarDatosFiscalesFaltantes();
           if(this.clienteSeleccionado?.idListaPrecio == LISTA_PRECIO.CONSUMIDOR_FINAL) this.formFacturacion.get('ajuste')?.setValue(false);
           this.PrepararFacturacionCliente(this.clienteSeleccionado?.idCondicionIva!, comprobante);
           this.ObtenerSaldoCliente();
@@ -2092,6 +2128,53 @@ export class AddModVentasComponent {
       this.ObtenerClientes();
 
     this.modalAddClienteVisible = false;
+  }
+
+  // El "+" de Cliente: en Presupuesto abre el alta rapida (solo nombre); en el resto de los
+  // procesos sigue abriendo el formulario completo.
+  AbrirAltaCliente(){
+    if(this.esPresupuesto){
+      this.clienteRapido = { nombre: '', telefono: '' };
+      this.modalClienteRapidoVisible = true;
+    }else{
+      this.modalAddClienteVisible = true;
+    }
+  }
+
+  GuardarClienteRapido(){
+    const nombre = this.clienteRapido.nombre.trim();
+    if(!nombre){
+      this.Notificaciones.Warn("Ingresá el nombre del cliente.");
+      return;
+    }
+    if(this.guardandoClienteRapido) return;
+    this.guardandoClienteRapido = true;
+
+    this.clientesService.AgregarRapido({ nombre, telefono: this.clienteRapido.telefono.trim() })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.guardandoClienteRapido = false;
+          if(!response?.ok){
+            this.Notificaciones.Warn(response?.mensaje ?? "No se pudo crear el cliente.");
+            return;
+          }
+          // Recargo el listado y dejo seleccionado el cliente nuevo en el formulario.
+          this.clientesService.SelectorClientes()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(clientes => {
+              this.clientes = clientes;
+              const nuevo = this.clientes.find(c => c.id === response.id);
+              if(nuevo){
+                this.formGenerales.get('cliente')?.setValue(nuevo);
+                this.SeleccionarCliente();
+              }
+              this.modalClienteRapidoVisible = false;
+              this.Notificaciones.Success("Cliente creado y seleccionado. Quedan pendientes sus datos fiscales para poder facturar.");
+            });
+        },
+        error: () => { this.guardandoClienteRapido = false; }
+      });
   }
   //#endregion
 
@@ -2671,7 +2754,14 @@ export class AddModVentasComponent {
     }
 
     const input = event.target as HTMLInputElement;
-    let value = this.globalesService.EstandarizarDecimal(input.value);
+    this.AsignarDescuentoManual(item, this.globalesService.EstandarizarDecimal(input.value));
+  }
+
+  // Aplica un % de descuento por ítem respetando tope de catálogo y rango de la lista editable.
+  // Compartido por la columna "Desc. %" y, en Presupuesto, por la columna "Unitario"
+  // (ActualizarUnitarioNeto): las dos son la misma información vista de dos formas.
+  private AsignarDescuentoManual(item: ProductosFactura | ServiciosFactura, valorInicial: number) {
+    let value = valorInicial;
     if (value < 0) value = 0;
 
     const tope = this.TopeDescuentoDe(item);
@@ -2705,6 +2795,44 @@ export class AddModVentasComponent {
 
     this.CalcularTotalGeneral();
     this.SincronizarBloqueoDescuentoGeneral();
+  }
+
+  // Presupuesto: precio unitario NETO = sugerido (unitario, solo lectura) menos el descuento que
+  // efectivamente se aplica al ítem (por ítem o general, con su tope). Es derivado: no se persiste,
+  // lo que se guarda sigue siendo unitario + importeDescuento.
+  UnitarioNeto(item: ProductosFactura): number {
+    const general = parseFloat(this.DescuentoControl) || 0;
+    const desc = Math.min(this.DescuentoBaseDe(item, general), this.TopeDescuentoDe(item));
+    return Math.round((item.unitario ?? 0) * (1 - desc / 100) * 100) / 100;
+  }
+
+  // Edición del Unitario neto en Presupuesto: el % de descuento se adapta (sugerido fijo). No puede
+  // superar al sugerido (decisión: descuento >= 0). Mismas reglas/bloqueos que la columna "Desc. %".
+  ActualizarUnitarioNeto(item: ProductosFactura, event: any) {
+    if (this.itemsDescuentoSoloLectura) {
+      this.Notificaciones.Warn(this.itemsDescuentoBloqueadoPorRelacion
+        ? "El descuento viene pactado del documento relacionado y no se puede modificar acá."
+        : "No puedes editar los ítems de una venta ya guardada.");
+      return;
+    }
+    if ((parseFloat(this.DescuentoControl) || 0) > 0) {
+      this.Notificaciones.Warn("Ya hay un descuento general aplicado. Para usar descuento por ítem, primero poné el descuento general en 0.");
+      return;
+    }
+
+    const sugerido = item.unitario ?? 0;
+    if (sugerido <= 0) return;
+
+    const input = event.target as HTMLInputElement;
+    let neto = this.globalesService.EstandarizarDecimal(input.value);
+    if (!(neto > 0)) return;
+
+    if (neto > sugerido) {
+      this.Notificaciones.Warn(`El unitario no puede superar el precio sugerido ($${sugerido}).`);
+      neto = sugerido;
+    }
+
+    this.AsignarDescuentoManual(item, Math.round((1 - neto / sugerido) * 100 * 1e6) / 1e6);
   }
 
   // Habilita/deshabilita en vivo el FormControl 'descuento' de cabecera según
@@ -3225,6 +3353,12 @@ export class AddModVentasComponent {
         return;
       };
 
+    // Cliente de alta rapida (Presupuesto) sin datos fiscales: se corta ANTES de pedir el CAE.
+    if (this.esFacturaFiscal && this.datosFiscalesFaltantes.length > 0) {
+      this.AvisarDatosFiscalesFaltantes();
+      return;
+    }
+
     if (this.esEntregaSinCargo && !this.ValidarEntregaSinCargo()) return;
 
     if (this.adelantoSinProductos && !this.AdelantoValido()) {
@@ -3479,6 +3613,8 @@ export class AddModVentasComponent {
 
     if(this.venta.idProceso == ID_PROCESO.NOTA_EMPAQUE)
       this.venta.estado = ESTADO_VENTA.PENDIENTE;
+    else if(this.venta.idProceso == ID_PROCESO.PRESUPUESTO)
+      this.venta.estado = ESTADO_VENTA.EMITIDO;
     else
       this.venta.estado = ESTADO_VENTA.APROBADO;
 

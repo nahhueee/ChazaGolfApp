@@ -29,7 +29,7 @@ export class ProductosService {
   }
 
   BuscarProductosPresupuesto(filtro:string): Observable<any>{
-    return this.apiService.get(`productos/buscar-prod-presupuesto/${filtro}`)
+    return this.apiService.get(`productos/buscar-prod-presupuesto/${encodeURIComponent(filtro)}`)
   }
 
   // excluirVenta: id de un documento cuya reserva no se descuenta (ej. la NE Aprobada que se está editando).

@@ -30,6 +30,11 @@ export class ClientesService {
     return this.apiService.post('clientes/agregar', cli)
   }
 
+  // Alta rapida (Presupuesto): solo nombre y telefono. Devuelve {ok, id?, mensaje?}.
+  AgregarRapido(datos:{nombre:string, telefono?:string}): Observable<any>{
+    return this.apiService.post('clientes/agregar-rapido', datos)
+  }
+
   Modificar(cli:Cliente): Observable<any>{
     return this.apiService.put('clientes/modificar', cli)
   }
