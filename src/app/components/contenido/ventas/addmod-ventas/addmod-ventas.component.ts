@@ -628,6 +628,8 @@ export class AddModVentasComponent {
     get esEntregaSinCargo(): boolean {return this.ProcesoControl?.id === ID_PROCESO.ENTREGA_SIN_CARGO;}
 
     get esNotaEmpaque(): boolean {return this.tipo === 'pre' && this.ProcesoControl?.id === ID_PROCESO.NOTA_EMPAQUE;}
+    // Pedido y Nota de Empaque no se guardan sin fecha de entrega (nov-2026); el Presupuesto no la exige.
+    get fechaEntregaObligatoria(): boolean {return this.tipo === 'pre' && (this.ProcesoControl?.id === ID_PROCESO.PEDIDO || this.ProcesoControl?.id === ID_PROCESO.NOTA_EMPAQUE);}
 
     // La sección de adelantos aparece solo en una NE con cliente y con adelantos para elegir.
     get mostrarAdelantos(): boolean {
@@ -3154,6 +3156,12 @@ export class AddModVentasComponent {
       this.Notificaciones.Warn("Seleccioná un cliente antes de guardar.");
       this.formGenerales.get('cliente')?.markAsTouched();
       this.formGenerales.get('cliente')?.markAsDirty();
+      return;
+    }
+
+    if (this.fechaEntregaObligatoria && !this.formGenerales.get('fechaEntrega')?.value) {
+      this.Notificaciones.Warn("Ingresá la fecha de entrega.");
+      this.formGenerales.get('fechaEntrega')?.markAsTouched();
       return;
     }
 

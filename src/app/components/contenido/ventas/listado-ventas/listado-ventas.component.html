@@ -11,7 +11,8 @@
             <!-- Clic en "Exportar" = export de siempre; la flecha despliega las dos opciones -->
             <p-splitbutton [outlined]="true" label="Exportar" severity="primary" icon="pi pi-file-excel" [model]="opcionesExportar" (onClick)="Exportar()"/>
         } @else {
-            <p-button variant="outlined" label="Exportar" severity="primary" icon="pi pi-file-excel" (onClick)="Exportar()"/>
+            <!-- Pre-Facturación: clic en "Exportar" = export de siempre; la flecha despliega los informes de pedidos pendientes -->
+            <p-splitbutton [outlined]="true" label="Exportar" severity="primary" icon="pi pi-file-excel" [model]="opcionesExportarPre" (onClick)="Exportar()"/>
         }
     </app-encabezado-seccion>
 
@@ -259,6 +260,26 @@
     <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="bajaVisible = false" />
         <p-button label="Confirmar baja" severity="danger" [disabled]="!motivoBaja?.trim()" (onClick)="ConfirmarDarBaja()" />
+    </div>
+</p-dialog>
+
+<p-dialog
+    [header]="tipoInformePendientes === 'administracion' ? 'Pedidos pendientes - Administración' : 'Pedidos pendientes - Producción'"
+    [(visible)]="pedidosPendientesVisible"
+    [modal]="true"
+    [style]="{width: '420px'}"
+    [closable]="true"
+    [dismissableMask]="true"
+>
+    <p>Elegí el rango de fecha de entrega. Se incluyen los pedidos pendientes de entrega y, en la hoja "Sin stock", los que no se pueden entregar completos.</p>
+    <br>
+    <p-floatlabel variant="in">
+        <p-datepicker [(ngModel)]="rangoPendientes" selectionMode="range" appendTo="body" [style]="{width: '100%'}"/>
+        <label>Fecha de entrega (desde - hasta)</label>
+    </p-floatlabel>
+    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: .5rem;">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="pedidosPendientesVisible = false" />
+        <p-button label="Descargar" icon="pi pi-file-excel" [disabled]="!rangoPendientes || !rangoPendientes[0] || !rangoPendientes[1]" (onClick)="DescargarPedidosPendientes()" />
     </div>
 </p-dialog>
 

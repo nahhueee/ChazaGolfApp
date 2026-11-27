@@ -297,6 +297,39 @@ export class ListadoVentasComponent implements OnDestroy {
     { label: 'Exportar entregas sin cargo', icon: 'pi pi-file-excel', command: () => this.ExportarEntregasSinCargo() },
   ];
 
+  // Pre-Facturación: informe de pedidos pendientes de entrega (nov-2026). Cada opción abre un diálogo
+  // donde se elige el rango de fecha de entrega (obligatorio); Administración lleva el Total.
+  opcionesExportarPre: MenuItem[] = [
+    { label: 'Exportar', icon: 'pi pi-file-excel', command: () => this.Exportar() },
+    { label: 'Pedidos pendientes - Producción', icon: 'pi pi-file-excel', command: () => this.AbrirPedidosPendientes('produccion') },
+    { label: 'Pedidos pendientes - Administración', icon: 'pi pi-file-excel', command: () => this.AbrirPedidosPendientes('administracion') },
+  ];
+  pedidosPendientesVisible: boolean = false;
+  tipoInformePendientes: 'produccion' | 'administracion' = 'produccion';
+  rangoPendientes: Date[] | null = null;
+
+  AbrirPedidosPendientes(tipo: 'produccion' | 'administracion'){
+    this.tipoInformePendientes = tipo;
+    // Si ya hay un rango de entrega elegido en el listado se usa de punto de partida.
+    const entrega = this.filtros.get('fechasEntrega')?.value;
+    this.rangoPendientes = Array.isArray(entrega) && entrega.length === 2 && entrega[0] && entrega[1] ? entrega : null;
+    this.pedidosPendientesVisible = true;
+  }
+
+  DescargarPedidosPendientes(){
+    const rango = this.rangoPendientes;
+    if(!rango || rango.length !== 2 || !rango[0] || !rango[1]){
+      this.Notificaciones.Warn("Debe seleccionar un rango de fechas de entrega completo (desde y hasta).");
+      return;
+    }
+    const tipo = this.tipoInformePendientes;
+    this.filesService.DescargarPedidosPendientesExcel({ fechasEntrega: rango, tipoInforme: tipo })
+      .subscribe(blob => {
+        this.GuardarExcel(blob, tipo === 'administracion' ? 'PedidosPendientes_Administracion' : 'PedidosPendientes_Produccion');
+        this.pedidosPendientesVisible = false;
+      });
+  }
+
   Exportar(){
     const fechas = this.filtros.get('fechas')?.value;
     const fechasCompletas = !!fechas && fechas.length === 2 && !!fechas[0] && !!fechas[1];

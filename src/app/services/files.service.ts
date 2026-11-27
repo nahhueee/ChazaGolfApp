@@ -37,6 +37,11 @@ export class FilesService {
     return this.apiService.getFile('files/prefacturacion-excel', filtros);
   }
 
+  // Informe de pedidos pendientes de entrega (Producción / Administración). Filtros: fechasEntrega + tipoInforme.
+  DescargarPedidosPendientesExcel(filtros:{ fechasEntrega: Date[]; tipoInforme: 'produccion' | 'administracion' }){
+    return this.apiService.getFile('files/pedidos-pendientes-excel', filtros);
+  }
+
   // Export de Entregas sin cargo (+ sus devoluciones, neteadas). Filtros: fechas + cliente.
   DescargarEntregasSinCargoExcel(filtros:FiltroVenta){
     return this.apiService.getFile('files/entregas-sin-cargo-excel', filtros);

@@ -51,8 +51,8 @@
                         @if(tipo === 'pre'){
                             <!-- Fecha de Entrega -->
                             <p-floatlabel variant="in">
-                                <p-datepicker formControlName="fechaEntrega" showIcon iconDisplay="input" />
-                                <label>Fecha de Entrega</label>
+                                <p-datepicker formControlName="fechaEntrega" showIcon iconDisplay="input" [invalid]="fechaEntregaObligatoria && formGenerales.get('fechaEntrega')?.touched && !formGenerales.get('fechaEntrega')?.value" />
+                                <label>Fecha de Entrega{{ fechaEntregaObligatoria ? ' *' : '' }}</label>
                             </p-floatlabel>
                         }
                     </div>
